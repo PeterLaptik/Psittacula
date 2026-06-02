@@ -64,7 +64,16 @@ std::string FileRemoveTool::Execute(std::vector<ToolParameter> &params_values)
     executed = true;
 
     // Success JSON
-    return fmt.Format("{\"status\":\"success\",\"file_removed\":{\"path\":\"%?\"}}", rel_path);
+    return fmt.Format(
+        "{"
+        "\"status\":\"success\","
+        "\"file_removed\":{"
+        "\"path\":\"%?\""
+        "},"
+        "\"message\":\"File removed\""
+        "}",
+        rel_path
+    );
 }
 
 void FileRemoveTool::Undo()

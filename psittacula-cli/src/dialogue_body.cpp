@@ -50,16 +50,40 @@ void DialogueBody::AddSystemMessage(const std::string &sys_message)
     auto it = m_request->body.FindMember("messages");
     if (it != m_request->body.MemberEnd() && it->value.IsArray())
     {
+        rapidjson::Value &messages = it->value;
         rapidjson::Document::AllocatorType &alloc = m_request->body.GetAllocator();
+
+        for (rapidjson::SizeType i = 0; i < messages.Size(); )
+        {
+            const rapidjson::Value &msg = messages[i];
+            if (msg.HasMember("role") && msg["role"].IsString() &&
+                std::string(msg["role"].GetString()) == "system")
+            {
+                messages.Erase(messages.Begin() + i);
+                continue; // do NOT increment i
+            }
+            ++i;
+        }
+
         rapidjson::Value msg_value(rapidjson::kObjectType);
-        msg_value.AddMember("role", "system", alloc);
-        msg_value.AddMember("content", rapidjson::Value(sys_message.c_str(), alloc).Move(), alloc);
-        it->value.PushBack(msg_value, alloc);
+        msg_value.AddMember("role", rapidjson::Value("system", alloc), alloc);
+        msg_value.AddMember("content", rapidjson::Value(sys_message.c_str(), alloc), alloc);
+
+        // Insert at index 0 manually
+        messages.PushBack(rapidjson::Value(), alloc);
+        for (rapidjson::SizeType i = messages.Size() - 1; i > 0; --i)
+        {
+            messages[i] = messages[i - 1];
+        }
+        messages[0] = msg_value; // place system message at front
     }
 }
 
 void DialogueBody::AddResponse(const std::string &response)
 {
+    if (response.empty())
+        return;
+
     auto it = m_request->body.FindMember("messages");
     if (it != m_request->body.MemberEnd() && it->value.IsArray())
     {

@@ -155,7 +155,8 @@ std::string FileModifyTool::Execute(std::vector<ToolParameter> &params_values)
         "    \"new_size\": %?,"
         "    \"replace_all\": %?,"
         "    \"position\": %?"
-        "  }"
+        "  },"
+        "  \"message\": \"File %?\""
         "}";
 
     return fmt.Format(
@@ -164,7 +165,8 @@ std::string FileModifyTool::Execute(std::vector<ToolParameter> &params_values)
         old_content.size(),
         new_content.size(),
         replace_all ? "true" : "false",
-        pos_int
+        pos_int,
+        replace_all ? "fully replaced" : "modified"
     );
 }
 

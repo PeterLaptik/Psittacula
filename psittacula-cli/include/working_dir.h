@@ -10,19 +10,21 @@ class WorkingDir
     public:
         static WorkingDir& GetInstance();
 
-        static void SetSettingsDir(const std::string &path);
+        static void SetWorkDir(const std::string &path);
 
-        static void SetWorkspaceDir(const std::string &path);
+        static void SetProjectDir(const std::string &path);
 
         void UpdateModels();
 
         const std::vector<std::string> &GetModelsList() const;
 
-        const std::string GetProjectDir() const;
+        std::string GetWorkDir() const;
 
-        const std::string GetModelsDir() const;
+        std::string GetProjectDir() const;
 
-        const std::string GetSettingsDir() const;
+        std::string GetModelsDir() const;
+
+        std::string GetSettingsDir() const;
 
         bool IsInWorkDir(const std::string &path) const;
 
@@ -35,7 +37,7 @@ class WorkingDir
 
         Formatter m_fmt;
         std::string m_workdir;
-        std::string m_workspace;
+        std::string m_project_dir;
         std::vector<std::string> models_list;
 };
 

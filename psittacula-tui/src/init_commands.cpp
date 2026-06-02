@@ -4,6 +4,8 @@
 #include "command_reasoning.h"
 #include "command_undo.h"
 #include "command_redo.h"
+#include "command_dump.h"
+#include "command_change_agent.h"
 
 void init_commands(ChatCommandDispatcher &dsp)
 {
@@ -12,4 +14,6 @@ void init_commands(ChatCommandDispatcher &dsp)
     dsp.RegisterCommand("reasoning", new CommandReasoning());
     dsp.RegisterCommand("undo", new CommandUndo());
     dsp.RegisterCommand("redo", new CommandRedo());
+    dsp.RegisterCommand("dump", new CommandDump());
+    dsp.RegisterCommand("rules", new CommandChangeAgent());
 }

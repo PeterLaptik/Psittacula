@@ -68,6 +68,15 @@ std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
         );
     }
 
+    if (!std::filesystem::is_empty(path))
+    {
+        console::write_line(fmt.Format("Directory is not empty: %?", path), console::TextOrigin::error);
+        return fmt.Format(
+            "{\"error\":{\"type\":\"runtime_error\",\"message\":\"Directory is not empty\",\"path\":\"%?\"}}",
+            rel_path
+        );
+    }
+
     existed_before = true;
     last_path = path;
 
@@ -111,10 +120,12 @@ std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
         "\"path\":\"%?\","
         "\"deleted\":true,"
         "\"recursive\":%?"
-        "}"
+        "},"
+        "\"message\":\"Directory deleted%?\""
         "}",
         rel_path,
-        recursive ? "true" : "false"
+        recursive ? "true" : "false",
+        recursive ? " recursively" : ""
     );
 }
 

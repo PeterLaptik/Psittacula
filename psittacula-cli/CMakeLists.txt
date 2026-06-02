@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.10)
 project(PSITTACULA_CLI)
 
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -31,13 +35,14 @@ add_library(${PSITTACULA_CLI_NAME} STATIC
 	${SRC_DIR}/history_manager.h
 	${SRC_DIR}/http_client.cpp
 	${SRC_DIR}/http_client.h
-	${SRC_DIR}/main.cpp
 	${SRC_DIR}/message.cpp
 	${SRC_DIR}/message.h
 	${SRC_DIR}/response_health.h
 	${SRC_DIR}/response_readers.cpp
 	${SRC_DIR}/response_readers.h
 	${SRC_DIR}/sys_command.h
+	${SRC_DIR}/default_rule_provider.h
+	${SRC_DIR}/default_rule_provider.cpp
 	${SRC_DIR}/working_dir.cpp
 )
 

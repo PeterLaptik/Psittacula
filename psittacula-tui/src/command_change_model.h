@@ -8,6 +8,7 @@
 #include "model.h"
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 
 #ifdef _WIN32
 #include <conio.h>
@@ -55,14 +56,13 @@ class CommandChangeModel: public ChatCommand
             console::write(formatter.Format("Unknown argument: '?%'\n", argument), TextOrigin::error);
         }
 
-        const std::string& Description() override
+        std::string Description() override
         {
-            return m_description;
+            return "Change model in interractive mode. Does not clear current context. \n\r\t[ARGS]: [create] is to create model connection in an interactive mode and connect to a new model.";
         }
 
     private:
         Formatter formatter;
-        std::string m_description = "Change model in interractive mode. Does not clear current context. \n\r\t[ARGS]: [create] is to create model connection in an interactive mode and connect to a new model.";
 
         // Select model from the list of found models in the working directory in interractive mode. 
         void ChooseModel(std::unique_ptr<AiClient> &client)
@@ -107,7 +107,7 @@ class CommandChangeModel: public ChatCommand
                         int c2 = getch();
                         if (c2 == 'A' && index > 0) index--;                        // Up
                         else if (c2 == 'B' && index < models.size() - 1) index++;   // Down
-                        draw();
+                        DrawMenu();
                     }
                 }
                 else if (c == '\n' || c == '\r')
@@ -126,38 +126,64 @@ class CommandChangeModel: public ChatCommand
 
         void CreateModel(std::unique_ptr<AiClient> &client)
         {
-            console::write_line("============ Create new model ==================", TextOrigin::filesystem);
+            bool no_models = WorkingDir::GetInstance().GetModelsList().empty();
+
             ActivateAlternateScreen();
 
-            auto models_list = WorkingDir::GetInstance().GetModelsList();
+            if (no_models)
+                console::write_line("No models found. Create at least one connection!\n\n", TextOrigin::error);
 
-            console::write_line(formatter.Format("Found models: %?", models_list.size()), TextOrigin::filesystem);
-            console::write_line("Select model:\n");
+            console::write_line("============ Create new model connection ==================", TextOrigin::filesystem);
 
-            for (int i = 0; i < models_list.size(); ++i)
-                console::write_line(formatter.Format("%? - %?", i + 1, models_list[i]));
+            std::string file_name;
+            std::string model_name;
+            std::string host;
+            std::string api_key;
 
-            int model_choice = 0;
-            std::cout << "\nChoose a model by number: ";
+            std::cout << "Enter file name for the connection: ";
+            std::getline(std::cin, file_name);
 
-            while (!(std::cin >> model_choice))
+            std::cout << "Enter model name (e.g., gpt-4o): ";
+            std::getline(std::cin, model_name);
+
+            std::cout << "Enter host URL (e.g., http://localhost:8080): ";
+            std::getline(std::cin, host);
+
+            std::cout << "Enter API key (leave empty if not required): ";
+            std::getline(std::cin, api_key);
+
+            std::string models_dir = WorkingDir::GetInstance().GetModelsDir();
+
+            std::string file_path = models_dir;
+            file_path += std::filesystem::path::preferred_separator;
+            file_path += file_name;
+            file_path += ".txt";
+
+            std::ofstream file(file_path);
+            if (!file.is_open())
             {
-                std::cin.clear();
-                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-                console::write_line("Invalid input. Enter a number.", TextOrigin::error);
-                std::cout << "Choose a model by number: ";
-            }
-
-            if (model_choice < 1 || model_choice > models_list.size())
-            {
-                console::write_line("Invalid model choice", TextOrigin::error);
-                RestoreMainScreen();
+                std::cerr << "Error: Could not open file for writing\n";
                 return;
             }
 
-            Model model = Model::FromFile(models_list[model_choice - 1]);
-            client.reset(model.GetClient());
+            file << "# Model name\n";
+            file << "name=" << model_name << "\n\n";
+
+            file << "# Host\n";
+            file << "# The value will be concatenate with '/v1/chat/completions' for requests\n";
+            file << "host=" << host << "\n\n";
+
+            file << "# Bearing key: add if necessary\n";
+            if (!api_key.empty())
+                file << "api_key=" << api_key << "\n";
+            else
+                file << "# api_key=\n";
+
+            file.close();
+
             RestoreMainScreen();
+
+            console::write_line("Configuration file '" + file_path + "' created successfully.\n", TextOrigin::filesystem);
         }
 
         // Main menu to choose a model

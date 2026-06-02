@@ -126,6 +126,10 @@ std::string FileListTool::BuildListingJSON(const std::string &rel_path,
             process_entry(entry, rel_path);
     }
 
-    json << "] }";
+    json << "], "
+        << "\"message\": \"Directory listing"
+        << (recursive ? " (recursive)" : "")
+        << " completed\" }";
+
     return json.str();
 }

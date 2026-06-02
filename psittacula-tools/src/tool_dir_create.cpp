@@ -51,7 +51,18 @@ std::string DirCreateTool::Execute(std::vector<ToolParameter> &params_values)
     executed = true;
     dir_existed_before = existed_before;
 
-    return fmt.Format("{\"status\":\"success\",\"directory\":{\"path\":\"%?\",\"created\":true,\"existed_before\":%?}}", rel_path, (existed_before ? "true" : "false"));
+    return fmt.Format(
+        "{\"status\":\"success\","          
+        "\"directory\":{"
+        "\"path\":\"%?\","
+        "\"created\":true,"
+        "\"existed_before\":%?"
+        "},"
+        "\"message\":\"Directory %?\"}",
+        rel_path,
+        (existed_before ? "true" : "false"),
+        (existed_before ? "already existed" : "created successfully")
+    );
 }
 
 void DirCreateTool::Undo()

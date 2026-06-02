@@ -17,15 +17,13 @@ WorkingDir& WorkingDir::GetInstance()
     if (instance.m_workdir.empty())
     {
         instance.CreateWorkingDirs();
-        std::string msg = instance.m_fmt.Format("No workdir path reveived. Using default directory: %?", instance.m_workdir);
-        console::write_line(msg, TextOrigin::filesystem);
         instance.FindModels();
     }
 
     return instance;
 }
 
-void WorkingDir::SetSettingsDir(const std::string &path)
+void WorkingDir::SetWorkDir(const std::string &path)
 {
     WorkingDir &instance = WorkingDir::GetInstance();
     instance.m_workdir = path;
@@ -39,13 +37,13 @@ void WorkingDir::SetSettingsDir(const std::string &path)
     fs::create_directories(settings);
     fs::create_directories(projects);
 
-    instance.FindModels();
+    instance.UpdateModels();
 }
 
-void WorkingDir::SetWorkspaceDir(const std::string &path)
+void WorkingDir::SetProjectDir(const std::string &path)
 {
     WorkingDir &instance = WorkingDir::GetInstance();
-    instance.m_workspace = path;
+    instance.m_project_dir = path;
 }
 
 void WorkingDir::UpdateModels()
@@ -59,19 +57,24 @@ const std::vector<std::string>& WorkingDir::GetModelsList() const
     return models_list;
 }
 
-const std::string WorkingDir::GetProjectDir() const
+std::string WorkingDir::GetProjectDir() const
 {
-    return m_workdir + '/' + "projects/";
+    return m_project_dir.empty() ? m_workdir + '/' + "projects/" : m_project_dir;
 }
 
-const std::string WorkingDir::GetModelsDir() const
+std::string WorkingDir::GetModelsDir() const
 {
     return m_workdir + '/' + "models/";
 }
 
-const std::string WorkingDir::GetSettingsDir() const
+std::string WorkingDir::GetSettingsDir() const
 {
     return m_workdir + '/' + "settings/";
+}
+
+std::string WorkingDir::GetWorkDir() const
+{
+    return m_workdir;
 }
 
 void WorkingDir::FindModels()
@@ -162,7 +165,7 @@ bool WorkingDir::IsInWorkDir(const std::string &path) const
 
     try
     {
-        fs::path sandbox = fs::weakly_canonical(m_workspace);
+        fs::path sandbox = fs::weakly_canonical(m_project_dir);
         fs::path target = fs::weakly_canonical(path);
 
         // Windows is case-insensitive: normalize to lowercase

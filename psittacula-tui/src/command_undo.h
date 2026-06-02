@@ -14,13 +14,10 @@ class CommandUndo : public ChatCommand
             client->ToolUndo();
         }
 
-        const std::string &Description() override
+        std::string Description() override
         {
-            return m_description;
+            return "Undo last tool call.";
         }
-
-    private:
-        std::string m_description = "Undo last tool call.";
 };
 
 #endif // !COMMAND_UNDO_INCLUDED_H

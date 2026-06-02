@@ -12,17 +12,18 @@ using console::TextOrigin;
 
 void input_loop(std::unique_ptr<AiClient> &client, ChatCommandDispatcher &cmd_dispatcher);
 void process_query(std::unique_ptr<AiClient> &client, const std::vector<std::string> &lines);
-void process_command(std::unique_ptr<AiClient> &client, std::string &command, ChatCommandDispatcher &cmd_dispatcher);
+void process_command(std::unique_ptr<AiClient> &client, const std::string &command, ChatCommandDispatcher &cmd_dispatcher);
+std::string get_logo();
 
 const int kMaxLinesInAQuery = 100;
 
-// The program settings directory structure:
+// The program workdir directory structure:
 //  |-- %USER_HOME%/[Documents]/Psittacula
 //    |-- models (txt files with models info)
-//    |-- skills (md skills files)
-//    |-- projects (files can be created / removed / modified by the agent)
+//    |-- settings (txt settings files)
+//    |-- projects (files in the directorycan be created / removed / modified by the agent)
 // 
-// The settings can be changed via command line value workdir (settings=...)
+// The workdir can be changed via command line value workdir (workdir=...)
 // The projects directory can be changed via command line value workspace (workspace=)
 //
 // Example:
@@ -33,30 +34,28 @@ int main(int argc, char **argv)
     Formatter formatter;
 
     console::set_up_console();
-    std::cout << "Robotic" << argc << std::endl;
+    std::cout << get_logo() << std::endl;
 
     // Parameters and flags from command line arguments
     ParamReader param_reader(argv, argc);
     param_reader.ReadParams();
 
     // Working directory
-    std::string workdir = param_reader.GetParam("settings", "");
-    std::string workspace = param_reader.GetParam("workspace", "");
+    std::string workdir = param_reader.GetParam("workdir", "");
+    std::string project = param_reader.GetParam("project", "");
 
-    console::write_line(formatter.Format("Workdir = %?", workdir));
-    console::write_line(formatter.Format("Project workspace = %?", workdir));
+    console::write_line(formatter.Format("Set workdir = %?", workdir));
+    console::write_line(formatter.Format("Set project workspace = %?", project));
 
     // Create and check working directory, default project directory, find models
     if (!workdir.empty())
-        WorkingDir::SetSettingsDir(workdir);
+        WorkingDir::SetWorkDir(workdir);
 
-    WorkingDir const &files = WorkingDir::GetInstance();
-    auto models_list = files.GetModelsList();
-    if (models_list.empty())
-    {
-        console::write_line("No models found! \nApplication exit", TextOrigin::error);
-        return 1;
-    }
+    if (!workdir.empty())
+        WorkingDir::SetProjectDir(project);
+
+    console::write_line(formatter.Format("Actual workdir: %?", WorkingDir::GetInstance().GetWorkDir()));
+    console::write_line(formatter.Format("Actual project: %?", WorkingDir::GetInstance().GetProjectDir()));
 
     // Init chat commands
     ChatCommandDispatcher cmd_dispatcher;
@@ -65,9 +64,10 @@ int main(int argc, char **argv)
     std::unique_ptr<AiClient> client;
 
     // Are there any models
-    bool found_models = !WorkingDir::GetInstance().GetModelsList().empty();
-    if (!found_models)
+    bool no_models = WorkingDir::GetInstance().GetModelsList().empty();
+    if (no_models)
     {
+        console::write_line("No models to choose. Create at least one model.");
         cmd_dispatcher.DispatchCommand("model", std::vector<std::string> {"create"}, client);
     }
     
@@ -76,6 +76,9 @@ int main(int argc, char **argv)
 
     // Main program dialogue loop
     input_loop(client, cmd_dispatcher);
+
+    // Waiting for enter press
+    std::cin.get();
 
     return 0;
 }
@@ -118,7 +121,7 @@ void input_loop(std::unique_ptr<AiClient> &client, ChatCommandDispatcher &cmd_di
         if (line == "/exit")
         {
             console::write("\r");
-            console::write_line("Bye...", TextOrigin::machine);
+            console::write_line("\nBye...", TextOrigin::machine);
             break;
         }
 
@@ -136,7 +139,7 @@ void input_loop(std::unique_ptr<AiClient> &client, ChatCommandDispatcher &cmd_di
 
 void process_query(std::unique_ptr<AiClient> &client, const std::vector<std::string> &lines)
 {
-    if (lines.size() == 0)
+    if (lines.empty())
         return;
 
     console::write("\r");
@@ -152,7 +155,7 @@ void process_query(std::unique_ptr<AiClient> &client, const std::vector<std::str
     console::write_line("");
 }
 
-void process_command(std::unique_ptr<AiClient> &client, std::string &command, ChatCommandDispatcher &cmd_dispatcher)
+void process_command(std::unique_ptr<AiClient> &client, const std::string &command, ChatCommandDispatcher &cmd_dispatcher)
 {
     std::vector<std::string> cmd_args;
 
@@ -168,4 +171,17 @@ void process_command(std::unique_ptr<AiClient> &client, std::string &command, Ch
         cmd_args.push_back(arg);
 
     cmd_dispatcher.DispatchCommand(cmd_name, cmd_args, client);
+}
+
+std::string get_logo()
+{
+    return R"("
+      ___________________________________________
+      / __\ ___\//_ _/_ _// | /__\//  ///   / |
+     / /_// /  // //  // //||//  //  ///   //||
+    / ___/__ \// //  // //_||/  //  ///   //_||
+   / /  ____\// //  // /___ |\_//__///__ /___ |
+ __\/__/____//_//__//_//___||_/\___/____\/___||_
+
+    ")";
 }

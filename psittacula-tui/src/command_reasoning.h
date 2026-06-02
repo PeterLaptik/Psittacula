@@ -4,46 +4,48 @@
 #include "chat_command.h"
 #include "format_util.h"
 #include "console_writer.h"
+#include <ctype.h>
 
-// Turns on / turns off reasoning output
 class CommandReasoning : public ChatCommand
 {
     public:
-        void Execute(std::unique_ptr<AiClient> &client, const std::vector<std::string> &args) override
+        void Execute(std::unique_ptr<AiClient> &client,
+            const std::vector<std::string> &args) override
         {
-
-            if (args.empty())
+            if (args.size() != 1)
             {
                 console::write_line("Usage: reasoning <true|false>", TextOrigin::reasoning);
                 return;
             }
 
-            const std::string &value = args[0];
+            auto to_lower = [](std::string s) {
+                std::transform(s.begin(), s.end(), s.begin(),
+                    [](unsigned char c) { return std::tolower(c); });
+                return s;
+                };
 
-            if (value == "true")
+            std::string value = to_lower(args[0]);
+
+            if (value == "true" || value == "1" || value == "on")
             {
-                console::write_line("Reasoning mode enabled.", TextOrigin::reasoning);
                 client->SetReasoning(true);
+                console::write_line("Reasoning mode enabled.", TextOrigin::reasoning);
             }
-            else if (value == "false")
+            else if (value == "false" || value == "0" || value == "off")
             {
-                console::write_line("Reasoning mode disabled.", TextOrigin::reasoning);
                 client->SetReasoning(false);
+                console::write_line("Reasoning mode disabled.", TextOrigin::reasoning);
             }
             else
             {
-                console::write_line("Invalid value. Use: true or false", TextOrigin::reasoning);
+                console::write_line("Invalid value. Use: true or false", TextOrigin::error);
             }
         }
 
-        const std::string &Description() override
+        std::string Description() override
         {
-            return m_description;
+            return "Enable deeper reasoning output. [ARGS] - true / false";
         }
-
-    private:
-        Formatter formatter;
-        std::string m_description = "Enable deeper reasoning output. [ARGS] - true / false";
 };
 
-#endif // !COMMAND_REASONING_INCLUDED_H
+#endif // COMMAND_REASONING_INCLUDED_H

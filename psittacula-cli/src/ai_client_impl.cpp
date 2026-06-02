@@ -5,6 +5,7 @@
 #include "response_readers.h"
 #include "tool_factory.h"
 #include "console_writer.h"
+#include "default_rule_provider.h"
 #include <iostream>
 #include <curl/curl.h>
 
@@ -18,6 +19,9 @@ AiClientImpl::AiClientImpl(const std::string &host_and_port)
 { 
     SetServerType(AiServerType::LlamaCPP);
     InitTools();
+
+    DefaultRuleProvider provider;
+    m_body_obj.AddSystemMessage(provider.GetDefaultSystemPrompt());
 }
 
 AiClientImpl::AiClientImpl(const std::string &host, int port)
@@ -25,6 +29,9 @@ AiClientImpl::AiClientImpl(const std::string &host, int port)
 {
     SetServerType(AiServerType::LlamaCPP);
     InitTools();
+
+    DefaultRuleProvider provider;
+    m_body_obj.AddSystemMessage(provider.GetDefaultSystemPrompt());
 }
 
 AiClientImpl::~AiClientImpl()
@@ -59,6 +66,11 @@ bool AiClientImpl::CheckHealth()
     return false;
 }
 
+void AiClientImpl::SetAgentRules(const std::string &rules)
+{
+    m_body_obj.AddSystemMessage(rules);
+}
+
 void AiClientImpl::SendUserMessage(const std::string &message)
 {
     m_body_obj.AddUserMessage(message);
@@ -72,7 +84,7 @@ void AiClientImpl::SendUserMessage(const std::string &message)
     int used, total;
     bool is_full;
     proc.GetStat(used, total, is_full);
-    console::write_line(fmt.Format("Tokens used %? of %?. Is context full: %?", used, total, is_full));
+    //console::write_line(fmt.Format("Tokens used %? of %?. Is context full: %?", used, total, is_full));
 
     std::string response_msg = proc.GetResponseMessage();
     m_body_obj.AddResponse(response_msg);
@@ -149,6 +161,11 @@ void AiClientImpl::ToolRedo()
     m_history_mgr.Redo();
 }
 
+std::string AiClientImpl::GetDialogueBody()
+{
+    return m_body_obj.ToJsonString();
+}
+
 void AiClientImpl::InitTools()
 {
     std::vector<ToolBase*> tools;
@@ -205,7 +222,6 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &responses
     int used, total;
     bool is_full;
     proc.GetStat(used, total, is_full);
-    console::write_line(fmt.Format("Tokens used %? of %?. Is context full: %?", used, total, is_full));
 
     if (proc.HasErrors())
     {

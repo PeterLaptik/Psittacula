@@ -19,6 +19,8 @@ class AiClient
 
         virtual bool CheckHealth() = 0;
 
+        virtual void SetAgentRules(const std::string &rules) = 0;
+
         virtual void SendUserMessage(const std::string &message) = 0;
 
         virtual void SetReasoning(bool is_shown = true) = 0;
@@ -36,6 +38,8 @@ class AiClient
         virtual void ToolUndo() = 0;
 
         virtual void ToolRedo() = 0;
+
+        virtual std::string GetDialogueBody() = 0;
 };
 
 #endif // AI_CLIENT_INCLUDED_H

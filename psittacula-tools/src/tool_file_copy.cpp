@@ -98,10 +98,15 @@ std::string FileCopyTool::Execute(std::vector<ToolParameter> &params_values)
         "\"to\":\"%?\","
         "\"copied\":true,"
         "\"overwritten\":%?"
-        "}"
+        "},"
+        "\"message\":\"File copied from %? to %?%?\""
         "}",
-        rel_from, rel_to,
-        dst_existed_before ? "true" : "false"
+        rel_from,
+        rel_to,
+        dst_existed_before ? "true" : "false",
+        rel_from,
+        rel_to,
+        dst_existed_before ? " (overwritten)" : ""
     );
 }
 

@@ -83,9 +83,13 @@ std::string FileMoveTool::Execute(std::vector<ToolParameter> &params_values)
         "\"from\":\"%?\","
         "\"to\":\"%?\","
         "\"moved\":true"
-        "}"
+        "},"
+        "\"message\":\"File moved from %? to %?\""
         "}",
-        rel_from, rel_to
+        rel_from,
+        rel_to,
+        rel_from,
+        rel_to
     );
 }
 

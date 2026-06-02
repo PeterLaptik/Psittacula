@@ -18,9 +18,11 @@ class AiClientImpl: public AiClient
 
         AiClientImpl(const std::string &host, int port);
 
-        ~AiClientImpl();
+        ~AiClientImpl() override;
 
         bool CheckHealth() override;
+
+        void SetAgentRules(const std::string &rules) override;
 
         void SendUserMessage(const std::string &message = "") override;
 
@@ -32,13 +34,15 @@ class AiClientImpl: public AiClient
 
         void RegisterTool(ToolBase *tool) override;
 
-        virtual void GetToolsInfo(std::vector<std::pair<std::string, std::string>> &tools_acc);
+        void GetToolsInfo(std::vector<std::pair<std::string, std::string>> &tools_acc) override;
 
         void SetServerType(AiServerType type) override;
 
         void ToolUndo() override;
 
         void ToolRedo() override;
+
+        std::string GetDialogueBody() override;
 
     private:
         void InitTools();

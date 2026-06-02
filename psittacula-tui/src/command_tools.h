@@ -29,14 +29,13 @@ class CommandTools : public ChatCommand
             RestoreMainScreen();
         }
 
-        const std::string &Description() override
+        std::string Description() override
         {
-            return m_description;
+            return "List of available tools.";
         }
 
     private:
         Formatter formatter;
-        std::string m_description = "List of available tools.";
 };
 
 #endif // COMMAND_TOOLS_INCLUDED_H

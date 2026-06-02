@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.10)
 project(${PSITTACULA_TUI})
 
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -14,6 +18,8 @@ set(TOOLS_INCLUDE ../${PSITTACULA_TOOLS}/include)
 add_executable(${PSITTACULA_TUI_NAME}
     ${SRC_DIR}/main.cpp
     ${SRC_DIR}/chat_command.h
+    ${SRC_DIR}/chat_command_dispatcher.h
+    ${SRC_DIR}/command_change_agent.h
     ${SRC_DIR}/command_change_model.h
     ${SRC_DIR}/command_reasoning.h
     ${SRC_DIR}/command_redo.h

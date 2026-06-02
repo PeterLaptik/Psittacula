@@ -106,10 +106,17 @@ std::string FileCreateTool::Execute(std::vector<ToolParameter> &params_values)
         "    \"size_bytes\": %?,"
         "    \"created\": true,"
         "    \"overwritten\": %?"
-        "  }"
+        "  },"
+        "  \"message\": \"File %?\""
         "}";
 
-    return fmt.Format(result_template, rel_path, size, file_exists ? "true" : "false");
+    return fmt.Format(
+        result_template,
+        rel_path,
+        size,
+        file_exists ? "true" : "false",
+        file_exists ? "overwritten" : "created"
+    );
 }
 
 void FileCreateTool::Undo()

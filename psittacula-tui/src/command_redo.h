@@ -14,13 +14,10 @@ class CommandRedo : public ChatCommand
             client->ToolRedo();
         }
 
-        const std::string &Description() override
+        std::string Description() override
         {
-            return m_description;
+            return "Redo last tool call.";
         }
-
-    private:
-        std::string m_description = "Redo last tool call.";
 };
 
 #endif // !COMMAND_REDO_INCLUDED_H

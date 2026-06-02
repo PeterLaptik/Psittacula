@@ -152,7 +152,8 @@ std::string FileReadTool::Execute(std::vector<ToolParameter> &params_values)
         "    \"size_bytes\": %?,"
         "    \"binary\": false,"
         "    \"content\": \"%?\""
-        "  }"
+        "  },"
+        "  \"message\": \"File read successfully\""
         "}";
 
     return fmt.Format(result_template, rel_path, size, FormatJSONString(content));

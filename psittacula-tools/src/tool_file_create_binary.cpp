@@ -135,11 +135,13 @@ std::string FileCreateBinaryTool::Execute(std::vector<ToolParameter> &params_val
         "\"size_bytes\":%?,"
         "\"created\":true,"
         "\"overwritten\":%?"
-        "}"
+        "},"
+        "\"message\":\"File %?\""
         "}",
         rel_path,
         size,
-        file_exists ? "true" : "false"
+        file_exists ? "true" : "false",
+        file_exists ? "overwritten" : "created"
     );
 }
 

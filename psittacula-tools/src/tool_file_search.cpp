@@ -62,7 +62,16 @@ std::string FileSearchTool::Execute(std::vector<ToolParameter> &params_values)
             result += ",";
     }
 
-    std::string response = fmt.Format("{\"success\": true,\"result\":[%?]}", result);
+    std::string response = fmt.Format(
+        "{"
+        "\"success\": true,"
+        "\"result\": [%?],"
+        "\"message\": \"Found %? match%?\""
+        "}",
+        result,
+        matches.size(),
+        matches.size() == 1 ? "" : "es"
+    );
     return response;
 }
 
