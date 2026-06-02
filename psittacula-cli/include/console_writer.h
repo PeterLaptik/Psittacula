@@ -10,6 +10,7 @@ namespace console {
         machine,
         filesystem,
         reasoning,
+        splitter,
         error
     };
 
@@ -18,6 +19,8 @@ namespace console {
     void write_line(const std::string &message, TextOrigin origin = TextOrigin::default);
 
     void write(const std::string &message, TextOrigin origin = TextOrigin::default);
+
+    void write_splitter(TextOrigin origin = TextOrigin::splitter);
 
     void flush();
 

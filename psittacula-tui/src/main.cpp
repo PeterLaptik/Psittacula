@@ -8,6 +8,10 @@
 #include <memory>
 #include <algorithm>
 
+#ifndef PSITTACULA_APP_VERSION
+#define PSITTACULA_APP_VERSION "unknown"
+#endif
+
 using console::TextOrigin;
 
 void input_loop(std::unique_ptr<AiClient> &client, ChatCommandDispatcher &cmd_dispatcher);
@@ -15,25 +19,36 @@ void process_query(std::unique_ptr<AiClient> &client, const std::vector<std::str
 void process_command(std::unique_ptr<AiClient> &client, const std::string &command, ChatCommandDispatcher &cmd_dispatcher);
 std::string get_logo();
 
+// Limit for lines in a sinagle query
 const int kMaxLinesInAQuery = 100;
 
-// The program workdir directory structure:
+//
+// TODO brief about the program
+// 
+// The program 'workdir' directory structure:
 //  |-- %USER_HOME%/[Documents]/Psittacula
 //    |-- models (txt files with models info)
 //    |-- settings (txt settings files)
-//    |-- projects (files in the directorycan be created / removed / modified by the agent)
+//    |-- projects (files in the directorycan be created / removed / modified by the agent - default project dir)
 // 
 // The workdir can be changed via command line value workdir (workdir=...)
-// The projects directory can be changed via command line value workspace (workspace=)
+// The projects directory can be changed via command line value project (project=...)
 //
 // Example:
-// ./psittacula workdir=~/Psittacula workspace=~/Documents/Projects/MyProject
+// 
+// ./psittacula workdir=~/Psittacula project=~/Documents/Projects/MyProject
+//
+// or use default parameters (no workdir / project arguments)
+// 
 //
 int main(int argc, char **argv)
 {
     Formatter formatter;
 
+    // Windows console setup
     console::set_up_console();
+
+    // Logo + info
     std::cout << get_logo() << std::endl;
 
     // Parameters and flags from command line arguments
@@ -44,7 +59,7 @@ int main(int argc, char **argv)
     std::string workdir = param_reader.GetParam("workdir", "");
     std::string project = param_reader.GetParam("project", "");
 
-    console::write_line(formatter.Format("Set workdir = %?", workdir));
+    console::write_line(formatter.Format("\nSet workdir = %?", workdir));
     console::write_line(formatter.Format("Set project workspace = %?", project));
 
     // Create and check working directory, default project directory, find models
@@ -54,20 +69,22 @@ int main(int argc, char **argv)
     if (!workdir.empty())
         WorkingDir::SetProjectDir(project);
 
-    console::write_line(formatter.Format("Actual workdir: %?", WorkingDir::GetInstance().GetWorkDir()));
+    console::write_line(formatter.Format("\nActual workdir: %?", WorkingDir::GetInstance().GetWorkDir()));
     console::write_line(formatter.Format("Actual project: %?", WorkingDir::GetInstance().GetProjectDir()));
 
-    // Init chat commands
+    // Init chat commands: /help or /h for info about commands
     ChatCommandDispatcher cmd_dispatcher;
     init_commands(cmd_dispatcher);
 
+    // AI API client
+    // The client is created in a CommandChangeModel ('model create'), see below
     std::unique_ptr<AiClient> client;
 
     // Are there any models
     bool no_models = WorkingDir::GetInstance().GetModelsList().empty();
     if (no_models)
     {
-        console::write_line("No models to choose. Create at least one model.");
+        // Create at least one model to connect
         cmd_dispatcher.DispatchCommand("model", std::vector<std::string> {"create"}, client);
     }
     
@@ -76,9 +93,8 @@ int main(int argc, char **argv)
 
     // Main program dialogue loop
     input_loop(client, cmd_dispatcher);
-
-    // Waiting for enter press
-    std::cin.get();
+    
+    std::cin.get(); // wait for press enter
 
     return 0;
 }
@@ -86,17 +102,16 @@ int main(int argc, char **argv)
 void input_loop(std::unique_ptr<AiClient> &client, ChatCommandDispatcher &cmd_dispatcher)
 {
     std::vector<std::string> lines_acc;
-    console::write_line("");
+    console::write("\n>");
 
     std::string line;
     while (std::getline(std::cin, line)) {
-       std::cout << "\033[0m" << ">";
-
         // Double enter - process query
         if (line.empty())
         {
             process_query(client, lines_acc);
             lines_acc.clear();
+            console::write(">");
             continue;
         }
 
@@ -105,6 +120,7 @@ void input_loop(std::unique_ptr<AiClient> &client, ChatCommandDispatcher &cmd_di
         {
             console::write_line("\rToo many lines in query! Max is " + std::to_string(kMaxLinesInAQuery), TextOrigin::error);
             process_query(client, lines_acc);
+            console::write("\n>");
             continue;
         }
 
@@ -114,6 +130,7 @@ void input_loop(std::unique_ptr<AiClient> &client, ChatCommandDispatcher &cmd_di
             console::write("\r");
             lines_acc.clear();
             console::write_line("Query cleared.\n", TextOrigin::machine);
+            console::write(">");
             continue;
         }
 
@@ -129,7 +146,7 @@ void input_loop(std::unique_ptr<AiClient> &client, ChatCommandDispatcher &cmd_di
         if (!line.empty() && line[0] == '/')
         {
             process_command(client, line, cmd_dispatcher);
-            console::write("\n");
+            console::write("\n>");
             continue;
         }
 
@@ -141,10 +158,6 @@ void process_query(std::unique_ptr<AiClient> &client, const std::vector<std::str
 {
     if (lines.empty())
         return;
-
-    console::write("\r");
-    console::flush();
-    console::write_line("");
 
     std::ostringstream oss;
     for (const auto &line : lines) {
@@ -175,13 +188,18 @@ void process_command(std::unique_ptr<AiClient> &client, const std::string &comma
 
 std::string get_logo()
 {
-    return R"("
+    std::string logo =  R"(
       ___________________________________________
       / __\ ___\//_ _/_ _// | /__\//  ///   / |
      / /_// /  // //  // //||//  //  ///   //||
     / ___/__ \// //  // //_||/  //  ///   //_||
    / /  ____\// //  // /___ |\_//__///__ /___ |
  __\/__/____//_//__//_//___||_/\___/____\/___||_
+    )";
 
-    ")";
+    logo += ("Version: ");
+    logo += PSITTACULA_APP_VERSION;
+    logo += "\n    Written by Peter Laptik";
+    logo += "\n    Press /help or /h for information about commands";
+    return logo;
 }

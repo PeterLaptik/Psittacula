@@ -33,6 +33,8 @@ add_executable(${PSITTACULA_TUI_NAME}
     ${SRC_DIR}/param_reader.h
 )
 
+target_compile_definitions(${PSITTACULA_TUI_NAME} PRIVATE PSITTACULA_APP_VERSION="${A_VERSION}")
+
 set_target_properties(${PSITTACULA_TUI_NAME}
     PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${OUTPUT_ARCH_PATH}

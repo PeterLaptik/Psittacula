@@ -31,6 +31,9 @@ const char* console::get_origin_colour(TextOrigin origin)
         case TextOrigin::reasoning:
             result = kGrey;
             break;
+        case TextOrigin::splitter:
+            result = kGrey;
+            break;
         default:
             result = kDefault;
     }
@@ -59,6 +62,12 @@ void console::write(const std::string &message, TextOrigin origin)
     const char *colour = get_origin_colour(origin);
     std::cout << colour << message;
     history.AddText(colour + message);
+}
+
+void console::write_splitter(TextOrigin origin)
+{
+    const char *colour = get_origin_colour(origin);
+    std::cout << colour << "---------------------------------------------------";
 }
 
 void console::flush()

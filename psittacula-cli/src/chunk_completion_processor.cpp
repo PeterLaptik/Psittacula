@@ -53,6 +53,7 @@ void ChunkCompletionProcessor::ProcessChunk(const std::string &chunk)
     if (json == " [DONE]" || json == "[DONE]")
     {
         console::write_line("\nTokens: " + std::to_string(m_total_tokens) + "\n", console::TextOrigin::reasoning);
+        console::write_splitter();
         return;
     }
         
@@ -118,6 +119,7 @@ void ChunkCompletionProcessor::CheckMessage(JsonDocument &doc)
         {
             m_reasoning_in_process = false;
             console::write_line("");
+            console::write_splitter();
             console::flush();
         }
 

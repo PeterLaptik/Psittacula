@@ -75,6 +75,10 @@ class ChatCommandDispatcher
                 console::write_line("\033[1m" + cmd_desc.first + " -\033[0m " + cmd_desc.second);
             }
 
+            std::string q_clear = "q";
+            std::string q_clear_desc = "Clear active query.";
+            console::write_line("\033[1m" + q_clear + " -\033[0m " + q_clear_desc);
+
             console::write_line("\n\nPress Enter to continue...");
             std::cin.get();
 
