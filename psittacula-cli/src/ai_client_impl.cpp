@@ -244,6 +244,8 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &responses
         secondary_responses.push_back(rsp);
     }
 
+    std::cout << m_body_obj.ToJsonString() << std::endl;
+
     SendToolsResponses(secondary_responses);
 }
 

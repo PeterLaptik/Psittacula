@@ -67,7 +67,7 @@ void console::write(const std::string &message, TextOrigin origin)
 void console::write_splitter(TextOrigin origin)
 {
     const char *colour = get_origin_colour(origin);
-    std::cout << colour << "---------------------------------------------------";
+    std::cout << colour << "---------------------------------------------------" << std::endl;
 }
 
 void console::flush()

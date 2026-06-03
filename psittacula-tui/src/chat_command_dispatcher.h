@@ -69,7 +69,7 @@ class ChatCommandDispatcher
                 });
 
             console::write_line("---------------------------------------------", console::TextOrigin::filesystem);
-            console::write_line("Avialable commands:", console::TextOrigin::filesystem);
+            console::write_line("\033[1mAvialable commands:\033[0m");
             for (auto &cmd_desc : cmd_list)
             {
                 console::write_line("\033[1m" + cmd_desc.first + " -\033[0m " + cmd_desc.second);

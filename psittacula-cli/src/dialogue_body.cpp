@@ -1,5 +1,6 @@
 #include "dialogue_body.h"
 #include <iostream>
+#include <algorithm>
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
@@ -81,7 +82,12 @@ void DialogueBody::AddSystemMessage(const std::string &sys_message)
 
 void DialogueBody::AddResponse(const std::string &response)
 {
-    if (response.empty())
+    auto is_all_whitespace = [](const std::string &s) {
+        return std::all_of(s.begin(), s.end(),
+            [](unsigned char c) { return std::isspace(c); });
+        };
+
+    if (response.empty() || is_all_whitespace(response))
         return;
 
     auto it = m_request->body.FindMember("messages");

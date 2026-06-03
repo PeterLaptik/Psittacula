@@ -17,10 +17,10 @@ class CommandTools : public ChatCommand
             std::vector<std::pair<std::string, std::string>> tools;
             client.get()->GetToolsInfo(tools);
             console::write_line("---------------------------------------------", TextOrigin::filesystem);
-            console::write_line("Available tools: ", TextOrigin::filesystem);
+            console::write_line("\033[1mAvailable tools:\033[0m");
             for (const auto &tool : tools)
             {
-                console::write_line(formatter.Format("%? - %?", tool.first, tool.second), TextOrigin::filesystem);
+                console::write_line(formatter.Format("\033[1m%?\033[0m - %?", tool.first, tool.second));
             }
 
             console::write_line("\n\nPress Enter to continue...");

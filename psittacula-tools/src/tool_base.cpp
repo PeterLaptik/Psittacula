@@ -67,3 +67,9 @@ std::string ToolBase::FormatJSONString(const std::string &str)
 
     return out.str();
 }
+
+void ToolBase::CleanFilePathFromTrailingDots(std::string path)
+{
+    while(!path.empty() && path.back() == '.')
+        path.pop_back();
+}

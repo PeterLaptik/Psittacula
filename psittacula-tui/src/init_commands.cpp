@@ -6,6 +6,7 @@
 #include "command_redo.h"
 #include "command_dump.h"
 #include "command_change_agent.h"
+#include "command_change_project_dir.h"
 
 void init_commands(ChatCommandDispatcher &dsp)
 {
@@ -16,4 +17,5 @@ void init_commands(ChatCommandDispatcher &dsp)
     dsp.RegisterCommand("redo", new CommandRedo());
     dsp.RegisterCommand("dump", new CommandDump());
     dsp.RegisterCommand("rules", new CommandChangeAgent());
+    dsp.RegisterCommand("project", new CommandChangeProjectDir());
 }

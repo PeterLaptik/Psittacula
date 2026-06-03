@@ -31,8 +31,8 @@ message(STATUS "Project version: ${A_VERSION}")
 # Dependencies
 message(STATUS "Searching dependencies in ${CMAKE_PREFIX_PATH}")
 
-find_package(ZLIB CONFIG REQUIRED)
-find_package(CURL CONFIG REQUIRED)
+find_package(ZLIB REQUIRED)
+find_package(CURL REQUIRED)
 find_package(RapidJSON REQUIRED)
 
 # Project contents

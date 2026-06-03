@@ -9,7 +9,6 @@ void ParamReader::ReadParams()
 {
     for (int i = 1; i < m_argc; i++)
     {
-        std::cout << "Processing argument: " << m_argv[i] << std::endl;
         std::string arg(m_argv[i]);
         size_t pos = arg.find('=');
         if (pos != std::string::npos)

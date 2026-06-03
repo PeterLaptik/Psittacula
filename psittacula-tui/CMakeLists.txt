@@ -21,6 +21,8 @@ add_executable(${PSITTACULA_TUI_NAME}
     ${SRC_DIR}/chat_command_dispatcher.h
     ${SRC_DIR}/command_change_agent.h
     ${SRC_DIR}/command_change_model.h
+    ${SRC_DIR}//command_change_project_dir.h
+    ${SRC_DIR}/command_dump.h
     ${SRC_DIR}/command_reasoning.h
     ${SRC_DIR}/command_redo.h
     ${SRC_DIR}/command_tools.h

@@ -57,6 +57,8 @@ class ToolBase
 
         // Util method to escape symbols for string putting into a JSON
         std::string FormatJSONString(const std::string &str);
+
+        void CleanFilePathFromTrailingDots(std::string path);
 };
 
 #endif // TOOL_BASE_INCLUDED_H

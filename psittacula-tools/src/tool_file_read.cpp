@@ -62,34 +62,32 @@ std::string FileReadTool::Execute(std::vector<ToolParameter> &params_values)
 
     console::write_line("File read tool.", console::TextOrigin::filesystem);
 
-    std::string rel_path = GetParam(params_values, "path");
+    std::string path = GetParam(params_values, "path");
     bool binary_mode = GetParamBool(params_values, "binary", false);
 
-    console::write_line(fmt.Format("Reading file: %?", rel_path), console::TextOrigin::filesystem);
+    console::write_line(fmt.Format("Reading file: %?", path), console::TextOrigin::filesystem);
 
-    if (rel_path.empty())
+    if (path.empty())
     {
         console::write_line("Missing required parameter: path", console::TextOrigin::error);
         return R"({"error":{"type":"invalid_arguments","message":"Missing required parameter: path"}})";
     }
-
-    std::string path = std::filesystem::path(wdir.GetProjectDir() + rel_path).string();
 
     if (!wdir.IsInWorkDir(path))
     {
         console::write_line(fmt.Format("Permission_denied: path is outside working directory: %?", path), console::TextOrigin::error);
         return fmt.Format(
             "{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory\",\"path\":\"%?\"}}",
-            rel_path
+            path
         );
     }
 
     if (!std::filesystem::exists(path))
     {
-        console::write_line(fmt.Format("File does not exist: %?", rel_path), console::TextOrigin::error);
+        console::write_line(fmt.Format("File does not exist: %?", path), console::TextOrigin::error);
         return fmt.Format(
             "{\"error\":{\"type\":\"not_found\",\"message\":\"File does not exist\",\"path\":\"%?\"}}",
-            rel_path
+            path
         );
     }
 
@@ -98,17 +96,17 @@ std::string FileReadTool::Execute(std::vector<ToolParameter> &params_values)
     { 
         size = std::filesystem::file_size(path); 
     }
-    catch (...) {}
+    catch (...) { }
 
     if (binary_mode)
     {
         std::ifstream in(path, std::ios::binary);
         if (!in)
         {
-            console::write_line(fmt.Format("Failed to open file: %?", rel_path), console::TextOrigin::error);
+            console::write_line(fmt.Format("Failed to open file: %?", path), console::TextOrigin::error);
             return fmt.Format(
                 "{\"error\":{\"type\":\"runtime_error\",\"message\":\"Failed to open file\",\"path\":\"%?\"}}",
-                rel_path
+                path
             );
         }
 
@@ -128,7 +126,7 @@ std::string FileReadTool::Execute(std::vector<ToolParameter> &params_values)
             "  }"
             "}";
 
-        return fmt.Format(result_template, rel_path, size, b64);
+        return fmt.Format(result_template, path, size, b64);
     }
 
     std::ifstream in(path);
@@ -136,7 +134,7 @@ std::string FileReadTool::Execute(std::vector<ToolParameter> &params_values)
     {
         return fmt.Format(
             "{\"error\":{\"type\":\"runtime_error\",\"message\":\"Failed to open file\",\"path\":\"%?\"}}",
-            rel_path
+            path
         );
     }
 
@@ -156,5 +154,5 @@ std::string FileReadTool::Execute(std::vector<ToolParameter> &params_values)
         "  \"message\": \"File read successfully\""
         "}";
 
-    return fmt.Format(result_template, rel_path, size, FormatJSONString(content));
+    return fmt.Format(result_template, path, size, FormatJSONString(content));
 }

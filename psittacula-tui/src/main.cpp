@@ -64,12 +64,12 @@ int main(int argc, char **argv)
 
     // Create and check working directory, default project directory, find models
     if (!workdir.empty())
-        WorkingDir::SetWorkDir(workdir);
+        WorkingDir::GetInstance().SetWorkDir(workdir);
 
-    if (!workdir.empty())
-        WorkingDir::SetProjectDir(project);
+    if (!project.empty())
+        WorkingDir::GetInstance().SetProjectDir(project);
 
-    console::write_line(formatter.Format("\nActual workdir: %?", WorkingDir::GetInstance().GetWorkDir()));
+    console::write_line(formatter.Format("Actual workdir: %?", WorkingDir::GetInstance().GetWorkDir()));
     console::write_line(formatter.Format("Actual project: %?", WorkingDir::GetInstance().GetProjectDir()));
 
     // Init chat commands: /help or /h for info about commands
@@ -102,6 +102,8 @@ int main(int argc, char **argv)
 void input_loop(std::unique_ptr<AiClient> &client, ChatCommandDispatcher &cmd_dispatcher)
 {
     std::vector<std::string> lines_acc;
+    console::write_line("\nDialogue:", TextOrigin::reasoning);
+    console::write_splitter();
     console::write("\n>");
 
     std::string line;
@@ -188,8 +190,9 @@ void process_command(std::unique_ptr<AiClient> &client, const std::string &comma
 
 std::string get_logo()
 {
-    std::string logo =  R"(
-      ___________________________________________
+    console::write("", TextOrigin::default);
+    std::string logo = 
+ R"(      ____________________________________________
       / __\ ___\//_ _/_ _// | /__\//  ///   / |
      / /_// /  // //  // //||//  //  ///   //||
     / ___/__ \// //  // //_||/  //  ///   //_||
@@ -197,9 +200,9 @@ std::string get_logo()
  __\/__/____//_//__//_//___||_/\___/____\/___||_
     )";
 
-    logo += ("Version: ");
+    logo += "Version: ";
     logo += PSITTACULA_APP_VERSION;
     logo += "\n    Written by Peter Laptik";
-    logo += "\n    Press /help or /h for information about commands";
+    logo += "\n\033[36m    Press /help or /h for information about commands\033[0m";
     return logo;
 }

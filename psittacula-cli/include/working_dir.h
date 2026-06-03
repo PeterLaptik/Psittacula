@@ -10,9 +10,9 @@ class WorkingDir
     public:
         static WorkingDir& GetInstance();
 
-        static void SetWorkDir(const std::string &path);
+        void SetWorkDir(const std::string &path);
 
-        static void SetProjectDir(const std::string &path);
+        void SetProjectDir(const std::string &path);
 
         void UpdateModels();
 

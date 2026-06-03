@@ -168,29 +168,38 @@ bool WorkingDir::IsInWorkDir(const std::string &path) const
         fs::path sandbox = fs::weakly_canonical(m_project_dir);
         fs::path target = fs::weakly_canonical(path);
 
-        // Windows is case-insensitive: normalize to lowercase
 #ifdef _WIN32
-        auto to_lower = [](std::string s) {
+        // Normalize case for Windows
+        auto normalize = [](const fs::path &p) {
+            std::string s = p.string();
             std::transform(s.begin(), s.end(), s.begin(),
                 [](unsigned char c) { return std::tolower(c); });
-            return s;
+            return fs::path(s);
             };
 
-        std::string sandbox_str = to_lower(sandbox.string());
-        std::string target_str = to_lower(target.string());
-#else
-        std::string sandbox_str = sandbox.string();
-        std::string target_str = target.string();
+        sandbox = normalize(sandbox);
+        target = normalize(target);
 #endif
 
-        // Ensure trailing separator for correct prefix matching
-        if (!sandbox_str.empty() && sandbox_str.back() != '\\' && sandbox_str.back() != '/')
-            sandbox_str += fs::path::preferred_separator;
+        // Explicit equality check
+        if (target == sandbox)
+            return true;
 
-        return target_str.rfind(sandbox_str, 0) == 0; // prefix check
+        // Walk upward from target until root or sandbox is found
+        fs::path cur = target;
+        while (!cur.empty())
+        {
+            if (cur == sandbox)
+                return true;
+
+            cur = cur.parent_path();
+        }
+
+        return false;
     }
     catch (...)
     {
-        return false; // invalid path, treat as outside sandbox
+        return false;
     }
 }
+

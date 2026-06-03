@@ -11,48 +11,48 @@
 
 class CommandDump : public ChatCommand
 {
-public:
-    void Execute(std::unique_ptr<AiClient> &client, const std::vector<std::string> &args) override
-    {
-        std::string project_dir = WorkingDir::GetInstance().GetProjectDir();
-        std::string body = client->GetDialogueBody();
+    public:
+        void Execute(std::unique_ptr<AiClient> &client, const std::vector<std::string> &args) override
+        {
+            std::string project_dir = WorkingDir::GetInstance().GetProjectDir();
+            std::string body = client->GetDialogueBody();
 
-        // Generate timestamp
-        auto now = std::chrono::system_clock::now();
-        std::time_t t = std::chrono::system_clock::to_time_t(now);
+            // Generate timestamp
+            auto now = std::chrono::system_clock::now();
+            std::time_t t = std::chrono::system_clock::to_time_t(now);
 
-        std::tm tm{};
+            std::tm tm{};
 #ifdef _WIN32
-        localtime_s(&tm, &t);
+            localtime_s(&tm, &t);
 #else
-        localtime_r(&t, &tm);
+            localtime_r(&t, &tm);
 #endif
 
-        char timestamp[32];
-        std::strftime(timestamp, sizeof(timestamp), "%Y-%m-%d_%H-%M-%S", &tm);
+            char timestamp[32];
+            std::strftime(timestamp, sizeof(timestamp), "%Y-%m-%d_%H-%M-%S", &tm);
 
-        // Build filename
-        std::string file_path = project_dir + "/dialogue_" + timestamp + ".txt";
+            // Build filename
+            std::string file_path = project_dir + "/dialogue_" + timestamp + ".txt";
 
-        // Write file
-        std::ofstream out(file_path, std::ios::out | std::ios::trunc);
-        if (!out)
-        {
-            console::write_line("Failed to open file for writing: " + file_path,
-                TextOrigin::error);
-            return;
+            // Write file
+            std::ofstream out(file_path, std::ios::out | std::ios::trunc);
+            if (!out)
+            {
+                console::write_line("Failed to open file for writing: " + file_path,
+                    TextOrigin::error);
+                return;
+            }
+
+            out << body;
+            out.close();
+
+            console::write_line("Dialogue body saved to: " + file_path, TextOrigin::filesystem);
         }
 
-        out << body;
-        out.close();
-
-        console::write_line("Dialogue body saved to: " + file_path, TextOrigin::filesystem);
-    }
-
-    std::string Description() override
-    {
-        return "Saves dialogue full body as a text file.";
-    }
+        std::string Description() override
+        {
+            return "Saves dialogue full JSON body as a text file (to a project directory).";
+        }
 };
 
 #endif // COMMAND_DUMP_INCLUDED_H

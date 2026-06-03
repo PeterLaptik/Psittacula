@@ -37,24 +37,24 @@ std::string FileListTool::Execute(std::vector<ToolParameter> &params_values)
 
     console::write_line("File list tool.", console::TextOrigin::filesystem);
 
-    std::string rel_path = GetParam(params_values, "path");
+    std::string path = GetParam(params_values, "path");
     bool recursive = GetParamBool(params_values, "recursive", true);
     bool include_hidden = GetParamBool(params_values, "include_hidden", false);
 
-    if (rel_path.empty())
+    if (path.empty())
     {
         console::write_line("Missing required parameter: path", console::TextOrigin::error);
         return R"({"error":{"type":"invalid_arguments","message":"Missing required parameter: path"}})";
     }
 
-    std::string path = std::filesystem::path(wdir.GetProjectDir() + rel_path).string();
+    console::write_line("Screening: " + path, console::TextOrigin::filesystem);
 
     if (!wdir.IsInWorkDir(path))
     {
         console::write_line(fmt.Format("Permission_denied: path is outside working directory: %?", path), console::TextOrigin::error);
         return fmt.Format(
             "{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory\",\"path\":\"%?\"}}",
-            rel_path
+            path
         );
     }
 
@@ -63,7 +63,7 @@ std::string FileListTool::Execute(std::vector<ToolParameter> &params_values)
         console::write_line(fmt.Format("Directory does not exist: %?", path), console::TextOrigin::error);
         return fmt.Format(
             "{\"error\":{\"type\":\"not_found\",\"message\":\"Directory does not exist\",\"path\":\"%?\"}}",
-            rel_path
+            path
         );
     }
 
@@ -72,11 +72,11 @@ std::string FileListTool::Execute(std::vector<ToolParameter> &params_values)
         console::write_line(fmt.Format("Path is not a directory: %?", path), console::TextOrigin::error);
         return fmt.Format(
             "{\"error\":{\"type\":\"invalid_arguments\",\"message\":\"Path is not a directory\",\"path\":\"%?\"}}",
-            rel_path
+            path
         );
     }
 
-    return BuildListingJSON(rel_path, path, recursive, include_hidden);
+    return BuildListingJSON(path, path, recursive, include_hidden);
 }
 
 std::string FileListTool::BuildListingJSON(const std::string &rel_path,
