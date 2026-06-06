@@ -7,6 +7,7 @@
 #include "console_writer.h"
 #include "default_rule_provider.h"
 #include <iostream>
+#include <algorithm>
 #include <curl/curl.h>
 
 
@@ -105,7 +106,7 @@ void AiClientImpl::SendUserMessage(const std::string &message)
         responses.push_back(rsp);
     }
 
-    SendToolsResponses(responses);
+    //SendToolsResponses(responses);
 }
 
 void AiClientImpl::SetReasoning(bool is_shown)
@@ -201,17 +202,17 @@ ToolResponse AiClientImpl::EvokeTool(ToolCall &call)
 
     auto *tool = it->second->Clone();
     std::string rsp_content = m_history_mgr.Execute(std::unique_ptr<ToolBase>(tool), parameters);
-    rsp.content = rsp_content;
+    rsp.output_content = rsp_content;
 
     return rsp;
 }
 
-void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &responses)
+void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_responses, const std::string &response)
 {
-    if (responses.empty())
+    if (tools_responses.empty())
         return;
 
-    m_body_obj.AddToolResponses(responses);
+    m_body_obj.AddToolResponses(tools_responses);
 
     std::string body = m_body_obj.ToJsonString();
 
@@ -230,7 +231,10 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &responses
     }
 
     std::string response_msg = proc.GetResponseMessage();
-    m_body_obj.AddResponse(response_msg);
+    std::cout << "RESPONSE: '" << response_msg << "'" << std::endl;
+    bool message_is_not_empty = m_body_obj.AddResponse(response_msg);
+    if (!message_is_not_empty)
+        return;
 
     std::vector<ToolCall> tool_calls;
     proc.GetResponseTools(tool_calls);

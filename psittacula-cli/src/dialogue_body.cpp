@@ -80,7 +80,7 @@ void DialogueBody::AddSystemMessage(const std::string &sys_message)
     }
 }
 
-void DialogueBody::AddResponse(const std::string &response)
+bool DialogueBody::AddResponse(const std::string &response)
 {
     auto is_all_whitespace = [](const std::string &s) {
         return std::all_of(s.begin(), s.end(),
@@ -88,7 +88,7 @@ void DialogueBody::AddResponse(const std::string &response)
         };
 
     if (response.empty() || is_all_whitespace(response))
-        return;
+        return false;
 
     auto it = m_request->body.FindMember("messages");
     if (it != m_request->body.MemberEnd() && it->value.IsArray())
@@ -99,6 +99,8 @@ void DialogueBody::AddResponse(const std::string &response)
         msg_value.AddMember("content", rapidjson::Value(response.c_str(), alloc).Move(), alloc);
         it->value.PushBack(msg_value, alloc);
     }
+
+    return true;
 }
 
 void DialogueBody::AddToolResponses(const std::vector<ToolResponse> &responses)
@@ -108,11 +110,17 @@ void DialogueBody::AddToolResponses(const std::vector<ToolResponse> &responses)
     {
         for (const ToolResponse &rss : responses)
         {
+            rapidjson::Document::AllocatorType &assist_alloc = m_request->body.GetAllocator();
+            rapidjson::Value assist_msg_value(rapidjson::kObjectType);
+            assist_msg_value.AddMember("role", "assistant", assist_alloc);
+            assist_msg_value.AddMember("content", rapidjson::Value(rss.input_content.c_str(), assist_alloc).Move(), assist_alloc);
+            assist_msg_value.AddMember("recipient", rapidjson::Value(rss.name.c_str(), assist_alloc).Move(), assist_alloc);
+            it->value.PushBack(assist_msg_value, assist_alloc);
+
             rapidjson::Document::AllocatorType &alloc = m_request->body.GetAllocator();
             rapidjson::Value msg_value(rapidjson::kObjectType);
             msg_value.AddMember("role", "tool", alloc);
-            msg_value.AddMember("name", rapidjson::Value(rss.name.c_str(), alloc).Move(), alloc);
-            msg_value.AddMember("content", rapidjson::Value(rss.content.c_str(), alloc).Move(), alloc);
+            msg_value.AddMember("content", rapidjson::Value(rss.output_content.c_str(), alloc).Move(), alloc);
             it->value.PushBack(msg_value, alloc);
         }
     }

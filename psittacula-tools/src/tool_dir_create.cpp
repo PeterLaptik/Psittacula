@@ -22,19 +22,17 @@ std::string DirCreateTool::Execute(std::vector<ToolParameter> &params_values)
 
     console::write_line("Directory create tool.", console::TextOrigin::filesystem);
 
-    std::string rel_path = GetParam(params_values, "path");
-    if (rel_path.empty()) 
+    std::string path = GetParam(params_values, "path");
+    if (path.empty())
     {
         console::write_line("Missing required parameter: path", console::TextOrigin::error);
         return R"({"error":{"type":"invalid_arguments","message":"Missing required parameter: path"}})";
     }
 
-    std::string path = wdir.GetProjectDir() + rel_path;
-
     if (!wdir.IsInWorkDir(path)) 
     {
         console::write_line(fmt.Format("Permission_denied: path is outside working directory: %?", path), console::TextOrigin::error);
-        return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory\",\"path\":\"%?\"}}", rel_path);
+        return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory\",\"path\":\"%?\"}}", path);
     }
 
     bool existed_before = std::filesystem::exists(path);
@@ -59,7 +57,7 @@ std::string DirCreateTool::Execute(std::vector<ToolParameter> &params_values)
         "\"existed_before\":%?"
         "},"
         "\"message\":\"Directory %?\"}",
-        rel_path,
+        path,
         (existed_before ? "true" : "false"),
         (existed_before ? "already existed" : "created successfully")
     );

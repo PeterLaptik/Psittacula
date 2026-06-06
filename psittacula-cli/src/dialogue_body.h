@@ -19,7 +19,7 @@ class DialogueBody
 
         void AddSystemMessage(const std::string &sys_message);
 
-        void AddResponse(const std::string &response);
+        bool AddResponse(const std::string &response);
 
         void AddToolResponses(const std::vector<ToolResponse> &responses);
 

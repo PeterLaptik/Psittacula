@@ -9,13 +9,15 @@ struct ToolCall
     std::string id;
     std::string name;
     std::vector<std::pair<std::string, std::string>> arguments;
+    std::string content;
 };
 
 struct ToolResponse
 {
     std::string role = "tool";
     std::string name;
-    std::string content;
+    std::string output_content;
+    std::string input_content;
 };
 
 struct ToolParameter

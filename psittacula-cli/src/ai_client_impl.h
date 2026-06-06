@@ -47,7 +47,7 @@ class AiClientImpl: public AiClient
     private:
         void InitTools();
         ToolResponse EvokeTool(ToolCall &call);
-        void SendToolsResponses(const std::vector<ToolResponse> &responses);
+        void SendToolsResponses(const std::vector<ToolResponse> &tools_responses, const std::string &response = "");
 
         DialogueBody m_body_obj;
 

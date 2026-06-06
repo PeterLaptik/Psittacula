@@ -338,16 +338,23 @@ void ChunkCompletionProcessor::GetResponseTools(std::vector<ToolCall> &calls_acc
         bool has_errors = doc.Parse(fn.arguments.c_str()).HasParseError();
         if (has_errors)
         {
-            //console::write_line("GetTools: JSON parse error\n", TextOrigin::error);
-            //console::write_line(fn.arguments, TextOrigin::error);
+            console::write_line("Tools: JSON parse error\n", TextOrigin::error);
+            console::write_line(fn.arguments, TextOrigin::error);
             continue;
         }
 
         if (!doc.IsObject()) 
         {
-            //console::write_line("GetTools: Expected JSON object\n", TextOrigin::error);
+            console::write_line("Tool: " + caller.name, TextOrigin::error);
+            console::write_line("Expected JSON object\n", TextOrigin::error);
             continue;
         }
+
+        // Raw arguments as a content
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        doc.Accept(writer);
+        caller.content = buffer.GetString();
 
         for (auto it = doc.MemberBegin(); it != doc.MemberEnd(); ++it) {
             const char *key = it->name.GetString();
