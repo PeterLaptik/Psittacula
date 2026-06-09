@@ -76,54 +76,88 @@ std::string FileListTool::Execute(std::vector<ToolParameter> &params_values)
         );
     }
 
-    return BuildListingJSON(path, path, recursive, include_hidden);
+    return BuildListingJSON(path, recursive, include_hidden);
 }
 
-std::string FileListTool::BuildListingJSON(const std::string &rel_path,
-    const std::string &abs_path,
+std::string FileListTool::BuildListingJSON(const std::string &input_path,
     bool recursive,
     bool include_hidden)
 {
     Formatter fmt;
     std::ostringstream json;
-    json << "{ \"status\": \"success\", \"directory\": \"" << FormatJSONString(rel_path) << "\", \"entries\": [";
+
+    // Normalize to absolute path for filesystem traversal
+    std::filesystem::path abs_path = std::filesystem::absolute(input_path);
+
+    json << "{ \"status\": \"success\", "
+        << "\"directory\": \"" << GetEscapedJSONString(input_path) << "\", "
+        << "\"entries\": [";
 
     bool first = true;
 
-    auto process_entry = [&](const std::filesystem::directory_entry &entry, const std::string &base_rel) {
-        std::string name = entry.path().filename().string();
-
-        if (!include_hidden && !name.empty() && name[0] == '.')
-            return;
-
-        if (!first) json << ",";
-        first = false;
-
-        bool is_dir = entry.is_directory();
-        std::uintmax_t size = 0;
-
-        if (!is_dir)
+    auto process_entry = [&](const std::filesystem::directory_entry &entry)
         {
-            try { size = entry.file_size(); }
-            catch (...) { size = 0; }
-        }
+            const auto &p = entry.path();
+            std::string filename = p.filename().string();
 
-        json << "{"
-            << "\"name\":\"" << FormatJSONString(name) << "\","
-            << "\"type\":\"" << (is_dir ? "directory" : "file") << "\","
-            << "\"size_bytes\":" << size
-            << "}";
+            // Hidden file/dir filtering
+            if (!include_hidden && !filename.empty() && filename[0] == '.')
+                return;
+
+            if (!first)
+                json << ",";
+            first = false;
+
+            bool is_dir = entry.is_directory();
+            std::uintmax_t size = 0;
+
+            if (!is_dir)
+            {
+                try { size = entry.file_size(); }
+                catch (...) { size = 0; }
+            }
+
+            // Prefer relative path for output
+            std::string rel_name;
+            try
+            {
+                rel_name = std::filesystem::relative(p, abs_path).string();
+            }
+            catch (...)
+            {
+                rel_name = filename;
+            }
+
+            json << "{"
+                << "\"name\":\"" << GetEscapedJSONString(rel_name) << "\","
+                << "\"type\":\"" << (is_dir ? "directory" : "file") << "\","
+                << "\"size_bytes\":" << size
+                << "}";
         };
 
     if (recursive)
     {
-        for (auto &entry : std::filesystem::recursive_directory_iterator(abs_path))
-            process_entry(entry, rel_path);
+        std::filesystem::recursive_directory_iterator it(abs_path), end;
+        for (; it != end; ++it)
+        {
+            const auto &entry = *it;
+            std::string filename = entry.path().filename().string();
+
+            // Prevent recursion into hidden directories
+            if (!include_hidden && entry.is_directory() &&
+                !filename.empty() && filename[0] == '.')
+            {
+                it.disable_recursion_pending();
+                continue;
+            }
+
+            process_entry(entry);
+        }
     }
     else
     {
-        for (auto &entry : std::filesystem::directory_iterator(abs_path))
-            process_entry(entry, rel_path);
+        for (const auto &entry : std::filesystem::directory_iterator(abs_path))
+            process_entry(entry);
     }
 
     json << "], "

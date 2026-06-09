@@ -30,23 +30,21 @@ std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
 
     console::write_line("Directory delete tool.", console::TextOrigin::filesystem);
 
-    std::string rel_path = GetParam(params_values, "path");
+    std::string path = GetParam(params_values, "path");
     recursive = GetParamBool(params_values, "recursive", false);
 
-    if (rel_path.empty())
+    if (path.empty())
     {
         console::write_line("Missing required parameter: path", console::TextOrigin::error);
         return R"({"error":{"type":"invalid_arguments","message":"Missing required parameter: path"}})";
     }
-
-    std::string path = wdir.GetProjectDir() + rel_path;
 
     if (!wdir.IsInWorkDir(path))
     {
         console::write_line(fmt.Format("Permission denied: %?", path), console::TextOrigin::error);
         return fmt.Format(
             "{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory\",\"path\":\"%?\"}}",
-            rel_path
+            path
         );
     }
 
@@ -55,7 +53,7 @@ std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
         console::write_line(fmt.Format("Directory does not exist: %?", path), console::TextOrigin::error);
         return fmt.Format(
             "{\"error\":{\"type\":\"not_found\",\"message\":\"Directory does not exist\",\"path\":\"%?\"}}",
-            rel_path
+            path
         );
     }
 
@@ -64,7 +62,7 @@ std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
         console::write_line(fmt.Format("Path is not a directory: %?", path), console::TextOrigin::error);
         return fmt.Format(
             "{\"error\":{\"type\":\"invalid_arguments\",\"message\":\"Path is not a directory\",\"path\":\"%?\"}}",
-            rel_path
+            path
         );
     }
 
@@ -73,7 +71,7 @@ std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
         console::write_line(fmt.Format("Directory is not empty: %?", path), console::TextOrigin::error);
         return fmt.Format(
             "{\"error\":{\"type\":\"runtime_error\",\"message\":\"Directory is not empty\",\"path\":\"%?\"}}",
-            rel_path
+            path
         );
     }
 
@@ -95,7 +93,7 @@ std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
             console::write_line("Directory is not empty; recursive=false", console::TextOrigin::error);
             return fmt.Format(
                 "{\"error\":{\"type\":\"runtime_error\",\"message\":\"Directory is not empty\",\"path\":\"%?\"}}",
-                rel_path
+                path
             );
         }
 
@@ -107,7 +105,7 @@ std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
         console::write_line(fmt.Format("Failed to delete directory: %?", ec.message()), console::TextOrigin::error);
         return fmt.Format(
             "{\"error\":{\"type\":\"runtime_error\",\"message\":\"Failed to delete directory: %?\",\"path\":\"%?\"}}",
-            ec.message(), rel_path
+            ec.message(), path
         );
     }
 
@@ -123,7 +121,7 @@ std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
         "},"
         "\"message\":\"Directory deleted%?\""
         "}",
-        rel_path,
+        path,
         recursive ? "true" : "false",
         recursive ? " recursively" : ""
     );

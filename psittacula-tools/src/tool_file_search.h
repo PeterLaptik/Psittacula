@@ -1,11 +1,11 @@
 #ifndef TOOL_FILE_SEARCH_INCLUDED_H
 #define TOOL_FILE_SEARCH_INCLUDED_H
 
-#include "tool_base.h"
+#include "tool_file.h"
 #include <string>
 #include <vector>
 
-class FileSearchTool : public ToolBase
+class FileSearchTool : public ToolFile
 {
     public:
         FileSearchTool() = default;

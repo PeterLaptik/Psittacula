@@ -154,5 +154,6 @@ std::string FileReadTool::Execute(std::vector<ToolParameter> &params_values)
         "  \"message\": \"File read successfully\""
         "}";
 
-    return fmt.Format(result_template, path, size, FormatJSONString(content));
+    std::string file_content = GetEscapedJSONString(content);
+    return fmt.Format(result_template, path, size, file_content);
 }

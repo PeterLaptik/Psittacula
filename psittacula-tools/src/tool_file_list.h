@@ -1,11 +1,11 @@
 #ifndef TOOL_FILE_LIST_INCLUDED_H
 #define TOOL_FILE_LIST_INCLUDED_H
 
-#include "tool_base.h"
+#include "tool_file.h"
 #include <string>
 #include <vector>
 
-class FileListTool : public ToolBase
+class FileListTool : public ToolFile
 {
     public:
         FileListTool() = default;
@@ -24,8 +24,7 @@ class FileListTool : public ToolBase
         void GetParameters(std::vector<ToolParameter> &params_acc) override;
 
     private:
-        std::string BuildListingJSON(const std::string &rel_path,
-            const std::string &abs_path,
+        std::string BuildListingJSON(const std::string &path,
             bool recursive,
             bool include_hidden);
 };

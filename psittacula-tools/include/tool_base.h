@@ -8,8 +8,8 @@ struct ToolCall
 {
     std::string id;
     std::string name;
-    std::vector<std::pair<std::string, std::string>> arguments;
-    std::string content;
+    std::vector<std::pair<std::string, std::string>> arguments; // Parsed arguments from JSON content
+    std::string content; // JSON content
 };
 
 struct ToolResponse
@@ -39,7 +39,7 @@ class ToolBase
 
         virtual ToolBase* Clone() = 0;
 
-        // Retutns tool response JSON string
+        // Returns tool response as a JSON string
         virtual std::string Execute(std::vector<ToolParameter> &params_values) = 0;
 
         virtual void Undo() = 0;
@@ -57,10 +57,7 @@ class ToolBase
 
         bool GetParamBool(const std::vector<ToolParameter> &params_acc, const std::string &param_name, bool default_value);
 
-        // Util method to escape symbols for string putting into a JSON
-        std::string FormatJSONString(const std::string &str);
-
-        void CleanFilePathFromTrailingDots(std::string path);
+        std::string GetEscapedJSONString(const std::string &str) const;
 };
 
 #endif // TOOL_BASE_INCLUDED_H

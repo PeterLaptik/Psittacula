@@ -1,11 +1,11 @@
 #ifndef TOOL_FILE_CREATE_INCLUDED_H
 #define TOOL_FILE_CREATE_INCLUDED_H
 
-#include "tool_base.h"
+#include "tool_file.h"
 #include <string>
 #include <vector>
 
-class FileCreateTool : public ToolBase
+class FileCreateTool : public ToolFile
 {
     public:
         FileCreateTool() = default;

@@ -106,7 +106,7 @@ void AiClientImpl::SendUserMessage(const std::string &message)
         responses.push_back(rsp);
     }
 
-    //SendToolsResponses(responses);
+    SendToolsResponses(responses);
 }
 
 void AiClientImpl::SetReasoning(bool is_shown)
@@ -182,6 +182,7 @@ ToolResponse AiClientImpl::EvokeTool(ToolCall &call)
     ToolResponse rsp;
     rsp.role = "tool";
     rsp.name = call.name;
+    rsp.input_content = call.content;
 
     auto it = m_tools_dispatcher.find(call.name);
     if (it == m_tools_dispatcher.end())
@@ -231,10 +232,7 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
     }
 
     std::string response_msg = proc.GetResponseMessage();
-    std::cout << "RESPONSE: '" << response_msg << "'" << std::endl;
-    bool message_is_not_empty = m_body_obj.AddResponse(response_msg);
-    if (!message_is_not_empty)
-        return;
+    m_body_obj.AddResponse(response_msg);
 
     std::vector<ToolCall> tool_calls;
     proc.GetResponseTools(tool_calls);

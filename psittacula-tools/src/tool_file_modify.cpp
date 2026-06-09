@@ -45,23 +45,21 @@ std::string FileModifyTool::Execute(std::vector<ToolParameter> &params_values)
 
     console::write_line("File modify tool.", console::TextOrigin::filesystem);
 
-    std::string rel_path = GetParam(params_values, "path");
+    std::string path = GetParam(params_values, "path");
     std::string content = GetParam(params_values, "content");
 
-    if (rel_path.empty()) 
+    if (path.empty())
     {
         console::write_line("Missing required parameter: path", console::TextOrigin::error);
         return R"({"error":{"type":"invalid_arguments","message":"Missing required parameter: path"}})";
     }
-
-    std::string path = wdir.GetProjectDir() + rel_path;
 
     if (!wdir.IsInWorkDir(path)) 
     {
         console::write_line(fmt.Format("Permission_denied: path is outside working directory: %?", path), console::TextOrigin::error);
         return fmt.Format(
             "{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory\",\"path\":\"%?\"}}",
-            rel_path
+            path
         );
     }
 

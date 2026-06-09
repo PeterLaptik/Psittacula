@@ -1,11 +1,11 @@
 #ifndef TOOL_FILE_REMOVE_INCLUDED_H
 #define TOOL_FILE_REMOVE_INCLUDED_H
 
-#include "tool_base.h"
+#include "tool_file.h"
 #include <string>
 #include <vector>
 
-class FileRemoveTool : public ToolBase
+class FileRemoveTool : public ToolFile
 {
     public:
         FileRemoveTool() = default;

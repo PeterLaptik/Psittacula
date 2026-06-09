@@ -30,21 +30,19 @@ std::string FileCreateTool::Execute(std::vector<ToolParameter> &params_values)
 
     console::write_line("File create tool.", console::TextOrigin::filesystem);
 
-    std::string rel_path = GetParam(params_values, "path");
+    std::string path = GetParam(params_values, "path");
     std::string content = GetParam(params_values, "content");
 
-    if (rel_path.empty()) 
+    if (path.empty())
     {
         console::write_line("Missing required parameter: path", console::TextOrigin::error);
         return R"({"error":{"type":"invalid_arguments","message":"Missing required parameter: path"}})";
     }
 
-    std::string path = std::filesystem::path(wdir.GetProjectDir() + rel_path).string();
-
     if (!wdir.IsInWorkDir(path)) 
     {
         console::write_line(fmt.Format("Permission_denied: path is outside working directory: %?", path), console::TextOrigin::error);
-        return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory\",\"path\":\"%?\"}}", rel_path);
+        return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory\",\"path\":\"%?\"}}", path);
     }
 
     console::write_line("Creating file: " + path, console::TextOrigin::filesystem);
@@ -78,7 +76,7 @@ std::string FileCreateTool::Execute(std::vector<ToolParameter> &params_values)
     if (!out) 
     {
         console::write_line(fmt.Format("Failed to create file: %?", path), console::TextOrigin::error);
-        return fmt.Format("{\"error\":{\"type\":\"runtime_error\",\"message\":\"Failed to create file\",\"path\":\"%?\"}}", rel_path);
+        return fmt.Format("{\"error\":{\"type\":\"runtime_error\",\"message\":\"Failed to create file\",\"path\":\"%?\"}}", path);
     }
 
     out << content;
@@ -112,7 +110,7 @@ std::string FileCreateTool::Execute(std::vector<ToolParameter> &params_values)
 
     return fmt.Format(
         result_template,
-        rel_path,
+        path,
         size,
         file_exists ? "true" : "false",
         file_exists ? "overwritten" : "created"

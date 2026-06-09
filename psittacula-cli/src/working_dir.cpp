@@ -37,6 +37,8 @@ void WorkingDir::SetWorkDir(const std::string &path)
     fs::create_directories(settings);
     fs::create_directories(projects);
 
+    m_project_dir = projects.string();
+
     instance.UpdateModels();
 }
 
@@ -157,6 +159,8 @@ void WorkingDir::CreateWorkingDirs()
     fs::create_directories(models);
     fs::create_directories(settings);
     fs::create_directories(projects);
+
+    m_project_dir = projects.string();
 }
 
 bool WorkingDir::IsInWorkDir(const std::string &path) const
@@ -186,13 +190,15 @@ bool WorkingDir::IsInWorkDir(const std::string &path) const
             return true;
 
         // Walk upward from target until root or sandbox is found
+        int level_counter = 0;
         fs::path cur = target;
-        while (!cur.empty())
+        while (!cur.empty() && level_counter < 32)
         {
             if (cur == sandbox)
                 return true;
 
             cur = cur.parent_path();
+            level_counter++;
         }
 
         return false;

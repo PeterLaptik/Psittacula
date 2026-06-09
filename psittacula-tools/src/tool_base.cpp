@@ -3,6 +3,10 @@
 #include <fstream>
 #include <sstream>
 #include <iomanip>
+#include <rapidjson/document.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/prettywriter.h>
 
 std::string ToolBase::GetParam(const std::vector<ToolParameter> &params_acc, const std::string &param_name, std::string default_value)
 {
@@ -36,40 +40,10 @@ bool ToolBase::GetParamBool(const std::vector<ToolParameter> &params_acc, const 
     return default_value;
 }
 
-std::string ToolBase::FormatJSONString(const std::string &str)
+std::string ToolBase::GetEscapedJSONString(const std::string &str) const
 {
-    std::ostringstream out;
-    out << std::hex << std::setfill('0');
-
-    for (unsigned char c : str)
-    {
-        switch (c)
-        {
-            case '\"': out << "\\\""; break;
-            case '\\': out << "\\\\"; break;
-            case '\b': out << "\\b";  break;
-            case '\f': out << "\\f";  break;
-            case '\n': out << "\\n";  break;
-            case '\r': out << "\\r";  break;
-            case '\t': out << "\\t";  break;
-
-            default:
-                if (c < 0x20)
-                {
-                    out << "\\u" << std::setw(4) << (int)c;
-                }
-                else
-                {
-                    out << c;
-                }
-        }
-    }
-
-    return out.str();
-}
-
-void ToolBase::CleanFilePathFromTrailingDots(std::string path)
-{
-    while(!path.empty() && path.back() == '.')
-        path.pop_back();
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    writer.String(str.c_str());
+    return std::string(buffer.GetString());
 }

@@ -1,11 +1,11 @@
 #ifndef TOOL_DIR_CREATE_INCLUDED_H
 #define TOOL_DIR_CREATE_INCLUDED_H
 
-#include "tool_base.h"
+#include "tool_file.h"
 #include <string>
 #include <vector>
 
-class DirCreateTool : public ToolBase
+class DirCreateTool : public ToolFile
 {
     public:
         DirCreateTool() = default;

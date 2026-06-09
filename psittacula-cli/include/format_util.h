@@ -267,6 +267,12 @@ class Formatter
         // stream - stream to get a string value
         // t - type value
         template<typename Stream, typename T,
+                typename = std::enable_if_t<
+                !std::is_same_v<T, std::string> &&
+                !std::is_same_v<T, std::wstring> &&
+                !std::is_same_v<T, std::u16string> &&
+                !std::is_same_v<T, std::u32string>
+                >,
                 typename It = typename T::const_iterator,
                 typename Type = typename T::value_type,
                 typename Begin = decltype(std::declval<T>().begin()),

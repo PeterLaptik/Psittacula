@@ -1,11 +1,11 @@
 #ifndef TOOL_FILE_CREATE_BINARY_INCLUDED_H
 #define TOOL_FILE_CREATE_BINARY_INCLUDED_H
 
-#include "tool_base.h"
+#include "tool_file.h"
 #include <string>
 #include <vector>
 
-class FileCreateBinaryTool : public ToolBase
+class FileCreateBinaryTool : public ToolFile
 {
     public:
         FileCreateBinaryTool() = default;

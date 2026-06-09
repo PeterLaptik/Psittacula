@@ -1,11 +1,11 @@
 #ifndef TOOL_FILE_MODIFY_INCLUDED_H
 #define TOOL_FILE_MODIFY_INCLUDED_H
 
-#include "tool_base.h"
+#include "tool_file.h"
 #include <string>
 #include <vector>
 
-class FileModifyTool : public ToolBase
+class FileModifyTool : public ToolFile
 {
     public:
         FileModifyTool() = default;

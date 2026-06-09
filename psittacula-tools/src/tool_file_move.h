@@ -1,11 +1,11 @@
 #ifndef TOOL_FILE_MOVE_INCLUDED_H
 #define TOOL_FILE_MOVE_INCLUDED_H
 
-#include "tool_base.h"
+#include "tool_file.h"
 #include <string>
 #include <vector>
 
-class FileMoveTool : public ToolBase
+class FileMoveTool : public ToolFile
 {
     public:
         FileMoveTool() = default;

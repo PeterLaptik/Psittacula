@@ -350,13 +350,8 @@ void ChunkCompletionProcessor::GetResponseTools(std::vector<ToolCall> &calls_acc
             continue;
         }
 
-        // Raw arguments as a content
-        rapidjson::StringBuffer buffer;
-        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-        doc.Accept(writer);
-        caller.content = buffer.GetString();
-
-        for (auto it = doc.MemberBegin(); it != doc.MemberEnd(); ++it) {
+        for (auto it = doc.MemberBegin(); it != doc.MemberEnd(); ++it) 
+        {
             const char *key = it->name.GetString();
             const rapidjson::Value &value = it->value;
 
@@ -377,6 +372,12 @@ void ChunkCompletionProcessor::GetResponseTools(std::vector<ToolCall> &calls_acc
 
             caller.arguments.emplace_back(key, arg_val);
         }
+
+        // Raw arguments as a content
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        doc.Accept(writer);
+        caller.content = buffer.GetString();
 
         calls_acc.push_back(caller);
     }

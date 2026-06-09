@@ -1,11 +1,11 @@
 #ifndef TOOL_FILE_COPY_INCLUDED_H
 #define TOOL_FILE_COPY_INCLUDED_H
 
-#include "tool_base.h"
+#include "tool_file.h"
 #include <string>
 #include <vector>
 
-class FileCopyTool : public ToolBase
+class FileCopyTool : public ToolFile
 {
     public:
     FileCopyTool() = default;

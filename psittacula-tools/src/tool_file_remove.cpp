@@ -24,19 +24,17 @@ std::string FileRemoveTool::Execute(std::vector<ToolParameter> &params_values)
 
     console::write_line("File remove tool.", console::TextOrigin::filesystem);
 
-    std::string rel_path = GetParam(params_values, "path");
-    if (rel_path.empty()) 
+    std::string path = GetParam(params_values, "path");
+    if (path.empty())
     {
         console::write_line("Missing required parameter: path", console::TextOrigin::error);
         return R"({"error":{"type":"invalid_arguments","message":"Missing required parameter: path"}})";
     }
 
-    std::string path = wdir.GetProjectDir() + rel_path;
-
     if (!wdir.IsInWorkDir(path)) 
     {
         console::write_line(fmt.Format("Permission_denied: path is outside working directory: %?", path), console::TextOrigin::error);
-        return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory\",\"path\":\"%?\"}}", rel_path);
+        return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory\",\"path\":\"%?\"}}", path);
     }
 
     console::write_line("Removing file: " + path, console::TextOrigin::filesystem);
@@ -44,7 +42,7 @@ std::string FileRemoveTool::Execute(std::vector<ToolParameter> &params_values)
     if (!std::filesystem::exists(path)) 
     {
         console::write_line(fmt.Format("File does not exist: %?", path), console::TextOrigin::error);
-        return fmt.Format("{\"error\":{\"type\":\"not_found\",\"message\":\"File does not exist\",\"path\":\"%?\"}}", rel_path);
+        return fmt.Format("{\"error\":{\"type\":\"not_found\",\"message\":\"File does not exist\",\"path\":\"%?\"}}", path);
     }
 
     // Save file content for Undo()
@@ -72,7 +70,7 @@ std::string FileRemoveTool::Execute(std::vector<ToolParameter> &params_values)
         "},"
         "\"message\":\"File removed\""
         "}",
-        rel_path
+        path
     );
 }
 

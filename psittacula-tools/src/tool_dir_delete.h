@@ -1,11 +1,11 @@
 #ifndef TOOL_DIR_DELETE_INCLUDED_H
 #define TOOL_DIR_DELETE_INCLUDED_H
 
-#include "tool_base.h"
+#include "tool_file.h"
 #include <string>
 #include <vector>
 
-class DirDeleteTool : public ToolBase
+class DirDeleteTool : public ToolFile
 {
     public:
         DirDeleteTool() = default;
