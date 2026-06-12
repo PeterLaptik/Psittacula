@@ -21,9 +21,18 @@ class CommandChangeProjectDir : public ChatCommand
             console::write_line("Current project directory:", TextOrigin::filesystem);
             console::write_line("  " + current + "\n");
 
-            std::cout << "Enter new project directory path: ";
             std::string new_path;
-            std::getline(std::cin, new_path);
+
+            // If there are arguments, take the first one as the new path
+            if (!args.empty())
+            {
+                new_path = args[0];
+            }
+            else
+            {
+                std::cout << "Enter new project directory path: ";
+                std::getline(std::cin, new_path);
+            }
 
             if (new_path.empty())
             {
@@ -92,4 +101,4 @@ class CommandChangeProjectDir : public ChatCommand
         }
 };
 
-#endif // COMMAND_CHANGE_PROJECT_DIR_INCLUDED_H
+#endif // COMMAND_CHANGE_PROJECT_INCLUDED_H

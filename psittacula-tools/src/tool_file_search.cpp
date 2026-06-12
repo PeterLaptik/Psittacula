@@ -44,6 +44,12 @@ std::string FileSearchTool::Execute(std::vector<ToolParameter> &params_values)
     bool case_sensitive = GetParamBool(params_values, "case_sensitive", false);
     bool use_regex = GetParamBool(params_values, "regex", false);
 
+    if (path.empty())
+    {
+        console::write_line("Missing required parameter: path", console::TextOrigin::error);
+        return R"({"error":{"type":"invalid_arguments","message":"Missing required parameter: path"}})";
+    }
+
     if (query.empty())
     {
         console::write_line("Missing required field: query", console::TextOrigin::error);

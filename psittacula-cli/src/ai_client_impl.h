@@ -32,7 +32,7 @@ class AiClientImpl: public AiClient
 
         void SetModel(const std::string &model) override;
 
-        void RegisterTool(ToolBase *tool) override;
+        void RegisterTool(std::unique_ptr<ToolBase> tool) override;
 
         void GetToolsInfo(std::vector<std::pair<std::string, std::string>> &tools_acc) override;
 
@@ -48,6 +48,7 @@ class AiClientImpl: public AiClient
         void InitTools();
         ToolResponse EvokeTool(ToolCall &call);
         void SendToolsResponses(const std::vector<ToolResponse> &tools_responses, const std::string &response = "");
+        std::string GetContextInfo();
 
         DialogueBody m_body_obj;
 

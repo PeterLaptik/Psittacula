@@ -90,6 +90,9 @@ bool DialogueBody::AddResponse(const std::string &response)
     if (response.empty() || is_all_whitespace(response))
         return false;
 
+    if (response.empty())
+        return false;
+
     auto it = m_request->body.FindMember("messages");
     if (it != m_request->body.MemberEnd() && it->value.IsArray())
     {

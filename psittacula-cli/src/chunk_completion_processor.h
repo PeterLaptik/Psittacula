@@ -23,6 +23,8 @@ class ChunkCompletionProcessor: public ChunkProcessor
 
         std::string GetResponseReasoning() const;
 
+        void WriteStat(std::string ctx_data) const;
+
         bool HasErrors() const;
 
         std::string GetError() const;

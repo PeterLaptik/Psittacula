@@ -1,5 +1,7 @@
 #include "chunk_completion_processor.h"
 #include "console_writer.h"
+#include <sstream>
+#include <iomanip>
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
@@ -52,8 +54,13 @@ void ChunkCompletionProcessor::ProcessChunk(const std::string &chunk)
     // Is finished?
     if (json == " [DONE]" || json == "[DONE]")
     {
-        console::write_line("\nTokens: " + std::to_string(m_total_tokens) + "\n", console::TextOrigin::reasoning);
-        console::write_splitter();
+        /*console::write_line("\nTokens: " + std::to_string(m_total_tokens) + 
+            + "( prompt: " + std::to_string(m_prompt_tokens) + 
+            " / completion: " + std::to_string(m_completion_tokens)
+            + ") "
+            + (m_tokens_cost > 0 ? "cost: " + std::to_string(m_tokens_cost) : "")
+            + "\n", console::TextOrigin::reasoning);
+        console::write_splitter();*/
         return;
     }
         
@@ -97,6 +104,42 @@ std::string ChunkCompletionProcessor::GetResponseMessage() const
 std::string ChunkCompletionProcessor::GetResponseReasoning() const
 {
     return m_reasoning;
+}
+
+void ChunkCompletionProcessor::WriteStat(std::string ctx_data) const
+{
+    rapidjson::Document doc;
+    doc.Parse(ctx_data.c_str());
+
+    int context_size = 0;
+    if (doc.IsArray() && !doc.Empty())
+    {
+        const auto &firstSlot = doc[0];
+
+        if (firstSlot.IsObject() &&
+            firstSlot.HasMember("n_ctx") &&
+            firstSlot["n_ctx"].IsInt())
+        {
+            context_size = firstSlot["n_ctx"].GetInt();
+        }
+    }
+
+    double ratio_ctx = context_size != 0 ? static_cast<double>(m_total_tokens) / static_cast<double>(context_size) : 0;
+    double percentage_ctx = std::round(ratio_ctx * 10000) / 100;
+
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(2) << percentage_ctx;
+    std::string percentage_ctx_str = oss.str();
+
+    console::write_line("\nTokens: " + std::to_string(m_total_tokens)
+        + " (prompt: " + std::to_string(m_prompt_tokens) +
+        + " / completion: " + std::to_string(m_completion_tokens)
+        + ") \t"
+        + percentage_ctx_str + "% of context ("
+        + std::to_string(context_size) + ")"
+        + (m_tokens_cost > 0 ? "cost: " + std::to_string(m_tokens_cost) : "")
+        + "\n", console::TextOrigin::reasoning);
+    console::write_splitter();
 }
 
 bool ChunkCompletionProcessor::HasErrors() const
@@ -163,8 +206,19 @@ void ChunkCompletionProcessor::CheckTokens(JsonDocument &doc)
         const auto &tokens = doc.body["timings"];
         if (tokens.HasMember("predicted_n") && tokens["predicted_n"].IsInt())
         {
-            m_total_tokens = tokens["predicted_n"].GetInt();
+            m_completion_tokens = tokens["predicted_n"].GetInt();
         }
+        int ctx_cached = 0;
+        if (tokens.HasMember("cache_n") && tokens["cache_n"].IsInt())
+        {
+            ctx_cached = tokens["cache_n"].GetInt();
+        }
+        if (tokens.HasMember("prompt_n") && tokens["prompt_n"].IsInt())
+        {
+            m_prompt_tokens = tokens["prompt_n"].GetInt();
+        }
+
+        m_total_tokens = ctx_cached + m_prompt_tokens + m_completion_tokens;
     }
 
     // The condition works for OpenRouter
@@ -185,7 +239,7 @@ void ChunkCompletionProcessor::CheckTokens(JsonDocument &doc)
         }
         if (usage.HasMember("cost") && usage["cost"].IsDouble())
         {
-            m_tokens_cost = usage["cost"].GetInt();
+            m_tokens_cost = usage["cost"].IsDouble();
         }
     }
 

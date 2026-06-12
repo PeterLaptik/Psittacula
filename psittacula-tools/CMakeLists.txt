@@ -16,7 +16,7 @@ add_library(${PSITTACULA_TOOLS_NAME} STATIC
 	${INCLUDE_DIR}/tool_base.h
 	${SRC_DIR}/tool_base.cpp
 	${INCLUDE_DIR}/tool_factory.h
-	${SRC_DIR}/tool_file.cpp
+	${SRC_DIR}/tool_file.h
 	${SRC_DIR}/tool_dir_delete.cpp
 	${SRC_DIR}/tool_dir_delete.h
 	${SRC_DIR}/tool_factory.cpp

@@ -9,10 +9,15 @@
 #include <iostream>
 #include <algorithm>
 #include <curl/curl.h>
+#include <rapidjson/document.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/prettywriter.h>
 
 
 const std::string kEndPointHealth = "/health";
 const std::string kEndPointCompletions = "/v1/chat/completions";
+const std::string kEndPointSlots = "/slots";
 
 
 AiClientImpl::AiClientImpl(const std::string &host_and_port)
@@ -82,10 +87,7 @@ void AiClientImpl::SendUserMessage(const std::string &message)
     proc.SetReasoning(m_show_reasoning);
     m_http_client.HttpPostStream(kEndPointCompletions, body, &proc);
 
-    int used, total;
-    bool is_full;
-    proc.GetStat(used, total, is_full);
-    //console::write_line(fmt.Format("Tokens used %? of %?. Is context full: %?", used, total, is_full));
+    proc.WriteStat(GetContextInfo());
 
     std::string response_msg = proc.GetResponseMessage();
     m_body_obj.AddResponse(response_msg);
@@ -124,7 +126,7 @@ void AiClientImpl::SetModel(const std::string &model)
     m_body_obj.SetModel(model);
 }
 
-void AiClientImpl::RegisterTool(ToolBase *tool)
+void AiClientImpl::RegisterTool(std::unique_ptr<ToolBase> tool)
 {
     auto it = m_tools_dispatcher.find(tool->GetToolName());
     if (it != m_tools_dispatcher.end())
@@ -133,8 +135,8 @@ void AiClientImpl::RegisterTool(ToolBase *tool)
         return;
     }
 
-    m_body_obj.RegisterTool(tool);
-    m_tools_dispatcher.insert(std::pair(tool->GetToolName(), tool));
+    m_body_obj.RegisterTool(tool.get());
+    m_tools_dispatcher.insert(std::pair(tool->GetToolName(), std::move(tool)));
 }
 
 void AiClientImpl::GetToolsInfo(std::vector<std::pair<std::string, std::string>> &tools_acc)
@@ -169,11 +171,11 @@ std::string AiClientImpl::GetDialogueBody()
 
 void AiClientImpl::InitTools()
 {
-    std::vector<ToolBase*> tools;
+    std::vector<std::unique_ptr<ToolBase>> tools;
     get_all_tools(tools);
-    for (auto tool : tools)
+    for (auto &tool : tools)
     {
-        RegisterTool(tool);
+        RegisterTool(std::move(tool));
     }
 }
 
@@ -221,9 +223,7 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
     proc.SetReasoning(m_show_reasoning);
     m_http_client.HttpPostStream(kEndPointCompletions, body, &proc);
 
-    int used, total;
-    bool is_full;
-    proc.GetStat(used, total, is_full);
+    proc.WriteStat(GetContextInfo());
 
     if (proc.HasErrors())
     {
@@ -246,8 +246,13 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
         secondary_responses.push_back(rsp);
     }
 
-    std::cout << m_body_obj.ToJsonString() << std::endl;
+    //std::cout << m_body_obj.ToJsonString() << std::endl;
 
     SendToolsResponses(secondary_responses);
+}
+
+std::string AiClientImpl::GetContextInfo()
+{
+    return m_http_client.HttpGet(kEndPointSlots);
 }
 

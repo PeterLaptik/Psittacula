@@ -10,18 +10,19 @@
 #include "tool_file_move.h"
 #include "tool_file_create_binary.h"
 #include "tool_file_search.h"
+#include <memory>
 
-void get_all_tools(std::vector<ToolBase*> &acc)
+void get_all_tools(std::vector<std::unique_ptr<ToolBase>> &acc)
 {
-    acc.push_back(new DirCreateTool());
-    acc.push_back(new DirDeleteTool());
-    acc.push_back(new FileListTool());
-    acc.push_back(new FileCreateTool());
-    acc.push_back(new FileRemoveTool());
-    acc.push_back(new FileCopyTool());
-    acc.push_back(new FileMoveTool());
-    acc.push_back(new FileModifyTool());
-    acc.push_back(new FileReadTool());
-    acc.push_back(new FileCreateBinaryTool());
-    acc.push_back(new FileSearchTool());
+    acc.push_back(std::make_unique<DirCreateTool>());
+    acc.push_back(std::make_unique<DirDeleteTool>());
+    acc.push_back(std::make_unique<FileListTool>());
+    acc.push_back(std::make_unique<FileCreateTool>());
+    acc.push_back(std::make_unique<FileRemoveTool>());
+    acc.push_back(std::make_unique<FileCopyTool>());
+    acc.push_back(std::make_unique<FileMoveTool>());
+    acc.push_back(std::make_unique<FileModifyTool>());
+    acc.push_back(std::make_unique<FileReadTool>());
+    acc.push_back(std::make_unique<FileCreateBinaryTool>());
+    acc.push_back(std::make_unique<FileSearchTool>());
 }

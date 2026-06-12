@@ -3,6 +3,7 @@
 
 #include "tool_base.h"
 #include <string>
+#include <memory>
 
 enum class AiServerType
 {
@@ -29,7 +30,7 @@ class AiClient
 
         virtual void SetModel(const std::string &model) = 0;
 
-        virtual void RegisterTool(ToolBase *tool) = 0;
+        virtual void RegisterTool(std::unique_ptr<ToolBase> tool) = 0;
 
         virtual void GetToolsInfo(std::vector<std::pair<std::string, std::string>> &tools_acc) = 0;
 

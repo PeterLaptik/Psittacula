@@ -44,8 +44,7 @@ void WorkingDir::SetWorkDir(const std::string &path)
 
 void WorkingDir::SetProjectDir(const std::string &path)
 {
-    WorkingDir &instance = WorkingDir::GetInstance();
-    instance.m_project_dir = path;
+    m_project_dir = path;
 }
 
 void WorkingDir::UpdateModels()

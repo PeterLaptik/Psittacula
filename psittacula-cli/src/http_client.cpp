@@ -6,13 +6,17 @@
 HttpClient::HttpClient(const std::string &host_and_port, std::string api_key)
     : m_host(host_and_port), m_api_key(api_key)
 {
-    curl_global_init(CURL_GLOBAL_DEFAULT);
+    CURLcode result = curl_global_init(CURL_GLOBAL_DEFAULT);
+    if (result != CURLE_OK)
+        std::cerr << "Curl init error!" << std::endl;
 }
 
 HttpClient::HttpClient(const std::string &host, int port, std::string api_key)
     : m_host(host + '/' + std::to_string(port)), m_api_key(api_key)
 {
-    curl_global_init(CURL_GLOBAL_DEFAULT);
+    CURLcode result = curl_global_init(CURL_GLOBAL_DEFAULT);
+    if (result != CURLE_OK)
+        std::cerr << "Curl init error!" << std::endl;
 }
 
 HttpClient::~HttpClient()
