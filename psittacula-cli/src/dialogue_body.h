@@ -32,6 +32,8 @@ class DialogueBody
         std::string ToJsonString() const;
 
     private:
+        void AddToolCallMessages(const std::vector<ToolResponse> &responses);
+
         std::string m_model = "gpt-4o";
 
         // Pointer to implementation for RapidJSON document

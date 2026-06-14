@@ -25,6 +25,8 @@ std::string FileRemoveTool::Execute(std::vector<ToolParameter> &params_values)
     console::write_line("File remove tool.", console::TextOrigin::filesystem);
 
     std::string path = GetParam(params_values, "path");
+    UnescapeSlashesInPath(path);
+
     if (path.empty())
     {
         console::write_line("Missing required parameter: path", console::TextOrigin::error);

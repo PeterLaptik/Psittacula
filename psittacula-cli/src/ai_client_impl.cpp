@@ -16,7 +16,7 @@
 
 
 const std::string kEndPointHealth = "/health";
-const std::string kEndPointCompletions = "/v1/chat/completions";
+const std::string kEndPointCompletions = "/chat/completions";
 const std::string kEndPointSlots = "/slots";
 
 
@@ -182,6 +182,7 @@ void AiClientImpl::InitTools()
 ToolResponse AiClientImpl::EvokeTool(ToolCall &call)
 {
     ToolResponse rsp;
+    rsp.id = call.id;
     rsp.role = "tool";
     rsp.name = call.name;
     rsp.input_content = call.content;
@@ -218,7 +219,7 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
     m_body_obj.AddToolResponses(tools_responses);
 
     std::string body = m_body_obj.ToJsonString();
-
+    std::cout << body << std::endl;
     ChunkCompletionProcessor proc;
     proc.SetReasoning(m_show_reasoning);
     m_http_client.HttpPostStream(kEndPointCompletions, body, &proc);

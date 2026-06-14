@@ -4,6 +4,19 @@
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
+#include <rapidjson/error/en.h>
+
+// Double escaping backslashes
+auto prepare_obj_string = [](const std::string &s) {
+    std::string out;
+    out.reserve(s.size());
+    for (char c : s)
+    {
+        if (c == '\\') out += "\\\\";
+        else out += c;
+    }
+    return out;
+    };
 
 struct DialogueBody::RequestJson
 {
@@ -108,23 +121,45 @@ bool DialogueBody::AddResponse(const std::string &response)
 
 void DialogueBody::AddToolResponses(const std::vector<ToolResponse> &responses)
 {
+    AddToolCallMessages(responses);
+
     auto it = m_request->body.FindMember("messages");
     if (it != m_request->body.MemberEnd() && it->value.IsArray())
     {
+        rapidjson::Document::AllocatorType &alloc = m_request->body.GetAllocator();
+
         for (const ToolResponse &rss : responses)
         {
+            // Tool result message
             rapidjson::Document::AllocatorType &assist_alloc = m_request->body.GetAllocator();
-            rapidjson::Value assist_msg_value(rapidjson::kObjectType);
-            assist_msg_value.AddMember("role", "assistant", assist_alloc);
-            assist_msg_value.AddMember("content", rapidjson::Value(rss.input_content.c_str(), assist_alloc).Move(), assist_alloc);
-            assist_msg_value.AddMember("recipient", rapidjson::Value(rss.name.c_str(), assist_alloc).Move(), assist_alloc);
-            it->value.PushBack(assist_msg_value, assist_alloc);
+            rapidjson::Value tool_msg(rapidjson::kObjectType);
+            tool_msg.AddMember("tool_call_id", rapidjson::Value(rss.id.c_str(), assist_alloc).Move(), assist_alloc);
+            tool_msg.AddMember("role", "tool", alloc);
+            tool_msg.AddMember("recipient", rapidjson::Value(rss.name.c_str(), assist_alloc).Move(), assist_alloc);
 
-            rapidjson::Document::AllocatorType &alloc = m_request->body.GetAllocator();
-            rapidjson::Value msg_value(rapidjson::kObjectType);
-            msg_value.AddMember("role", "tool", alloc);
-            msg_value.AddMember("content", rapidjson::Value(rss.output_content.c_str(), alloc).Move(), alloc);
-            it->value.PushBack(msg_value, alloc);
+            rapidjson::Document json;
+            std::string raw_tool_output = rss.output_content; // prepare_obj_string(rss.output_content);
+            json.Parse(raw_tool_output.c_str());
+
+            rapidjson::Value content_val;
+
+            if (json.HasParseError()) // as string
+            {
+                rapidjson::ParseErrorCode code = json.GetParseError();
+                size_t offset = json.GetErrorOffset();
+                const char *msg = rapidjson::GetParseError_En(code);
+                std::cerr << "JSON parse error: " << msg << " at offset " << offset << std::endl;
+                content_val.SetString(rss.output_content.c_str(), alloc);
+            }
+            else // as object
+            {
+                content_val.CopyFrom(json, alloc);
+            }
+
+            //tool_msg.AddMember("content", content_val, alloc);
+
+            tool_msg.AddMember("content", rapidjson::Value(rss.output_content.c_str(), assist_alloc).Move(), alloc);
+            it->value.PushBack(tool_msg, alloc);
         }
     }
 }
@@ -224,3 +259,36 @@ std::string DialogueBody::ToJsonString() const
     m_request->body.Accept(writer);
     return buffer.GetString();
 }
+
+void DialogueBody::AddToolCallMessages(const std::vector<ToolResponse> &responses)
+{
+    auto it = m_request->body.FindMember("messages");
+    if (it != m_request->body.MemberEnd() && it->value.IsArray())
+    {
+        rapidjson::Document::AllocatorType &assist_alloc = m_request->body.GetAllocator();
+        rapidjson::Value assist_msg_value(rapidjson::kObjectType);
+        assist_msg_value.AddMember("role", "assistant", assist_alloc);
+        assist_msg_value.AddMember("content", rapidjson::Value(rapidjson::kNullType), assist_alloc);
+
+        rapidjson::Value arr(rapidjson::kArrayType);
+        for (const ToolResponse &rsp : responses)
+        {
+            rapidjson::Value obj(rapidjson::kObjectType);
+            obj.AddMember("id", rapidjson::Value(rsp.id.c_str(), assist_alloc).Move(), assist_alloc);
+            obj.AddMember("type", rapidjson::Value("function", assist_alloc), assist_alloc);
+
+            rapidjson::Value inner_obj(rapidjson::kObjectType);
+            inner_obj.AddMember("name", rapidjson::Value(rsp.name.c_str(), assist_alloc).Move(), assist_alloc);
+            inner_obj.AddMember("arguments", rapidjson::Value(rsp.input_content.c_str(), assist_alloc).Move(), assist_alloc);
+
+            obj.AddMember("function", inner_obj, assist_alloc);
+
+            arr.PushBack(obj, assist_alloc);
+        }
+
+        assist_msg_value.AddMember("tool_calls", arr, assist_alloc);
+
+        it->value.PushBack(assist_msg_value, assist_alloc);
+    }
+}
+

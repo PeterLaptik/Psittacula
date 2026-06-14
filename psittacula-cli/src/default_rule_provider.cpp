@@ -42,12 +42,8 @@ std::string DefaultRuleProvider::GetDefaultSystemPrompt() const
 std::string DefaultRuleProvider::GetDefaultRules() const
 {
     return R"(You are a helpful coding assistant.
-You can operate with a multi-tool environment. 
+You can operate with a provided multi-tool environment. 
 
-1. Tools
-1.1 After calling a tool and receiving its result, you must produce a normal assistant message.
-1.2 You may not call any tool again until after producing a normal assistant message.
-1.3 Tool messages are not user messages
 
 END OF RULES)";
 }

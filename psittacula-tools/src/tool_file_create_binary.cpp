@@ -67,6 +67,8 @@ std::string FileCreateBinaryTool::Execute(std::vector<ToolParameter> &params_val
     console::write_line("Binary file create tool.", console::TextOrigin::filesystem);
 
     std::string path = GetParam(params_values, "path");
+    UnescapeSlashesInPath(path);
+
     std::string content_b64 = GetParam(params_values, "content_base64");
 
     if (path.empty())

@@ -1,7 +1,9 @@
 #include "chunk_completion_processor.h"
 #include "console_writer.h"
+#include "format_util.h"
 #include <sstream>
 #include <iomanip>
+#include <random>
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
@@ -35,6 +37,7 @@ void ChunkCompletionProcessor::Reset()
     m_prompt_tokens = 0;
     m_tokens_cost = 0;
 
+    tool_delta.clear();
     m_current_tool.name.clear();
     m_current_tool.arguments.clear();
     m_tools.clear();
@@ -279,6 +282,7 @@ void ChunkCompletionProcessor::CheckTools(JsonDocument &doc)
                 if (fn.HasMember("id") && fn["id"].IsString())
                 {
                     id = fn["id"].GetString();
+                    std::cout << "ID ========== " << id << std::endl;
                 }
 
                 std::string name;
@@ -379,6 +383,9 @@ void ChunkCompletionProcessor::GetStat(int &used, int &total, bool &is_full) con
 
 void ChunkCompletionProcessor::GetResponseTools(std::vector<ToolCall> &calls_acc)
 {
+    static std::mt19937 rng(std::random_device{}());
+
+    Formatter fmt;
     if (!m_current_tool.name.empty())
         m_tools.push_back(m_current_tool);
 
@@ -387,6 +394,12 @@ void ChunkCompletionProcessor::GetResponseTools(std::vector<ToolCall> &calls_acc
         ToolCall caller;
         caller.name = fn.name;
         caller.id = fn.id;
+
+        if (caller.id.empty())
+        {
+            std::uniform_int_distribution<int> dist(1, std::numeric_limits<int>::max());
+            caller.id = "tool_call_" + std::to_string(dist(rng));
+        }
 
         rapidjson::Document doc;
         bool has_errors = doc.Parse(fn.arguments.c_str()).HasParseError();
@@ -404,28 +417,48 @@ void ChunkCompletionProcessor::GetResponseTools(std::vector<ToolCall> &calls_acc
             continue;
         }
 
+        std::string full_content;
         for (auto it = doc.MemberBegin(); it != doc.MemberEnd(); ++it) 
         {
-            const char *key = it->name.GetString();
+            std::string key = it->name.GetString();
+            full_content += fmt.Format("\"%?\":", key);
+
             const rapidjson::Value &value = it->value;
 
             std::string arg_val;
             if (value.IsString()) {
                 arg_val = value.GetString();
+                full_content += fmt.Format("\"%?\"", arg_val);
             }
             else if (value.IsInt()) {
                 arg_val = std::to_string(value.GetInt());
+                full_content += fmt.Format("%?", arg_val);
             }
             else if (value.IsBool()) {
                 arg_val = std::to_string(value.GetBool());
+                full_content += fmt.Format("%?", arg_val);
             }
             else
             {
-                console::write("GetTools: Unknown type of argument\n", TextOrigin::error);
+                std::string msg = fmt.Format("GetTools: Unknown type of argument\: %?", key);
+                console::write_line(msg, TextOrigin::error);
             }
 
             caller.arguments.emplace_back(key, arg_val);
+            full_content += ",";
         }
+
+        if (!full_content.empty())
+        {
+            full_content.pop_back();
+            full_content += "}";
+        }
+        else
+        {
+            full_content = "{}";
+        }
+
+        full_content = "{" + full_content;
 
         // Raw arguments as a content
         rapidjson::StringBuffer buffer;

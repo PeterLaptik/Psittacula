@@ -63,6 +63,7 @@ std::string FileReadTool::Execute(std::vector<ToolParameter> &params_values)
     console::write_line("File read tool.", console::TextOrigin::filesystem);
 
     std::string path = GetParam(params_values, "path");
+
     bool binary_mode = GetParamBool(params_values, "binary", false);
 
     console::write_line(fmt.Format("Reading file: %?", path), console::TextOrigin::filesystem);
@@ -149,7 +150,7 @@ std::string FileReadTool::Execute(std::vector<ToolParameter> &params_values)
         "    \"path\": \"%?\","
         "    \"size_bytes\": %?,"
         "    \"binary\": false,"
-        "    \"content\": \"%?\""
+        "    \"content\": %?"
         "  },"
         "  \"message\": \"File read successfully\""
         "}";

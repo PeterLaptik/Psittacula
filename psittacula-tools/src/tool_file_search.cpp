@@ -40,7 +40,10 @@ void FileSearchTool::GetParameters(std::vector<ToolParameter> &params_acc)
 std::string FileSearchTool::Execute(std::vector<ToolParameter> &params_values)
 {
     std::string query = GetParam(params_values, "query");
+
     std::string path = GetParam(params_values, "path");
+    UnescapeSlashesInPath(path);
+
     bool case_sensitive = GetParamBool(params_values, "case_sensitive", false);
     bool use_regex = GetParamBool(params_values, "regex", false);
 

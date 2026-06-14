@@ -47,3 +47,15 @@ std::string ToolBase::GetEscapedJSONString(const std::string &str) const
     writer.String(str.c_str());
     return std::string(buffer.GetString());
 }
+
+void ToolBase::UnescapeSlashesInPath(std::string &value) const
+{
+    std::string from = "\\\\";
+    std::string to = "\\";
+
+    size_t pos = 0;
+    while ((pos = value.find(from, pos)) != std::string::npos) {
+        value.replace(pos, from.length(), to);
+        pos += to.length();
+    }
+}

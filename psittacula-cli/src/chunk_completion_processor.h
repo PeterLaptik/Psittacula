@@ -60,6 +60,9 @@ class ChunkCompletionProcessor: public ChunkProcessor
         int m_kv_total = 0;
         bool m_context_full = false;
 
+        // Tools
+        std::string tool_delta;
+
         struct FunctionToEvoke
         {
             std::string id;

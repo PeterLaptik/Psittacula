@@ -23,6 +23,8 @@ std::string DirCreateTool::Execute(std::vector<ToolParameter> &params_values)
     console::write_line("Directory create tool.", console::TextOrigin::filesystem);
 
     std::string path = GetParam(params_values, "path");
+    UnescapeSlashesInPath(path);
+
     if (path.empty())
     {
         console::write_line("Missing required parameter: path", console::TextOrigin::error);

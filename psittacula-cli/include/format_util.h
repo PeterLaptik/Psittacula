@@ -5,6 +5,7 @@
 #include <cstring>
 #include <array>
 #include <istream>
+#include <iostream>
 #include <memory>
 
 ///\brief Class for filling strings with formatted arguments.
@@ -263,20 +264,24 @@ class Formatter
             stream << t;
         }
 
+        template<typename T>
+        struct is_string : std::false_type {};
+
+        template<>
+        struct is_string<std::string> : std::true_type {};
+
+        template<>
+        struct is_string<std::string_view> : std::true_type {};
+
         // Outputs type which can be iterated, to a string stream
         // stream - stream to get a string value
         // t - type value
         template<typename Stream, typename T,
-                typename = std::enable_if_t<
-                !std::is_same_v<T, std::string> &&
-                !std::is_same_v<T, std::wstring> &&
-                !std::is_same_v<T, std::u16string> &&
-                !std::is_same_v<T, std::u32string>
-                >,
                 typename It = typename T::const_iterator,
                 typename Type = typename T::value_type,
                 typename Begin = decltype(std::declval<T>().begin()),
-                typename End = decltype(std::declval<T>().end())>
+                typename End = decltype(std::declval<T>().end()),
+                std::enable_if_t<!is_string<T>::value>>
         void OutputValue(Stream &stream, const T &t)
         {
             stream << "[";

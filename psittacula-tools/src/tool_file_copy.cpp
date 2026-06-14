@@ -32,7 +32,10 @@ std::string FileCopyTool::Execute(std::vector<ToolParameter> &params_values)
     console::write_line("File copy tool.", console::TextOrigin::filesystem);
 
     std::string rel_from = GetParam(params_values, "from");
+    UnescapeSlashesInPath(rel_from);
+
     std::string rel_to = GetParam(params_values, "to");
+    UnescapeSlashesInPath(rel_to);
 
     if (rel_from.empty() || rel_to.empty())
     {

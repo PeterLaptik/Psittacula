@@ -18,6 +18,7 @@ struct ToolResponse
     std::string name;
     std::string output_content;
     std::string input_content;
+    std::string id;
 };
 
 struct ToolParameter
@@ -58,6 +59,8 @@ class ToolBase
         bool GetParamBool(const std::vector<ToolParameter> &params_acc, const std::string &param_name, bool default_value);
 
         std::string GetEscapedJSONString(const std::string &str) const;
+
+        void UnescapeSlashesInPath(std::string &value) const;
 };
 
 #endif // TOOL_BASE_INCLUDED_H
