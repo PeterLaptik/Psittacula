@@ -43,6 +43,8 @@ class AiClient
         virtual std::string GetAgentRules() const = 0;
 
         virtual std::string GetDialogueBody() const = 0;
+
+        virtual void CleanContext() = 0;
 };
 
 #endif // AI_CLIENT_INCLUDED_H

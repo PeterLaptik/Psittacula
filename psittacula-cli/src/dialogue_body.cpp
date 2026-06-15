@@ -199,7 +199,6 @@ void DialogueBody::RegisterTool(ToolBase *tool)
     tool->GetParameters(props);
 
     rapidjson::Value required(rapidjson::kArrayType);
-
     for (auto &prop : props)
     {
         rapidjson::Value prop_schema(rapidjson::kObjectType);
@@ -333,5 +332,40 @@ void DialogueBody::AddToolCallMessages(const std::vector<ToolResponse> &response
         assist_msg_value.AddMember("tool_calls", arr, assist_alloc);
 
         it->value.PushBack(assist_msg_value, assist_alloc);
+    }
+}
+
+void DialogueBody::CleanContext()
+{
+    auto it = m_request->body.FindMember("messages");
+    if (it != m_request->body.MemberEnd() && it->value.IsArray())
+    {
+        rapidjson::Value &messages = it->value;
+        rapidjson::Document::AllocatorType &alloc = m_request->body.GetAllocator();
+
+        // Find the first system message
+        rapidjson::Value system_msg;
+        bool has_system = false;
+
+        for (rapidjson::SizeType i = 0; i < messages.Size(); ++i)
+        {
+            const rapidjson::Value &msg = messages[i];
+            if (msg.HasMember("role") && msg["role"].IsString() &&
+                std::string(msg["role"].GetString()) == "system")
+            {
+                system_msg.CopyFrom(msg, alloc);
+                has_system = true;
+                break;
+            }
+        }
+
+        // Clear all messages
+        messages.Clear();
+
+        // Restore the first system message if it existed
+        if (has_system)
+        {
+            messages.PushBack(system_msg, alloc);
+        }
     }
 }

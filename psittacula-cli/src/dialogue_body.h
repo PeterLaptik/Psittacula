@@ -33,11 +33,13 @@ class DialogueBody
 
         std::string GetSystemMessage() const;
 
+        void CleanContext();
+
     private:
         void AddToolCallMessages(const std::vector<ToolResponse> &responses);
 
-        std::string m_model = "gpt-4o";
-
+        std::string m_model = "gpt-4-o";
+        
         // PIMPL for RapidJSON document
         struct RequestJson;
         std::unique_ptr<RequestJson> m_request;

@@ -46,6 +46,8 @@ class AiClientImpl: public AiClient
 
         std::string GetAgentRules() const override;
 
+        void CleanContext() override;
+
     private:
         void InitTools();
         ToolResponse EvokeTool(ToolCall &call);

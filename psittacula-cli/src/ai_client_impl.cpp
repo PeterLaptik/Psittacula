@@ -262,3 +262,7 @@ std::string AiClientImpl::GetContextInfo()
     return m_http_client.HttpGet(kEndPointSlots);
 }
 
+void AiClientImpl::CleanContext()
+{
+    m_body_obj.CleanContext();
+}
