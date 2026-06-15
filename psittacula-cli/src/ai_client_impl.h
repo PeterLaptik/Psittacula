@@ -42,7 +42,9 @@ class AiClientImpl: public AiClient
 
         void ToolRedo() override;
 
-        std::string GetDialogueBody() override;
+        std::string GetDialogueBody() const override;
+
+        std::string GetAgentRules() const override;
 
     private:
         void InitTools();

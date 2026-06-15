@@ -164,9 +164,14 @@ void AiClientImpl::ToolRedo()
     m_history_mgr.Redo();
 }
 
-std::string AiClientImpl::GetDialogueBody()
+std::string AiClientImpl::GetDialogueBody() const
 {
     return m_body_obj.ToJsonString();
+}
+
+std::string AiClientImpl::GetAgentRules() const
+{
+    return m_body_obj.GetSystemMessage();
 }
 
 void AiClientImpl::InitTools()

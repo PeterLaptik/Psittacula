@@ -40,7 +40,9 @@ class AiClient
 
         virtual void ToolRedo() = 0;
 
-        virtual std::string GetDialogueBody() = 0;
+        virtual std::string GetAgentRules() const = 0;
+
+        virtual std::string GetDialogueBody() const = 0;
 };
 
 #endif // AI_CLIENT_INCLUDED_H

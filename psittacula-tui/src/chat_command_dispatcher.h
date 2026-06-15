@@ -1,4 +1,4 @@
-#ifndef  CHAT_COMMAND_DISPATCHER_INCLUDED_H
+#ifndef CHAT_COMMAND_DISPATCHER_INCLUDED_H
 #define CHAT_COMMAND_DISPATCHER_INCLUDED_H
 
 #include "chat_command.h"
@@ -13,6 +13,7 @@
 
 class AiClient;
 
+/// Keeps and dispatches chat commands
 class ChatCommandDispatcher
 {
     public:
@@ -20,14 +21,14 @@ class ChatCommandDispatcher
 
         ~ChatCommandDispatcher() = default;
 
-        void RegisterCommand(const std::string &command_name, ChatCommand *command)
+        void RegisterCommand(const std::string &command_name, std::unique_ptr<ChatCommand> command)
         {
             // Force lowercase for commands names
             std::string cmd;
             std::transform(command_name.begin(), command_name.end(), std::back_inserter(cmd),
                 [](unsigned char c) { return std::tolower(c); });
 
-            m_commands[command_name] = std::unique_ptr<ChatCommand>(command);
+            m_commands[cmd] = std::move(command);
         }
 
         void DispatchCommand(const std::string &command_name, const std::vector<std::string> &args, std::unique_ptr<AiClient> &client)
@@ -43,7 +44,7 @@ class ChatCommandDispatcher
                 return;
             }
 
-            auto it = m_commands.find(command_name);
+            auto it = m_commands.find(cmd_name);
             if (it != m_commands.end())
             {
                 it->second->Execute(client, args);
@@ -75,9 +76,8 @@ class ChatCommandDispatcher
                 console::write_line("\033[1m" + cmd_desc.first + " -\033[0m " + cmd_desc.second);
             }
 
-            std::string q_clear = "q";
-            std::string q_clear_desc = "Clear active query.";
-            console::write_line("\033[1m" + q_clear + " -\033[0m " + q_clear_desc);
+            console::write_line("\033[1mq -\033[0m Clear active query.");
+            console::write_line("\033[1mexit -\033[0m Exit form the program.");
 
             console::write_line("\n\nPress Enter to continue...");
             std::cin.get();
@@ -89,4 +89,4 @@ class ChatCommandDispatcher
         std::map<std::string, std::unique_ptr<ChatCommand>> m_commands;
 };
 
-#endif // ! CHAT_COMMAND_DISPATCHER_INCLUDED_H
+#endif // CHAT_COMMAND_DISPATCHER_INCLUDED_H

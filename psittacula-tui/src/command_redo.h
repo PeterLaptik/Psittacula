@@ -2,10 +2,8 @@
 #define COMMAND_REDO_INCLUDED_H
 
 #include "chat_command.h"
-#include "format_util.h"
-#include "console_writer.h"
 
-// Redo last tool
+/// Redo last tool
 class CommandRedo : public ChatCommand
 {
     public:
@@ -20,4 +18,4 @@ class CommandRedo : public ChatCommand
         }
 };
 
-#endif // !COMMAND_REDO_INCLUDED_H
+#endif // COMMAND_REDO_INCLUDED_H

@@ -6,7 +6,7 @@
 #include "format_util.h"
 #include <iostream>
 
-// Shows list of available tools
+/// Shows list of available tools
 class CommandTools : public ChatCommand
 {
     public:

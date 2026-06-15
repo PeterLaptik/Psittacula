@@ -2,8 +2,6 @@
 #define COMMAND_UNDO_INCLUDED_H
 
 #include "chat_command.h"
-#include "format_util.h"
-#include "console_writer.h"
 
 // Undo last tool
 class CommandUndo : public ChatCommand
@@ -20,4 +18,4 @@ class CommandUndo : public ChatCommand
         }
 };
 
-#endif // !COMMAND_UNDO_INCLUDED_H
+#endif // COMMAND_UNDO_INCLUDED_H

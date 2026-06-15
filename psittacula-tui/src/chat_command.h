@@ -26,7 +26,7 @@ class ChatCommand
         virtual std::string Description() = 0;
 
     protected:
-        // Sets alternate screen buffer for command interractions, if necessary
+        // Sets alternate screen buffer for command interractive mode, if necessary
         void  ActivateAlternateScreen() const
         {
             std::cout << "\x1b[?1049h\x1b[2J\x1b[H";
@@ -39,5 +39,5 @@ class ChatCommand
 
 };
 
-#endif // !CHAT_COMMAND_INCLUDED_H
+#endif // CHAT_COMMAND_INCLUDED_H
 

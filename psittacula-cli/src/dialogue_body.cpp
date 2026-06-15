@@ -16,7 +16,7 @@ auto prepare_obj_string = [](const std::string &s) {
         else out += c;
     }
     return out;
-    };
+};
 
 struct DialogueBody::RequestJson
 {
@@ -45,6 +45,7 @@ DialogueBody::DialogueBody()
 
 DialogueBody::~DialogueBody()
 { }
+
 
 void DialogueBody::AddUserMessage(const std::string &message)
 {
@@ -137,26 +138,8 @@ void DialogueBody::AddToolResponses(const std::vector<ToolResponse> &responses)
             tool_msg.AddMember("role", "tool", alloc);
             tool_msg.AddMember("recipient", rapidjson::Value(rss.name.c_str(), assist_alloc).Move(), assist_alloc);
 
-            rapidjson::Document json;
-            std::string raw_tool_output = rss.output_content; // prepare_obj_string(rss.output_content);
-            json.Parse(raw_tool_output.c_str());
-
             rapidjson::Value content_val;
-
-            if (json.HasParseError()) // as string
-            {
-                rapidjson::ParseErrorCode code = json.GetParseError();
-                size_t offset = json.GetErrorOffset();
-                const char *msg = rapidjson::GetParseError_En(code);
-                std::cerr << "JSON parse error: " << msg << " at offset " << offset << std::endl;
-                content_val.SetString(rss.output_content.c_str(), alloc);
-            }
-            else // as object
-            {
-                content_val.CopyFrom(json, alloc);
-            }
-
-            //tool_msg.AddMember("content", content_val, alloc);
+            content_val.SetString(rss.output_content.c_str(), alloc);
 
             tool_msg.AddMember("content", rapidjson::Value(rss.output_content.c_str(), assist_alloc).Move(), alloc);
             it->value.PushBack(tool_msg, alloc);
@@ -298,6 +281,29 @@ std::string DialogueBody::ToJsonString() const
     return buffer.GetString();
 }
 
+std::string DialogueBody::GetSystemMessage() const
+{
+    auto it = m_request->body.FindMember("messages");
+    if (it != m_request->body.MemberEnd() && it->value.IsArray())
+    {
+        const rapidjson::Value &messages = it->value;
+        for (rapidjson::SizeType i = 0; i < messages.Size(); ++i)
+        {
+            const rapidjson::Value &msg = messages[i];
+            if (msg.HasMember("role") && msg["role"].IsString() &&
+                std::string(msg["role"].GetString()) == "system")
+            {
+                if (msg.HasMember("content") && msg["content"].IsString())
+                {
+                    return std::string(msg["content"].GetString());
+                }
+                return "";
+            }
+        }
+    }
+    return "";
+}
+
 void DialogueBody::AddToolCallMessages(const std::vector<ToolResponse> &responses)
 {
     auto it = m_request->body.FindMember("messages");
@@ -329,4 +335,3 @@ void DialogueBody::AddToolCallMessages(const std::vector<ToolResponse> &response
         it->value.PushBack(assist_msg_value, assist_alloc);
     }
 }
-

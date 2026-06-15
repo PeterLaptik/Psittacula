@@ -30,13 +30,18 @@ int getch()
 }
 #endif
 
-// Selects an agent rules (system prompt) from /settings
-class CommandChangeAgent : public ChatCommand
+/// Selects or shows existing agent rules (system prompt) from Psittacula/settings
+class CommandChangeRules : public ChatCommand
 {
     public:
         void Execute(std::unique_ptr<AiClient> &client, const std::vector<std::string> &args) override
         {
-            ChooseAgent(client);
+            if (!args.empty() && args[0] == "show")
+            {
+                ShowCurrentAgentRules(client);
+                return;
+            }
+            ChooseRules(client);
         }
 
         std::string Description() override
@@ -47,7 +52,26 @@ class CommandChangeAgent : public ChatCommand
     private:
         Formatter formatter;
 
-        void ChooseAgent(std::unique_ptr<AiClient> &client)
+        void ShowCurrentAgentRules(std::unique_ptr<AiClient> &client)
+        {
+            ActivateAlternateScreen();
+            
+            std::cout << "\x1b[2J\x1b[H";
+            console::write_line("====================================================", TextOrigin::filesystem);
+            console::write_line("================= Current Agent Rules ===============", TextOrigin::filesystem);
+            console::write_line("====================================================", TextOrigin::filesystem);
+            
+            std::string rules = client->GetAgentRules();
+            console::write_line(rules);
+            
+            console::write_line("\n\nPress any key to continue...");
+            
+            std::cin.get();
+
+            RestoreMainScreen();
+        }
+
+        void ChooseRules(std::unique_ptr<AiClient> &client)
         {
             ActivateAlternateScreen();
 
@@ -74,7 +98,7 @@ class CommandChangeAgent : public ChatCommand
 
             while (true)
             {
-    #ifdef _WIN32
+#ifdef _WIN32
                 int c = _getch();
                 if (c == 224)
                 {
@@ -96,8 +120,8 @@ class CommandChangeAgent : public ChatCommand
                     {
                         int c2 = getch();
                         if (c2 == 'A' && index > 0) index--;
-                        else if (c2 == 'B' && index < agents.size() - 1) index++;
-                        DrawMenu(agents, index);
+                        else if (c2 == 'B' && index < agent_rules.size() - 1) index++;
+                        DrawMenu(agent_rules, index);
                     }
                 }
                 else if (c == '\n' || c == '\r')
@@ -133,7 +157,7 @@ class CommandChangeAgent : public ChatCommand
         {
             std::cout << "\x1b[2J\x1b[H";
             console::write_line("====================================================", TextOrigin::filesystem);
-            console::write_line("============ Choose agent rules to load =============", TextOrigin::filesystem);
+            console::write_line("============ Choose agent rules to load ==============", TextOrigin::filesystem);
             console::write_line("====================================================", TextOrigin::filesystem);
             console::write_line(formatter.Format("Found agent rules: %?", agents.size()), TextOrigin::filesystem);
             console::write_line("Use Up/Down to choose, Enter to select.\n");

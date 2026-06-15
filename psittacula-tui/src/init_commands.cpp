@@ -8,14 +8,16 @@
 #include "command_change_agent.h"
 #include "command_change_project_dir.h"
 
+#include <memory>
+
 void init_commands(ChatCommandDispatcher &dsp)
 {
-    dsp.RegisterCommand("model", new CommandChangeModel());
-    dsp.RegisterCommand("tools", new CommandTools());
-    dsp.RegisterCommand("reasoning", new CommandReasoning());
-    dsp.RegisterCommand("undo", new CommandUndo());
-    dsp.RegisterCommand("redo", new CommandRedo());
-    dsp.RegisterCommand("dump", new CommandDump());
-    dsp.RegisterCommand("rules", new CommandChangeAgent());
-    dsp.RegisterCommand("project", new CommandChangeProjectDir());
+    dsp.RegisterCommand("model", std::make_unique<CommandChangeModel>());
+    dsp.RegisterCommand("tools", std::make_unique<CommandTools>());
+    dsp.RegisterCommand("reasoning", std::make_unique<CommandReasoning>());
+    dsp.RegisterCommand("undo", std::make_unique<CommandUndo>());
+    dsp.RegisterCommand("redo", std::make_unique<CommandRedo>());
+    dsp.RegisterCommand("dump", std::make_unique<CommandDump>());
+    dsp.RegisterCommand("rules", std::make_unique<CommandChangeRules>());
+    dsp.RegisterCommand("project", std::make_unique<CommandChangeProjectDir>());
 }

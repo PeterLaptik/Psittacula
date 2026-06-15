@@ -4,8 +4,9 @@
 #include "ai_client.h"
 #include <string>
 
-// Model file: extension .txt
-// See example txt file
+/// Holder of information from a model file.
+/// Model files have extension .txt.
+/// See example txt file
 class Model final
 {
     public:
@@ -33,7 +34,7 @@ class Model final
         std::string m_name;
         std::string m_host;
         std::string m_api_key;
-        int m_context_size = -1; // -1 means not set
+        int m_context_size = -1; // -1 means the value is not set
 };
 
-#endif // !MODEL_INCLUDED_H
+#endif // MODEL_INCLUDED_H

@@ -9,6 +9,8 @@
 #include <fstream>
 #include <chrono>
 
+/// Saves dialogue full JSON body as a text file (to a project directory)
+/// Can be useful for debug
 class CommandDump : public ChatCommand
 {
     public:

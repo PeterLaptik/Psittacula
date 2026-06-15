@@ -8,6 +8,7 @@
 #include <iostream>
 #include <filesystem>
 
+/// Changes project directore / sandbox
 class CommandChangeProjectDir : public ChatCommand
 {
     public:
@@ -26,7 +27,15 @@ class CommandChangeProjectDir : public ChatCommand
             // If there are arguments, take the first one as the new path
             if (!args.empty())
             {
-                new_path = args[0];
+                // Arguments preparation uses spliting by spaces.
+                // Taking spaces into account: '/path/to/some foldef/abc' -> '/path/to/some', 'foldef/abc'
+                std::ostringstream oss;
+                for (size_t i = 0; i < args.size(); ++i)
+                {
+                    if (i > 0) oss << ' ';
+                    oss << args[i];
+                }
+                new_path = oss.str();
             }
             else
             {

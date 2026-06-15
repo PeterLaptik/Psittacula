@@ -6,6 +6,7 @@
 #include "console_writer.h"
 #include <ctype.h>
 
+/// Turns on / off resoning text in an output
 class CommandReasoning : public ChatCommand
 {
     public:

@@ -31,7 +31,7 @@ int getch()
 }
 #endif
 
-// Changes model to interract
+/// Changes or creates model to connect
 class CommandChangeModel: public ChatCommand
 {
     public:
@@ -174,7 +174,7 @@ class CommandChangeModel: public ChatCommand
             file << "name=" << model_name << "\n\n";
 
             file << "# Host\n";
-            file << "# The value will be concatenate with '/v1/chat/completions' for requests\n";
+            file << "# The value will be concatenate with '/chat/completions' for requests\n";
             file << "host=" << host << "\n\n";
 
             file << "# Context size: maximum context length for the model (optional)\n";

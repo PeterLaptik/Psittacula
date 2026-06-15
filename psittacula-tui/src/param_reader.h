@@ -5,6 +5,10 @@
 #include <vector>
 #include <map>
 
+/// Program command line parameters and flags reader.
+/// Expects following formats:
+/// parameters - any expression like ABC=XYZ
+/// flags -- any other text tokens which do not contain '=' character
 class ParamReader
 {
     public:
