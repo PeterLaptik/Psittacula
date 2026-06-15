@@ -57,13 +57,6 @@ void ChunkCompletionProcessor::ProcessChunk(const std::string &chunk)
     // Is finished?
     if (json == " [DONE]" || json == "[DONE]")
     {
-        /*console::write_line("\nTokens: " + std::to_string(m_total_tokens) + 
-            + "( prompt: " + std::to_string(m_prompt_tokens) + 
-            " / completion: " + std::to_string(m_completion_tokens)
-            + ") "
-            + (m_tokens_cost > 0 ? "cost: " + std::to_string(m_tokens_cost) : "")
-            + "\n", console::TextOrigin::reasoning);
-        console::write_splitter();*/
         return;
     }
         
@@ -109,13 +102,12 @@ std::string ChunkCompletionProcessor::GetResponseReasoning() const
     return m_reasoning;
 }
 
-void ChunkCompletionProcessor::WriteStat(std::string ctx_data) const
+void ChunkCompletionProcessor::WriteStat(std::string ctx_data, int context_size) const
 {
     rapidjson::Document doc;
     doc.Parse(ctx_data.c_str());
 
-    int context_size = 0;
-    if (doc.IsArray() && !doc.Empty())
+    if (!doc.HasParseError() && doc.IsArray() && !doc.Empty())
     {
         const auto &firstSlot = doc[0];
 
@@ -127,19 +119,21 @@ void ChunkCompletionProcessor::WriteStat(std::string ctx_data) const
         }
     }
 
-    double ratio_ctx = context_size != 0 ? static_cast<double>(m_total_tokens) / static_cast<double>(context_size) : 0;
+    double ratio_ctx = context_size > 0 ? static_cast<double>(m_total_tokens) / static_cast<double>(context_size) : 0;
     double percentage_ctx = std::round(ratio_ctx * 10000) / 100;
 
     std::ostringstream oss;
     oss << std::fixed << std::setprecision(2) << percentage_ctx;
     std::string percentage_ctx_str = oss.str();
 
+    std::string context_usage_str = context_size > 0 ?
+        percentage_ctx_str + "% of context (" + std::to_string(context_size) + ")" : "";
+
     console::write_line("\nTokens: " + std::to_string(m_total_tokens)
         + " (prompt: " + std::to_string(m_prompt_tokens) +
         + " / completion: " + std::to_string(m_completion_tokens)
         + ") \t"
-        + percentage_ctx_str + "% of context ("
-        + std::to_string(context_size) + ")"
+        + context_usage_str
         + (m_tokens_cost > 0 ? "cost: " + std::to_string(m_tokens_cost) : "")
         + "\n", console::TextOrigin::reasoning);
     console::write_splitter();

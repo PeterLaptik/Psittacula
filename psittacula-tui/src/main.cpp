@@ -19,7 +19,7 @@ void process_query(std::unique_ptr<AiClient> &client, const std::vector<std::str
 void process_command(std::unique_ptr<AiClient> &client, const std::string &command, ChatCommandDispatcher &cmd_dispatcher);
 std::string get_logo();
 
-// Limit for lines in a sinagle query
+// Limit for lines in a single query
 const int kMaxLinesInAQuery = 100;
 
 //

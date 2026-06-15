@@ -27,14 +27,16 @@ void FileModifyTool::GetParameters(std::vector<ToolParameter> &params_acc)
         "position",
         "integer",
         "Position to insert content at (0 = beginning, -1 = append, default = -1).",
-        false
+        false,
+        "-1"
         });
     
     params_acc.push_back({
         "replace_all",
         "boolean",
         "If true, replaces entire file content; if false, inserts at position (default = false).",
-        false
+        false,
+        "false"
         });
 }
 

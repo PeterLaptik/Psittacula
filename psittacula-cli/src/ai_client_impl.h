@@ -14,9 +14,9 @@ class ToolBase;
 class AiClientImpl: public AiClient
 {
     public:
-        explicit AiClientImpl(const std::string &host_and_port);
+        explicit AiClientImpl(const std::string &host_and_port, int context_size);
 
-        AiClientImpl(const std::string &host, int port);
+        AiClientImpl(const std::string &host, int port, int context_size);
 
         ~AiClientImpl() override;
 
@@ -54,6 +54,7 @@ class AiClientImpl: public AiClient
 
         Formatter fmt;
         std::string m_api_key;
+        int m_context_size = -1;
         HttpClient m_http_client;
 
         bool m_show_reasoning = true;

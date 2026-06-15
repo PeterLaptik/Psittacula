@@ -27,8 +27,8 @@ struct ToolParameter
     std::string type;
     std::string description;
     bool is_required;
-
-    std::string value = ""; // always string, it is used to evoke a tool
+    std::string default;
+    std::string value; // always string, it is used to evoke a tool
 };
 
 class ToolBase

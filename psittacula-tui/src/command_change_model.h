@@ -139,6 +139,7 @@ class CommandChangeModel: public ChatCommand
             std::string model_name;
             std::string host;
             std::string api_key;
+            std::string context_size_str;
 
             std::cout << "Enter file name for the connection: ";
             std::getline(std::cin, file_name);
@@ -148,6 +149,9 @@ class CommandChangeModel: public ChatCommand
 
             std::cout << "Enter host URL (e.g., http://localhost:8080): ";
             std::getline(std::cin, host);
+
+            std::cout << "Enter context size (optional, leave empty if not set): ";
+            std::getline(std::cin, context_size_str);
 
             std::cout << "Enter API key (leave empty if not required): ";
             std::getline(std::cin, api_key);
@@ -173,6 +177,12 @@ class CommandChangeModel: public ChatCommand
             file << "# The value will be concatenate with '/v1/chat/completions' for requests\n";
             file << "host=" << host << "\n\n";
 
+            file << "# Context size: maximum context length for the model (optional)\n";
+            if (!context_size_str.empty())
+                file << "context_size=" << context_size_str << "\n";
+            else
+                file << "# context_size=\n";
+
             file << "# Bearing key: add if necessary\n";
             if (!api_key.empty())
                 file << "api_key=" << api_key << "\n";
@@ -180,6 +190,8 @@ class CommandChangeModel: public ChatCommand
                 file << "# api_key=\n";
 
             file.close();
+
+            WorkingDir::GetInstance().UpdateModels();
 
             RestoreMainScreen();
 

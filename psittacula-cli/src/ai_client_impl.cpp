@@ -20,8 +20,8 @@ const std::string kEndPointCompletions = "/chat/completions";
 const std::string kEndPointSlots = "/slots";
 
 
-AiClientImpl::AiClientImpl(const std::string &host_and_port)
-    : m_http_client(host_and_port)
+AiClientImpl::AiClientImpl(const std::string &host_and_port, int context_size)
+    : m_http_client(host_and_port), m_context_size(context_size)
 { 
     SetServerType(AiServerType::LlamaCPP);
     InitTools();
@@ -30,8 +30,8 @@ AiClientImpl::AiClientImpl(const std::string &host_and_port)
     m_body_obj.AddSystemMessage(provider.GetDefaultSystemPrompt());
 }
 
-AiClientImpl::AiClientImpl(const std::string &host, int port)
-    : m_http_client(host, port)
+AiClientImpl::AiClientImpl(const std::string &host, int port, int context_size)
+    : m_http_client(host, port), m_context_size(context_size)
 {
     SetServerType(AiServerType::LlamaCPP);
     InitTools();
@@ -87,7 +87,7 @@ void AiClientImpl::SendUserMessage(const std::string &message)
     proc.SetReasoning(m_show_reasoning);
     m_http_client.HttpPostStream(kEndPointCompletions, body, &proc);
 
-    proc.WriteStat(GetContextInfo());
+    proc.WriteStat(GetContextInfo(), m_context_size);
 
     std::string response_msg = proc.GetResponseMessage();
     m_body_obj.AddResponse(response_msg);
@@ -219,12 +219,12 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
     m_body_obj.AddToolResponses(tools_responses);
 
     std::string body = m_body_obj.ToJsonString();
-    std::cout << body << std::endl;
+
     ChunkCompletionProcessor proc;
     proc.SetReasoning(m_show_reasoning);
     m_http_client.HttpPostStream(kEndPointCompletions, body, &proc);
 
-    proc.WriteStat(GetContextInfo());
+    proc.WriteStat(GetContextInfo(), m_context_size);
 
     if (proc.HasErrors())
     {

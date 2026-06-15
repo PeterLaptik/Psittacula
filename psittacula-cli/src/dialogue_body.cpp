@@ -227,6 +227,44 @@ void DialogueBody::RegisterTool(ToolBase *tool)
         prop_schema.AddMember("description",
             rapidjson::Value(prop.description.c_str(), alloc).Move(), alloc);
 
+        if (!prop.default.empty())
+        {
+            if (prop.type == "string")
+            {
+                prop_schema.AddMember("default",
+                    rapidjson::Value(prop.default.c_str(), alloc).Move(), alloc);
+            }
+            else if (prop.type == "integer")
+            {
+                int value = 0;
+                try
+                {
+                    value = std::atoi(prop.default.c_str());
+                    prop_schema.AddMember("default", rapidjson::Value(value), alloc);
+                }
+                catch (...) { }
+            }
+            else if (prop.type == "boolean")
+            {
+                bool value = prop.type == "true" ? true : false;
+                prop_schema.AddMember("default", rapidjson::Value(value), alloc);
+            }
+            else if (prop.type == "number")
+            {
+                double value = 0;
+                try
+                {
+                    value = std::atof(prop.default.c_str());
+                    prop_schema.AddMember("default", rapidjson::Value(value), alloc);
+                }
+                catch (...) {}
+            }
+            else
+            {
+                std::cerr << "Tool registring: bad parameter type for " << prop.name << std::endl;
+            }
+        }
+
         properties.AddMember(
             rapidjson::Value(prop.name.c_str(), alloc).Move(),
             prop_schema,
