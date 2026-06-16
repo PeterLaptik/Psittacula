@@ -23,7 +23,7 @@ size_t responses_fn::write_callback_stream(char *ptr, size_t size, size_t nmemb,
     size_t total = size * nmemb;
     std::string chunk(ptr, total);
 
-    // SSE sends lines like:
+    // Server sends lines like:
     // data: {"id":"...","choices":[{"delta":{"content":"Text"}}]}
     // data: [DONE]
 
@@ -39,8 +39,5 @@ size_t responses_fn::write_callback_stream(char *ptr, size_t size, size_t nmemb,
 
     return total;
 }
-//
-//void responses_fn::SetChunkProcessor(ChunkProcessor *proc)
-//{
-//    processor = proc;
-//}
+
+

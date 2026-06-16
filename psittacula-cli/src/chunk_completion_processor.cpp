@@ -16,7 +16,6 @@ struct ChunkCompletionProcessor::JsonDocument
     rapidjson::Document &body;
 };
 
-static const char *kReasoningOutputColour = "\033[90m";
 
 // Resoning progress
 // Shows rotating line in a console
@@ -27,7 +26,6 @@ void ChunkCompletionProcessor::Reset()
 {
     m_reasoning_in_process = true;
     m_show_reasoning = true;
-    m_is_reading_function = false;
 
     m_message.clear();
     m_reasoning.clear();
@@ -37,7 +35,6 @@ void ChunkCompletionProcessor::Reset()
     m_prompt_tokens = 0;
     m_tokens_cost = 0;
 
-    tool_delta.clear();
     m_current_tool.name.clear();
     m_current_tool.arguments.clear();
     m_tools.clear();
@@ -218,7 +215,7 @@ void ChunkCompletionProcessor::CheckTokens(JsonDocument &doc)
         m_total_tokens = ctx_cached + m_prompt_tokens + m_completion_tokens;
     }
 
-    // The condition works for OpenRouter
+    // The condition works other servers
     if (doc.body.HasMember("usage"))
     {
         const auto &usage = doc.body["usage"];
@@ -237,23 +234,6 @@ void ChunkCompletionProcessor::CheckTokens(JsonDocument &doc)
         if (usage.HasMember("cost") && usage["cost"].IsDouble())
         {
             m_tokens_cost = usage["cost"].IsDouble();
-        }
-    }
-
-    if (doc.body.HasMember("context"))
-    {
-        const auto &usage = doc.body["context"];
-        if (usage.HasMember("kv_used") && usage["kv_used"].IsInt())
-        {
-            m_kv_used = usage["kv_used"].GetInt();
-        }
-        if (usage.HasMember("kv_total") && usage["kv_total"].IsInt())
-        {
-            m_kv_total = usage["kv_total"].GetInt();
-        }
-        if (usage.HasMember("context_full") && usage["context_full"].IsBool())
-        {
-            m_context_full = usage["context_full"].GetBool();
         }
     }
 }
@@ -368,13 +348,6 @@ std::string ChunkCompletionProcessor::GetError() const
     return m_error;
 }
 
-void ChunkCompletionProcessor::GetStat(int &used, int &total, bool &is_full) const
-{
-    used = m_kv_used;
-    total = m_kv_total;
-    is_full = m_context_full;
-}
-
 void ChunkCompletionProcessor::GetResponseTools(std::vector<ToolCall> &calls_acc)
 {
     static std::mt19937 rng(std::random_device{}());
@@ -434,7 +407,7 @@ void ChunkCompletionProcessor::GetResponseTools(std::vector<ToolCall> &calls_acc
             }
             else
             {
-                std::string msg = fmt.Format("GetTools: Unknown type of argument\: %?", key);
+                std::string msg = fmt.Format("GetTools: Unknown type of argument: %?", key);
                 console::write_line(msg, TextOrigin::error);
             }
 

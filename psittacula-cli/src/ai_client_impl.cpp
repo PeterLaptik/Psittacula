@@ -1,6 +1,4 @@
 #include "ai_client_impl.h"
-#include "health_rsp.h"
-#include "completion_rsp.h"
 #include "chunk_completion_processor.h"
 #include "response_readers.h"
 #include "tool_factory.h"
@@ -40,35 +38,6 @@ AiClientImpl::AiClientImpl(const std::string &host, int port, int context_size)
 
 AiClientImpl::~AiClientImpl()
 { }
-
-bool AiClientImpl::CheckHealth()
-{
-    std::string response = "";
-    try
-    {
-        response = m_http_client.HttpGet(kEndPointHealth);
-        ServerHealthResponse response_obj = health_response_from_json(response);
-        if (auto val = std::get_if<HealthOkResponse>(&response_obj)) {
-            std::cout << "Server status: OK" << std::endl;
-            return true;
-        }
-
-        if (auto val = std::get_if<HealthErrorResponse>(&response_obj)) {
-            std::cout << "Server status error: ";
-            std::cout << val->error.code;
-            std::cout << " " << val->error.message;
-            std::cout << " (" << val->error.type << ")" << std::endl;
-            return false;
-        }
-    }
-    catch (const std::runtime_error &e)
-    {
-        std::cout << "Response: " << response << std::endl;
-        std::cout << e.what() << std::endl;
-    }
-
-    return false;
-}
 
 void AiClientImpl::SetAgentRules(const std::string &rules)
 {

@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+/// Stream response receiver.
+/// Parses each chunk and extracts data: messages, reasoning, tool calls, etc
 class ChunkCompletionProcessor: public ChunkProcessor
 {
     public:
@@ -13,24 +15,31 @@ class ChunkCompletionProcessor: public ChunkProcessor
 
         virtual ~ChunkCompletionProcessor() = default;
 
+        /// Clears all data from the last response
         void Reset();
+
 
         void ProcessChunk(const std::string &chunk) override;
 
+        /// Shows/ hides reasoning text
         void SetReasoning(bool is_shown);
 
+        /// Returns full response message
         std::string GetResponseMessage() const;
 
+        /// Returns full response reasoning text
         std::string GetResponseReasoning() const;
 
+        /// Outputs statistic to a console (tokens used, context)
         void WriteStat(std::string ctx_data, int context_size = -1) const;
 
+        /// Returns whether a server returned error message for a request
         bool HasErrors() const;
 
+        /// Returns server error text
         std::string GetError() const;
 
-        void GetStat(int &used, int &total, bool &is_full) const;
-
+        /// Returns all tool calls from a response
         void GetResponseTools(std::vector<ToolCall> &calls_acc);
 
     private:
@@ -38,6 +47,7 @@ class ChunkCompletionProcessor: public ChunkProcessor
         void OutputReasoning(const std::string &msg) const;
 
         struct JsonDocument;
+
         void CheckMessage(JsonDocument &doc);
         void CheckReasoning(JsonDocument &doc);
         void CheckTokens(JsonDocument &doc);
@@ -46,23 +56,16 @@ class ChunkCompletionProcessor: public ChunkProcessor
 
         bool m_reasoning_in_process = true;
         bool m_show_reasoning = false;
-        bool m_is_reading_function = false;
 
-        std::string m_message;
-        std::string m_reasoning;
+        std::string m_message;      // message text accumulator
+        std::string m_reasoning;    // reasoning text accumulator
 
         int m_total_tokens = 0;
         int m_completion_tokens = 0;
         int m_prompt_tokens = 0;
         int m_tokens_cost = 0;
 
-        int m_kv_used = 0;
-        int m_kv_total = 0;
-        bool m_context_full = false;
-
         // Tools
-        std::string tool_delta;
-
         struct FunctionToEvoke
         {
             std::string id;

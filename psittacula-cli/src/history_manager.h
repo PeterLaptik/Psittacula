@@ -7,7 +7,9 @@
 
 class ToolParameter;
 
-class HistoryManager {
+/// Tools calls history manager implementing Undo / Redo actions
+class HistoryManager 
+{
     public:
         std::string Execute(std::unique_ptr<ToolBase> cmd, std::vector<ToolParameter> &params_values) 
         {
@@ -45,5 +47,4 @@ class HistoryManager {
         std::stack<std::unique_ptr<ToolBase>> redo_stack;
 };
 
-
-#endif // !HISTORY_MANAGER_INCLUDED_H
+#endif // HISTORY_MANAGER_INCLUDED_H

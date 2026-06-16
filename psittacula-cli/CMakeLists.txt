@@ -30,14 +30,11 @@ add_library(${PSITTACULA_CLI_NAME} STATIC
 	${SRC_DIR}/console_writer.cpp
 	${SRC_DIR}/dialogue_body.cpp
 	${SRC_DIR}/dialogue_body.h
-	${SRC_DIR}/health_rsp.cpp
-	${SRC_DIR}/health_rsp.h
 	${SRC_DIR}/history_manager.h
 	${SRC_DIR}/http_client.cpp
 	${SRC_DIR}/http_client.h
 	${SRC_DIR}/message.cpp
 	${SRC_DIR}/message.h
-	${SRC_DIR}/response_health.h
 	${SRC_DIR}/response_readers.cpp
 	${SRC_DIR}/response_readers.h
 	${SRC_DIR}/sys_command.h
