@@ -36,8 +36,6 @@ class AiClientImpl: public AiClient
 
         void GetToolsInfo(std::vector<std::pair<std::string, std::string>> &tools_acc) override;
 
-        void SetServerType(AiServerType type) override;
-
         void ToolUndo() override;
 
         void ToolRedo() override;

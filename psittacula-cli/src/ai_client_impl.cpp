@@ -23,7 +23,6 @@ const std::string kEndPointSlots = "/slots";
 AiClientImpl::AiClientImpl(const std::string &host_and_port, int context_size)
     : m_http_client(host_and_port), m_context_size(context_size)
 { 
-    SetServerType(AiServerType::LlamaCPP);
     InitTools();
 
     DefaultRuleProvider provider;
@@ -33,7 +32,6 @@ AiClientImpl::AiClientImpl(const std::string &host_and_port, int context_size)
 AiClientImpl::AiClientImpl(const std::string &host, int port, int context_size)
     : m_http_client(host, port), m_context_size(context_size)
 {
-    SetServerType(AiServerType::LlamaCPP);
     InitTools();
 
     DefaultRuleProvider provider;
@@ -147,11 +145,6 @@ void AiClientImpl::GetToolsInfo(std::vector<std::pair<std::string, std::string>>
         std::string purpose = tool.second.get()->GetToolDescription();
         tools_acc.push_back(std::make_pair(name, purpose));
     }
-}
-
-void AiClientImpl::SetServerType(AiServerType type)
-{
-    // TODO if necessary
 }
 
 void AiClientImpl::ToolUndo()

@@ -5,12 +5,6 @@
 #include <string>
 #include <memory>
 
-enum class AiServerType
-{
-    LlamaCPP,
-    OpenRouter
-};
-
 class AiClient
 {
     public:
@@ -33,8 +27,6 @@ class AiClient
         virtual void RegisterTool(std::unique_ptr<ToolBase> tool) = 0;
 
         virtual void GetToolsInfo(std::vector<std::pair<std::string, std::string>> &tools_acc) = 0;
-
-        virtual void SetServerType(AiServerType type) = 0;
 
         virtual void ToolUndo() = 0;
 
