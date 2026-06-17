@@ -6,8 +6,9 @@
 #include <string>
 #include <vector>
 
-/// Stream response receiver.
-/// Parses each chunk and extracts data: messages, reasoning, tool calls, etc
+/// Stream response chunks receiver.
+/// Parses each chunk and extracts data: messages, reasoning, tool calls, etc.
+/// Outputs reasoning and system messages to a console, accumulates response message text and tool calls.
 class ChunkCompletionProcessor: public ChunkProcessor
 {
     public:
@@ -18,7 +19,7 @@ class ChunkCompletionProcessor: public ChunkProcessor
         /// Clears all data from the last response
         void Reset();
 
-
+        /// Process a chenk data: extract message, reasoning, tools, errors, etc
         void ProcessChunk(const std::string &chunk) override;
 
         /// Shows/ hides reasoning text
@@ -72,12 +73,11 @@ class ChunkCompletionProcessor: public ChunkProcessor
             std::string name;
             std::string arguments;
         };
-        FunctionToEvoke m_current_tool;
 
-        std::vector<FunctionToEvoke> m_tools;
+        FunctionToEvoke m_current_tool;         // current tool, building by deltas
+        std::vector<FunctionToEvoke> m_tools;   // all tool lists
 
-        std::string m_error;
-
+        std::string m_error; // error message
 };
 
 #endif // CHUNK_COMPLETION_PROCESOR_INCLUDED_H

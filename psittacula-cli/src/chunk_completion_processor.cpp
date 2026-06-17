@@ -45,13 +45,14 @@ void ChunkCompletionProcessor::ProcessChunk(const std::string &chunk)
     if (chunk.size() < 5)
         return;
 
+    // Cut 'data:' text, leave JSON body only
     std::string json = chunk.substr(5);
 
     // Trim
     json.erase(0, json.find_first_not_of(" \t\n\r\f\v"));
     json.erase(json.find_last_not_of(" \t\n\r\f\v") + 1);
 
-    // Is finished?
+    // Is response finished?
     if (json == " [DONE]" || json == "[DONE]")
     {
         return;
@@ -62,7 +63,7 @@ void ChunkCompletionProcessor::ProcessChunk(const std::string &chunk)
     if (!doc.Parse(json.c_str()).HasParseError())
     {
         JsonDocument data{doc};
-
+        // Try to process data
         if (doc.HasMember("choices") && doc["choices"].Size() > 0)
         {
             CheckReasoning(data);
@@ -70,17 +71,16 @@ void ChunkCompletionProcessor::ProcessChunk(const std::string &chunk)
             CheckTools(data);
             CheckTokens(data);
         }
-
-        
     }
     else if(!doc.Parse(chunk.c_str()).HasParseError())
     {
+        // Check if the full uncut chunk can be parsed: get server errors
         JsonDocument data{doc};
         CheckErrors(data);
     }
     else
     {
-        // Skip
+        // Skip: ignore unsupported chunks
     }
 }
 

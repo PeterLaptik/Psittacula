@@ -49,7 +49,10 @@ class AiClient
         virtual std::string GetDialogueBody() const = 0;
 
         /// Clears all context: removes all messages excepting of the first system-role message
-        virtual void CleanContext() = 0;
+        virtual void ClearContext() = 0;
+
+        /// Restores session data (dialogue, etc) from a JsonString
+        virtual void RestoreDialogueFrom(const std::string &data) = 0;
 };
 
 #endif // AI_CLIENT_INCLUDED_H

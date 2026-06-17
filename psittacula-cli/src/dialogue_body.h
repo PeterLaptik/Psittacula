@@ -31,9 +31,11 @@ class DialogueBody
 
         std::string ToJsonString() const;
 
+        void FromJsonString(const std::string data);
+
         std::string GetSystemMessage() const;
 
-        void CleanContext();
+        void ClearContext();
 
     private:
         void AddToolCallMessages(const std::vector<ToolResponse> &responses);

@@ -104,9 +104,6 @@ bool DialogueBody::AddResponse(const std::string &response)
     if (response.empty() || is_all_whitespace(response))
         return false;
 
-    if (response.empty())
-        return false;
-
     auto it = m_request->body.FindMember("messages");
     if (it != m_request->body.MemberEnd() && it->value.IsArray())
     {
@@ -280,6 +277,18 @@ std::string DialogueBody::ToJsonString() const
     return buffer.GetString();
 }
 
+void DialogueBody::FromJsonString(const std::string data)
+{
+    // Clears the document and parses the new JSON
+    m_request->body.Parse(data.c_str());
+    
+    // Check for parse errors
+    if (m_request->body.HasParseError())
+    {
+        std::cerr << "JSON parse error: " << rapidjson::GetParseError_En(m_request->body.GetParseError()) << std::endl;
+    }
+}
+
 std::string DialogueBody::GetSystemMessage() const
 {
     auto it = m_request->body.FindMember("messages");
@@ -335,7 +344,7 @@ void DialogueBody::AddToolCallMessages(const std::vector<ToolResponse> &response
     }
 }
 
-void DialogueBody::CleanContext()
+void DialogueBody::ClearContext()
 {
     auto it = m_request->body.FindMember("messages");
     if (it != m_request->body.MemberEnd() && it->value.IsArray())

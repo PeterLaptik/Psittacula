@@ -44,7 +44,9 @@ class AiClientImpl: public AiClient
 
         std::string GetAgentRules() const override;
 
-        void CleanContext() override;
+        void ClearContext() override;
+
+        void RestoreDialogueFrom(const std::string &data) override;
 
     private:
         // Registers all tools in a dispatcher
@@ -53,7 +55,7 @@ class AiClientImpl: public AiClient
         // Executes a single tool call
         ToolResponse EvokeTool(ToolCall &call);
 
-        // Sends tool responses back to LLM
+        // Sends tool responses back to LLM, evokes secondary tools if necessary
         void SendToolsResponses(const std::vector<ToolResponse> &tools_responses, const std::string &response = "");
 
         // Gets actual context size via /slots endpoint
@@ -68,6 +70,7 @@ class AiClientImpl: public AiClient
         std::string m_api_key;      // Optional: API bearing key
         int m_context_size = -1;    // Can be set directly, if not set (for llama.cpp) then /slots endpoint is used to get the actual size
         bool m_show_reasoning = true;
+        int m_tool_loop_counter = 0;  // Counts tool calls loop iterations to avoid infinite loops
 
         HttpClient m_http_client; // CURL client for network requests
 

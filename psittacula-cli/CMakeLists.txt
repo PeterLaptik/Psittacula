@@ -24,7 +24,6 @@ add_library(${PSITTACULA_CLI_NAME} STATIC
 	${SRC_DIR}/chunk_completion_processor.h
 	${SRC_DIR}/chunk_processor.h
 	${SRC_DIR}/clients_factory.cpp
-	${SRC_DIR}/completion_rsp.h
 	${SRC_DIR}/console_history.cpp
 	${SRC_DIR}/console_history.h
 	${SRC_DIR}/console_writer.cpp
