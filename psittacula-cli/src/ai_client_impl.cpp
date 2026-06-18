@@ -112,6 +112,12 @@ void AiClientImpl::InitTools()
 
 ToolResponse AiClientImpl::EvokeTool(ToolCall &call)
 {
+    ToolResponse rsp;
+    rsp.id = call.id;
+    rsp.role = "tool";
+    rsp.name = call.name;
+    rsp.input_content = call.content;
+
     // Find tool in a dispatcher
     auto it = m_tools_dispatcher.find(call.name);
     if (it == m_tools_dispatcher.end())
@@ -134,12 +140,6 @@ ToolResponse AiClientImpl::EvokeTool(ToolCall &call)
     // Evoke tool and get response
     auto *tool = it->second->Clone();
     std::string rsp_content = m_history_mgr.Execute(std::unique_ptr<ToolBase>(tool), parameters);
-
-    ToolResponse rsp;
-    rsp.id = call.id;
-    rsp.role = "tool";
-    rsp.name = call.name;
-    rsp.input_content = call.content;
     rsp.output_content = rsp_content;
 
     return rsp;

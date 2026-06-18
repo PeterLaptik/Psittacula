@@ -63,6 +63,7 @@ void ChunkCompletionProcessor::ProcessChunk(const std::string &chunk)
     if (!doc.Parse(json.c_str()).HasParseError())
     {
         JsonDocument data{doc};
+
         // Try to process data
         if (doc.HasMember("choices") && doc["choices"].Size() > 0)
         {
@@ -82,21 +83,6 @@ void ChunkCompletionProcessor::ProcessChunk(const std::string &chunk)
     {
         // Skip: ignore unsupported chunks
     }
-}
-
-void ChunkCompletionProcessor::SetReasoning(bool is_shown)
-{
-    m_show_reasoning = is_shown;
-}
-
-std::string ChunkCompletionProcessor::GetResponseMessage() const
-{
-    return m_message;
-}
-
-std::string ChunkCompletionProcessor::GetResponseReasoning() const
-{
-    return m_reasoning;
 }
 
 void ChunkCompletionProcessor::WriteStat(std::string ctx_data, int context_size) const
@@ -136,11 +122,6 @@ void ChunkCompletionProcessor::WriteStat(std::string ctx_data, int context_size)
     console::write_splitter();
 }
 
-bool ChunkCompletionProcessor::HasErrors() const
-{
-    return !m_error.empty();
-}
-
 void ChunkCompletionProcessor::CheckMessage(JsonDocument &doc)
 {
     // ========== Content output ==========================
@@ -148,7 +129,8 @@ void ChunkCompletionProcessor::CheckMessage(JsonDocument &doc)
 
     if (delta.HasMember("content") && delta["content"].IsString())
     {
-        // Empty content can exist, so the first non-empty value is considered as a finished reasoning, see the check below
+        // Empty content can exist during reasoning
+        // So the first non-empty value is considered as a finished reasoning, see the check below
         size_t c_len = std::strlen(delta["content"].GetString());
 
         // Reset reasoning mode output after first entering
@@ -168,6 +150,9 @@ void ChunkCompletionProcessor::CheckMessage(JsonDocument &doc)
 
 void ChunkCompletionProcessor::CheckReasoning(JsonDocument &doc)
 {
+    if (!m_reasoning_in_process)
+        return;
+
     const auto &delta = doc.body["choices"][0]["delta"];
 
     // ========== Output reasoning data ====================
@@ -175,14 +160,14 @@ void ChunkCompletionProcessor::CheckReasoning(JsonDocument &doc)
     // Ignored after the first non-empty contet (see the code above)
     // Checking fields: reasoning_content or reasoning
     // The first condition works for llama.cpp
-    if (m_reasoning_in_process && delta.HasMember("reasoning_content") && delta["reasoning_content"].IsString()) {
+    if (delta.HasMember("reasoning_content") && delta["reasoning_content"].IsString()) {
         std::string reasoning_txt = delta["reasoning_content"].GetString();
         OutputReasoning(reasoning_txt);
         m_reasoning += reasoning_txt;
         m_reasoning_in_process = true;
     }
-    // The condition works for open router
-    else if (m_reasoning_in_process && delta.HasMember("reasoning") && delta["reasoning"].IsString())
+    // The condition works for other servers
+    else if (delta.HasMember("reasoning") && delta["reasoning"].IsString())
     {
         std::string reasoning_txt = delta["reasoning"].GetString();
         OutputReasoning(reasoning_txt);
@@ -215,7 +200,7 @@ void ChunkCompletionProcessor::CheckTokens(JsonDocument &doc)
         m_total_tokens = ctx_cached + m_prompt_tokens + m_completion_tokens;
     }
 
-    // The condition works other servers
+    // The condition works for other servers
     if (doc.body.HasMember("usage"))
     {
         const auto &usage = doc.body["usage"];
@@ -263,8 +248,9 @@ void ChunkCompletionProcessor::CheckTools(JsonDocument &doc)
                 if (fn.HasMember("name") && fn["name"].IsString())
                     name = fn["name"].GetString();
 
-                if (!name.empty())
+                if (!name.empty()) // Next tool call: new id? May be wrong! Recheck in the future!
                 {
+                    // Push current tool to the a list and fill a new tool data
                     if (!m_current_tool.name.empty())
                     {
                         m_tools.push_back(m_current_tool);
@@ -284,23 +270,6 @@ void ChunkCompletionProcessor::CheckTools(JsonDocument &doc)
             }
         }
     }
-
-    // ===================== LEGACY function_call ====================
-    // Not tested
-    /*
-    if (delta.HasMember("function_call") && delta["function_call"].IsObject())
-    {
-        const auto &fc = delta["function_call"];
-        auto &entry = tool_calls["legacy_0"];
-        entry.id = "legacy_0";
-
-        if (fc.HasMember("name") && fc["name"].IsString())
-            entry.name = fc["name"].GetString();
-
-        if (fc.HasMember("arguments") && fc["arguments"].IsString())
-            entry.arguments += fc["arguments"].GetString();
-    }
-    */
 }
 
 void ChunkCompletionProcessor::CheckErrors(JsonDocument &doc)
@@ -365,26 +334,29 @@ void ChunkCompletionProcessor::GetResponseTools(std::vector<ToolCall> &calls_acc
         if (caller.id.empty())
         {
             std::uniform_int_distribution<int> dist(1, std::numeric_limits<int>::max());
-            caller.id = "tool_call_" + std::to_string(dist(rng));
+            caller.id = "tool_call_" + std::to_string(dist(rng)); // Autogenerated id: tool_call_XXXXX
         }
 
         rapidjson::Document doc;
         bool has_errors = doc.Parse(fn.arguments.c_str()).HasParseError();
         if (has_errors)
         {
-            console::write_line("Tools: JSON parse error\n", TextOrigin::error);
+            console::write_line("Tool call: JSON parse error\n", TextOrigin::error);
             console::write_line(fn.arguments, TextOrigin::error);
             continue;
         }
 
         if (!doc.IsObject()) 
         {
-            console::write_line("Tool: " + caller.name, TextOrigin::error);
+            console::write_line("Tool call error: " + caller.name, TextOrigin::error);
             console::write_line("Expected JSON object\n", TextOrigin::error);
             continue;
         }
 
+        // Assembling th full content like JSON stringified object:
+        // {\"arg1\": 1, \"arg2\": \"2str\", etc.}
         std::string full_content;
+
         for (auto it = doc.MemberBegin(); it != doc.MemberEnd(); ++it) 
         {
             std::string key = it->name.GetString();
@@ -417,15 +389,15 @@ void ChunkCompletionProcessor::GetResponseTools(std::vector<ToolCall> &calls_acc
 
         if (!full_content.empty())
         {
-            full_content.pop_back();
+            full_content.pop_back(); // remove last comma
             full_content += "}";
         }
         else
         {
-            full_content = "{}";
+            full_content = "{}"; // no args for call
         }
 
-        full_content = "{" + full_content;
+        full_content = "{" + full_content; // {\"arg1\": 1, \"arg2\": \"2str\", etc.}
 
         // Raw arguments as a content
         rapidjson::StringBuffer buffer;
@@ -435,4 +407,32 @@ void ChunkCompletionProcessor::GetResponseTools(std::vector<ToolCall> &calls_acc
 
         calls_acc.push_back(caller);
     }
+}
+
+void ChunkCompletionProcessor::GetTokensStat(int &total, int &completion, int &prompt, double &cost) const
+{
+    total = m_total_tokens;
+    completion = m_completion_tokens;
+    prompt = m_prompt_tokens;
+    cost = m_tokens_cost;
+}
+
+void ChunkCompletionProcessor::SetReasoning(bool is_shown)
+{
+    m_show_reasoning = is_shown;
+}
+
+std::string ChunkCompletionProcessor::GetResponseMessage() const
+{
+    return m_message;
+}
+
+std::string ChunkCompletionProcessor::GetResponseReasoning() const
+{
+    return m_reasoning;
+}
+
+bool ChunkCompletionProcessor::HasErrors() const
+{
+    return !m_error.empty();
 }

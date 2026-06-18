@@ -40,7 +40,7 @@ class DialogueBody
     private:
         void AddToolCallMessages(const std::vector<ToolResponse> &responses);
 
-        std::string m_model = "gpt-4-o";
+        std::string m_model = "any";
         
         // PIMPL for RapidJSON document
         struct RequestJson;

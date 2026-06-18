@@ -27,6 +27,8 @@ add_library(${PSITTACULA_CLI_NAME} STATIC
 	${SRC_DIR}/console_history.cpp
 	${SRC_DIR}/console_history.h
 	${SRC_DIR}/console_writer.cpp
+	${SRC_DIR}/context_info.h
+	${SRC_DIR}/context_info.cpp
 	${SRC_DIR}/dialogue_body.cpp
 	${SRC_DIR}/dialogue_body.h
 	${SRC_DIR}/history_manager.h
@@ -36,7 +38,6 @@ add_library(${PSITTACULA_CLI_NAME} STATIC
 	${SRC_DIR}/message.h
 	${SRC_DIR}/response_readers.cpp
 	${SRC_DIR}/response_readers.h
-	${SRC_DIR}/sys_command.h
 	${SRC_DIR}/default_rule_provider.h
 	${SRC_DIR}/default_rule_provider.cpp
 	${SRC_DIR}/working_dir.cpp

@@ -43,6 +43,9 @@ class ChunkCompletionProcessor: public ChunkProcessor
         /// Returns all tool calls from a response
         void GetResponseTools(std::vector<ToolCall> &calls_acc);
 
+        /// Returns token statistic after response
+        void GetTokensStat(int &total, int &completion, int &prompt, double &cost) const;
+
     private:
         void OutputSystemMessage(const std::string &msg);
         void OutputReasoning(const std::string &msg) const;

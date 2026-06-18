@@ -3,6 +3,7 @@
 
 #include <string>
 
+/// Interface for POST response chunk processing in a stream mode
 class ChunkProcessor
 {
     public:
