@@ -1,4 +1,5 @@
 #include "dialogue_body.h"
+#include "console_writer.h"
 #include <iostream>
 #include <algorithm>
 #include <rapidjson/document.h>
@@ -286,6 +287,23 @@ void DialogueBody::FromJsonString(const std::string data)
     if (m_request->body.HasParseError())
     {
         std::cerr << "JSON parse error: " << rapidjson::GetParseError_En(m_request->body.GetParseError()) << std::endl;
+    }
+
+    const rapidjson::Value &messages = m_request->body["messages"];
+    for (auto &msg : messages.GetArray()) {
+        std::string role = msg["role"].GetString();
+        std::string message = msg["content"].GetString();
+
+        console::TextOrigin origin = console::TextOrigin::default;
+        if (role == "system")
+            origin = console::TextOrigin::filesystem;
+        else if (role == "assistant")
+            origin = console::TextOrigin::machine;
+        else if(role == "tool")
+            origin = console::TextOrigin::filesystem;
+
+        console::write_line(message, origin);
+        console::write_splitter();
     }
 }
 

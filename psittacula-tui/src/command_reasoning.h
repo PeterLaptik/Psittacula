@@ -45,7 +45,7 @@ class CommandReasoning : public ChatCommand
 
         std::string Description() override
         {
-            return "Enable deeper reasoning output. [ARGS] - true / false";
+            return "Enable deeper reasoning output.\n\t[ARGS] - true / false";
         }
 };
 

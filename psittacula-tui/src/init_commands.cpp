@@ -8,6 +8,7 @@
 #include "command_change_agent.h"
 #include "command_change_project_dir.h"
 #include "command_clean_context.h"
+#include "command_restore.h"
 
 #include <memory>
 
@@ -21,5 +22,6 @@ void init_commands(ChatCommandDispatcher &dsp)
     dsp.RegisterCommand("dump", std::make_unique<CommandDump>());
     dsp.RegisterCommand("rules", std::make_unique<CommandChangeRules>());
     dsp.RegisterCommand("project", std::make_unique<CommandChangeProjectDir>());
-    dsp.RegisterCommand("clean", std::make_unique<CommandCleanContext>());
+    dsp.RegisterCommand("clear", std::make_unique<CommandCleanContext>());
+    dsp.RegisterCommand("restore", std::make_unique<CommandRestore>());
 }
