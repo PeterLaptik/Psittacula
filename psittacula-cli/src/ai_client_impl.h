@@ -59,7 +59,7 @@ class AiClientImpl: public AiClient
         void SendToolsResponses(const std::vector<ToolResponse> &tools_responses, const std::string &response = "");
 
         // Gets actual context size via /slots endpoint
-        std::string GetContextInfo();
+        std::string GetSlotstInfo();
 
         // POST JSON data object
         // Keeps all messages, tool calls, tool calls responses

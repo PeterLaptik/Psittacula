@@ -1,10 +1,11 @@
-#ifndef FILES_INCLUDED_H
-#define FILES_INCLUDED_H
+#ifndef WORKING_DIR_INCLUDED_H
+#define WORKING_DIR_INCLUDED_H
 
 #include "format_util.h"
 #include <string>
 #include <vector>
 
+/// A singleton keeping working dir paths
 class WorkingDir
 {
     public:
@@ -36,9 +37,9 @@ class WorkingDir
         void FindModels();
 
         Formatter m_fmt;
-        std::string m_workdir;
-        std::string m_project_dir;
+        std::string m_workdir;      // Settings for model connections, etc
+        std::string m_project_dir;  // Project: files and directories can be modified via file tools
         std::vector<std::string> models_list;
 };
 
-#endif // FILES_INCLUDED_H
+#endif // WORKING_DIR_INCLUDED_H

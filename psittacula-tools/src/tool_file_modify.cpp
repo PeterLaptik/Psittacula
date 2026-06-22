@@ -93,6 +93,9 @@ std::string FileModifyTool::Execute(std::vector<ToolParameter> &params_values)
     replace_all = replace_all_bool;
 
     console::write_line("Modifying file: " + path, console::TextOrigin::filesystem);
+    console::write_line("Position: " + pos_int, console::TextOrigin::filesystem);
+    std::string replase_str = replace_all ? "yes" : "no";
+    console::write_line("Replace all: " + replase_str, console::TextOrigin::filesystem);
 
     // Read old content if file exists
     if (std::filesystem::exists(path)) 

@@ -34,8 +34,6 @@ add_library(${PSITTACULA_CLI_NAME} STATIC
 	${SRC_DIR}/history_manager.h
 	${SRC_DIR}/http_client.cpp
 	${SRC_DIR}/http_client.h
-	${SRC_DIR}/message.cpp
-	${SRC_DIR}/message.h
 	${SRC_DIR}/response_readers.cpp
 	${SRC_DIR}/response_readers.h
 	${SRC_DIR}/default_rule_provider.h

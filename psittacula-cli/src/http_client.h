@@ -3,6 +3,7 @@
 
 #include <string>
 
+/// CURL-based http client
 class HttpClient
 {
     public:
@@ -22,7 +23,7 @@ class HttpClient
 
     private:
         std::string m_host;
-        std::string m_api_key;
+        std::string m_api_key; // optional
 };
 
 #endif // HTTP_CLIENT_INCLUDED_H

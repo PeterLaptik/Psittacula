@@ -120,7 +120,10 @@ class CommandChangeModel: public ChatCommand
             // Load selected model
             Model model = Model::FromFile(models[index]);
             AiClient *created_client = model.GetClient();
-            created_client->RestoreDialogueFrom(client->GetDialogueBody());
+
+            if(client.get() != nullptr)
+                created_client->RestoreDialogueFrom(client->GetDialogueBody());
+
             client.reset(created_client);
 
             RestoreMainScreen();

@@ -3,6 +3,7 @@
 
 #include <string>
 
+/// Provides default system message
 class DefaultRuleProvider
 {
     public:

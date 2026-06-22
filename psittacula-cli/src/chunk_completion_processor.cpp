@@ -85,10 +85,12 @@ void ChunkCompletionProcessor::ProcessChunk(const std::string &chunk)
     }
 }
 
-void ChunkCompletionProcessor::WriteStat(std::string ctx_data, int context_size) const
+void ChunkCompletionProcessor::WriteStat(std::string slots_info_rsp, int context_size) const
 {
+    // Trying to get context from /slots endpoint response
+    // If it is not well formed / does not exist, use 'context_size' value
     rapidjson::Document doc;
-    doc.Parse(ctx_data.c_str());
+    doc.Parse(slots_info_rsp.c_str());
 
     if (!doc.HasParseError() && doc.IsArray() && !doc.Empty())
     {

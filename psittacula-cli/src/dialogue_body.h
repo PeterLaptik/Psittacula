@@ -29,8 +29,10 @@ class DialogueBody
 
         void RegisterTool(ToolBase *tool);
 
+        /// Dump full body to a JSON string
         std::string ToJsonString() const;
 
+        /// Restore body from JSON string
         void FromJsonString(const std::string data);
 
         std::string GetSystemMessage() const;

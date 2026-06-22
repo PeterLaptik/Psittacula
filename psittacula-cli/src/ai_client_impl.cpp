@@ -50,7 +50,8 @@ void AiClientImpl::SendUserMessage(const std::string &message)
     proc.SetReasoning(m_show_reasoning);
     m_http_client.HttpPostStream(kEndPointCompletions, body, &proc);
 
-    proc.WriteStat(GetContextInfo(), m_context_size);
+    std::string slots_rsp = GetSlotstInfo();
+    proc.WriteStat(slots_rsp, m_context_size);
 
     // Add response message to a dialogue body
     std::string response_msg = proc.GetResponseMessage();
@@ -167,7 +168,8 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
     proc.SetReasoning(m_show_reasoning);
     m_http_client.HttpPostStream(kEndPointCompletions, body, &proc);
 
-    proc.WriteStat(GetContextInfo(), m_context_size);
+    std::string slots_rsp = GetSlotstInfo();
+    proc.WriteStat(slots_rsp, m_context_size);
 
     if (proc.HasErrors())
     {
@@ -219,7 +221,7 @@ void AiClientImpl::SetAgentRules(const std::string &rules)
     m_body_obj.AddSystemMessage(rules);
 }
 
-std::string AiClientImpl::GetContextInfo()
+std::string AiClientImpl::GetSlotstInfo()
 {
     return m_http_client.HttpGet(kEndPointSlots);
 }
