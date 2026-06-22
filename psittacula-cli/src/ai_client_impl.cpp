@@ -9,7 +9,7 @@
 #include <curl/curl.h>
 
 // Maximum number of tool calls per response, to prevent infinite loops in case of errors
-const int kToolsCallMax = 5; 
+const int kToolsCallMax = 20; 
 
 const std::string kEndPointHealth = "/health";
 const std::string kEndPointCompletions = "/chat/completions";
@@ -155,7 +155,7 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
     m_tool_loop_counter++;
     if (m_tool_loop_counter > kToolsCallMax)
     {
-        console::write_line("\nError: Too many tool calls loops, possible infinite loop.", console::TextOrigin::error);
+        console::write_line("\nError: Too many tool calls loops, possible infinite loop. Agent stopped the calls.", console::TextOrigin::error);
         return;
     }
 
