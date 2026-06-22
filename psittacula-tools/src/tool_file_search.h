@@ -22,6 +22,8 @@ class FileSearchTool : public ToolFile
 
         void GetParameters(std::vector<ToolParameter> &params_acc) override;
 
+        bool CanBeReverted() override { return false; }
+
     private:
         struct Match
         {

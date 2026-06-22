@@ -23,6 +23,8 @@ class FileListTool : public ToolFile
 
         void GetParameters(std::vector<ToolParameter> &params_acc) override;
 
+        bool CanBeReverted() override { return false; }
+
     private:
         std::string BuildListingJSON(const std::string &path,
             bool recursive,

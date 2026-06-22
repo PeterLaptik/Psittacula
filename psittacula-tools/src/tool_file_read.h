@@ -22,6 +22,8 @@ class FileReadTool : public ToolFile
         std::string GetToolDescription() const override { return "Reads the content of a file (text or binary)."; }
 
         void GetParameters(std::vector<ToolParameter> &params_acc) override;
+
+        bool CanBeReverted() override { return false; }
 };
 
 #endif // TOOL_FILE_READ_INCLUDED_H

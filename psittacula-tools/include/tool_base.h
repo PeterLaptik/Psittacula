@@ -53,6 +53,9 @@ class ToolBase
 
         virtual void GetParameters(std::vector<ToolParameter> &params_acc) = 0;
 
+        /// Defines: should be added to undo / redo history
+        virtual bool CanBeReverted() { return true; }
+
     protected:
         std::string GetParam(const std::vector<ToolParameter> &params_acc, const std::string &param_name, std::string default_value = "");
 
