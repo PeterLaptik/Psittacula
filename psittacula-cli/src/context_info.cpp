@@ -1,0 +1,36 @@
+#include "context_info.h"
+#include "chunk_completion_processor.h"
+
+ContextInfo::ContextInfo(int ctx_size)
+    : m_ctx_size(ctx_size)
+{ }
+
+void ContextInfo::ChangeContextSize(int ctx_size)
+{
+    m_ctx_size = ctx_size;
+}
+
+void ContextInfo::Reset()
+{
+    m_completion_tokens = 0;
+    m_prompt_tokens = 0;
+    m_total_tokens = 0;
+    m_tokens_cost = 0;
+}
+
+void ContextInfo::UpdateTokens(const ChunkCompletionProcessor &chunk_processor)
+{
+    int total, completion, prompt;
+    double cost;
+    chunk_processor.GetTokensStat(total, completion, prompt, cost);
+
+    m_completion_tokens = completion;
+    m_prompt_tokens = prompt;
+    m_total_tokens = total;
+    m_tokens_cost = cost;
+}
+
+void ContextInfo::WriteStat() const
+{
+
+}
