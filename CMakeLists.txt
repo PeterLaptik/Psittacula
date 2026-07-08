@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.25)
 
 project(Psittacula)
 
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
+if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
 # Project output paths: %root_project_dir%/Build/*
@@ -51,3 +51,4 @@ add_subdirectory(${PSITTACULA_TUI})
 add_subdirectory(${PSITTACULA_CLI})
 add_subdirectory(${PSITTACULA_TOOLS})
 
+message(STATUS "Libs: ${CURL_LIBRARIES}")

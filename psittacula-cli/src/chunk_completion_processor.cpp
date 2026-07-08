@@ -85,7 +85,7 @@ void ChunkCompletionProcessor::ProcessChunk(const std::string &chunk)
     }
 }
 
-void ChunkCompletionProcessor::WriteStat(std::string slots_info_rsp, int context_size) const
+void ChunkCompletionProcessor::ShowStat(std::string slots_info_rsp, int context_size) const
 {
     // Trying to get context from /slots endpoint response
     // If it is not well formed / does not exist, use 'context_size' value

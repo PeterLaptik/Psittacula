@@ -32,7 +32,7 @@ class ChunkCompletionProcessor: public ChunkProcessor
         std::string GetResponseReasoning() const;
 
         /// Outputs statistic to a console (tokens used, context)
-        void WriteStat(std::string slots_info_rsp, int context_size = -1) const;
+        void ShowStat(std::string slots_info_rsp, int context_size = -1) const;
 
         /// Returns whether a server returned error message for a request
         bool HasErrors() const;

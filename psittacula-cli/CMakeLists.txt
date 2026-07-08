@@ -1,8 +1,8 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.25)
 project(PSITTACULA_CLI)
 
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
+if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
@@ -12,7 +12,6 @@ set(INCLUDE_DIR ./include)
 set(SRC_DIR ./src)
 
 add_library(${PSITTACULA_CLI_NAME} STATIC
-	${INCLUDE_DIR}/ai_client.cpp
 	${INCLUDE_DIR}/ai_client.h
 	${INCLUDE_DIR}/clients_factory.h
 	${INCLUDE_DIR}/console_writer.h

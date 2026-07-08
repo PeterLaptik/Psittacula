@@ -45,13 +45,14 @@ class AiClient
         virtual std::string GetAgentRules() const = 0;
 
         /// Returns full data body from the last POST request
-        /// May be useful for debug and manua testing
+        /// May be useful for debug and manual testing
         virtual std::string GetDialogueBody() const = 0;
 
         /// Clears all context: removes all messages excepting of the first system-role message
+        /// Leaves undo / redo tools history untouched
         virtual void ClearContext() = 0;
 
-        /// Restores session data (dialogue, etc) from a JsonString
+        /// Restores session data (dialogue, etc) from a JSON string
         virtual void RestoreDialogueFrom(const std::string &data) = 0;
 };
 

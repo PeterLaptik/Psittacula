@@ -15,12 +15,14 @@ void DirDeleteTool::GetParameters(std::vector<ToolParameter> &params_acc)
         true
         });
 
+    /*
     params_acc.push_back({
         "recursive",
         "boolean",
         "If true, delete directory recursively.",
         false
         });
+    */
 }
 
 std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
@@ -33,7 +35,7 @@ std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
     std::string path = GetParam(params_values, "path");
     UnescapeSlashesInPath(path);
 
-    recursive = GetParamBool(params_values, "recursive", false);
+    //recursive = GetParamBool(params_values, "recursive", false);
 
     if (path.empty())
     {
@@ -84,23 +86,18 @@ std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
 
     std::error_code ec;
 
-    if (recursive)
-    {
-        std::filesystem::remove_all(path, ec);
-    }
-    else
-    {
-        if (!std::filesystem::is_empty(path))
-        {
-            console::write_line("Directory is not empty; recursive=false", console::TextOrigin::error);
-            return fmt.Format(
-                "{\"error\":{\"type\":\"runtime_error\",\"message\":\"Directory is not empty\",\"path\":\"%?\"}}",
-                path
-            );
-        }
+    //if (recursive) { std::filesystem::remove_all(path, ec); }
 
-        std::filesystem::remove(path, ec);
+    if (!std::filesystem::is_empty(path))
+    {
+        console::write_line("Directory is not empty; recursive=false", console::TextOrigin::error);
+        return fmt.Format(
+            "{\"error\":{\"type\":\"runtime_error\",\"message\":\"Directory is not empty\",\"path\":\"%?\"}}",
+            path
+        );
     }
+
+    std::filesystem::remove(path, ec);
 
     if (ec)
     {
@@ -121,11 +118,11 @@ std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
         "\"deleted\":true,"
         "\"recursive\":%?"
         "},"
-        "\"message\":\"Directory deleted%?\""
+        "\"message\":\"Directory deleted\""
         "}",
-        path,
-        recursive ? "true" : "false",
-        recursive ? " recursively" : ""
+        path
+        //recursive ? "true" : "false",
+        //recursive ? " recursively" : ""
     );
 }
 
@@ -135,9 +132,6 @@ void DirDeleteTool::Undo()
         return;
 
     console::write_line("Undo directory delete: " + last_path, console::TextOrigin::filesystem);
-
-    // We cannot restore deleted directory contents unless we snapshot them.
-    // For safety, we only recreate the directory itself.
     std::filesystem::create_directories(last_path);
 }
 
@@ -150,8 +144,6 @@ void DirDeleteTool::Redo()
 
     std::error_code ec;
 
-    if (recursive)
-        std::filesystem::remove_all(last_path, ec);
-    else
-        std::filesystem::remove(last_path, ec);
+    // if (recursive) std::filesystem::remove_all(last_path, ec);
+    std::filesystem::remove(last_path, ec);
 }

@@ -21,7 +21,7 @@ std::string get_logo()
     logo += "Version: ";
     logo += PSITTACULA_APP_VERSION;
     logo += "\n    Written by Peter Laptik";
-    logo += "\n\033[36m    Press /help or /h for information about commands\033[0m";
+    logo += "\n\033[36m    Input /help or /h for information about commands\033[0m";
     return logo;
 }
 

@@ -19,14 +19,14 @@ class DirDeleteTool : public ToolFile
         void Redo() override;
 
         std::string GetToolName() const override { return "delete_directory"; }
-        std::string GetToolDescription() const override { return "Deletes a directory (empty or recursive). Dangerous!"; }
+        std::string GetToolDescription() const override { return "Deletes a directory (non-recursive)."; }
 
         void GetParameters(std::vector<ToolParameter> &params_acc) override;
 
     private:
         std::string last_path;
         bool executed = false;
-        bool recursive = false;
+        //bool recursive = false;
         bool existed_before = false;
 };
 

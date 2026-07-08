@@ -1,8 +1,8 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.25)
 project(${PSITTACULA_TUI})
 
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
+if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
@@ -21,8 +21,8 @@ add_executable(${PSITTACULA_TUI_NAME}
     ${SRC_DIR}/chat_command_dispatcher.h
     ${SRC_DIR}/command_change_agent.h
     ${SRC_DIR}/command_change_model.h
-    ${SRC_DIR}//command_change_project_dir.h
-    ${SRC_DIR}//command_clean_context.h
+    ${SRC_DIR}/command_change_project_dir.h
+    ${SRC_DIR}/command_clean_context.h
     ${SRC_DIR}/command_dump.h
     ${SRC_DIR}/command_reasoning.h
     ${SRC_DIR}/command_redo.h
@@ -31,6 +31,7 @@ add_executable(${PSITTACULA_TUI_NAME}
     ${SRC_DIR}/command_undo.h
     ${SRC_DIR}/init_commands.cpp
     ${SRC_DIR}/init_commands.h
+    ${SRC_DIR}/logo.h
     ${SRC_DIR}/model.cpp
     ${SRC_DIR}/model.h
     ${SRC_DIR}/param_reader.cpp

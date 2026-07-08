@@ -58,7 +58,7 @@ class CommandChangeModel: public ChatCommand
 
         std::string Description() override
         {
-            return "Change model in interractive mode. Does not clear current context. \n\r\t[ARGS]: [create] is to create model connection in an interactive mode and connect to a new model.";
+            return "Change model in interractive mode. Does not clear current context. \n\r\t[ARG]: [create] is to create model connection in an interactive mode and connect to a new model.";
         }
 
     private:
