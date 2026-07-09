@@ -307,7 +307,7 @@ void DialogueBody::FromJsonString(const std::string data)
         std::string role = msg["role"].GetString();
         std::string message = msg["content"].GetString();
 
-        console::TextOrigin origin = console::TextOrigin::default;
+        console::TextOrigin origin = console::TextOrigin::normal;
         if (role == "system")
             origin = console::TextOrigin::filesystem;
         else if (role == "assistant")

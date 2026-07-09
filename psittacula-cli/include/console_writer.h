@@ -6,7 +6,7 @@
 namespace console {
 
     enum class TextOrigin {
-        default,
+        normal,
         machine,
         filesystem,
         reasoning,
@@ -16,9 +16,9 @@ namespace console {
 
     void set_up_console();
 
-    void write_line(const std::string &message, TextOrigin origin = TextOrigin::default);
+    void write_line(const std::string &message, TextOrigin origin = TextOrigin::normal);
 
-    void write(const std::string &message, TextOrigin origin = TextOrigin::default);
+    void write(const std::string &message, TextOrigin origin = TextOrigin::normal);
 
     void write_splitter(TextOrigin origin = TextOrigin::splitter);
 
