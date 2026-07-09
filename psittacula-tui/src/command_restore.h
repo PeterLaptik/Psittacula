@@ -15,11 +15,11 @@ class CommandRestore : public ChatCommand
         void Execute(std::unique_ptr<AiClient> &client, const std::vector<std::string> &args) override
         {
             if (args.empty()) {
-                console::write_line("Error: No file path provided. Usage: restore <filepath>", TextOrigin::error);
+                console::write_line("Error: No file path provided. Usage: restore <filename>", TextOrigin::error);
                 return;
             }
 
-            std::string project_dir = WorkingDir::GetInstance().GetProjectDir();
+            std::string project_dir = WorkingDir::GetInstance().GetLogsDir();
             std::string file_path = project_dir + "/" + args[0];
 
             // Read file contents
@@ -43,7 +43,7 @@ class CommandRestore : public ChatCommand
 
         std::string Description() override
         {
-            return "Restores dialogue from a text file (from a project directory). \n\t[ARG] filepath.";
+            return "Restores dialogue from a text file (from a project/logs directory). \n\t[ARG] filename.";
         }
 };
 
