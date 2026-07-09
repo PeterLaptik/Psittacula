@@ -207,19 +207,19 @@ void DialogueBody::RegisterTool(ToolBase *tool)
         prop_schema.AddMember("description",
             rapidjson::Value(prop.description.c_str(), alloc).Move(), alloc);
 
-        if (!prop.default.empty())
+        if (!prop.default_value.empty())
         {
             if (prop.type == "string")
             {
                 prop_schema.AddMember("default",
-                    rapidjson::Value(prop.default.c_str(), alloc).Move(), alloc);
+                    rapidjson::Value(prop.default_value.c_str(), alloc).Move(), alloc);
             }
             else if (prop.type == "integer")
             {
                 int value = 0;
                 try
                 {
-                    value = std::atoi(prop.default.c_str());
+                    value = std::atoi(prop.default_value.c_str());
                     prop_schema.AddMember("default", rapidjson::Value(value), alloc);
                 }
                 catch (...) { }
@@ -234,7 +234,7 @@ void DialogueBody::RegisterTool(ToolBase *tool)
                 double value = 0;
                 try
                 {
-                    value = std::atof(prop.default.c_str());
+                    value = std::atof(prop.default_value.c_str());
                     prop_schema.AddMember("default", rapidjson::Value(value), alloc);
                 }
                 catch (...) {}

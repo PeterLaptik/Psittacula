@@ -27,7 +27,7 @@ struct ToolParameter
     std::string type;
     std::string description;
     bool is_required;
-    std::string default;
+    std::string default_value;
     std::string value; // it is always string, it is used as a tool parameter after a casting
 };
 
