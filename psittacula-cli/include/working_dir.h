@@ -27,6 +27,8 @@ class WorkingDir
 
         std::string GetSettingsDir() const;
 
+        std::string GetLogsDir() const;
+
         bool IsInWorkDir(const std::string &path) const;
 
     private:

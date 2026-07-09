@@ -33,9 +33,11 @@ void WorkingDir::SetWorkDir(const std::string &path)
     fs::path models = base / "models";
     fs::path settings = base / "settings";
     fs::path projects = base / "projects";
+    fs::path logs = base / "logs";
     fs::create_directories(models);
     fs::create_directories(settings);
     fs::create_directories(projects);
+    fs::create_directories(logs);
 
     m_project_dir = projects.string();
 
@@ -71,6 +73,11 @@ std::string WorkingDir::GetModelsDir() const
 std::string WorkingDir::GetSettingsDir() const
 {
     return m_workdir + '/' + "settings/";
+}
+
+std::string WorkingDir::GetLogsDir() const
+{
+    return m_workdir + '/' + "logs/";
 }
 
 std::string WorkingDir::GetWorkDir() const
@@ -155,9 +162,11 @@ void WorkingDir::CreateWorkingDirs()
     fs::path models = base / "models";
     fs::path settings = base / "settings";
     fs::path projects = base / "projects";
+    fs::path logs = base / "logs";
     fs::create_directories(models);
     fs::create_directories(settings);
     fs::create_directories(projects);
+    fs::create_directories(logs);
 
     m_project_dir = projects.string();
 }
@@ -207,4 +216,3 @@ bool WorkingDir::IsInWorkDir(const std::string &path) const
         return false;
     }
 }
-
