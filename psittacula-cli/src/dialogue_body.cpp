@@ -278,6 +278,19 @@ std::string DialogueBody::ToJsonString() const
     return buffer.GetString();
 }
 
+std::string DialogueBody::ToPureText() const
+{
+    std::string pure_text;
+    const rapidjson::Value &messages = m_request->body["messages"];
+    for (auto &msg : messages.GetArray()) {
+        std::string role = msg["role"].GetString();
+        std::string message = msg["content"].GetString();
+        pure_text += "[" + role + "]: \n" + message + "\n";
+        pure_text += "--------------------------";
+    }
+    return pure_text;
+}
+
 void DialogueBody::FromJsonString(const std::string data)
 {
     // Clears the document and parses the new JSON

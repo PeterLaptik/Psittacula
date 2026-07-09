@@ -32,6 +32,9 @@ class DialogueBody
         /// Dump full body to a JSON string
         std::string ToJsonString() const;
 
+        /// Dump a dialogue only to a pure text
+        std::string ToPureText() const;
+
         /// Restore body from JSON string
         void FromJsonString(const std::string data);
 
