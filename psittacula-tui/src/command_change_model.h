@@ -149,16 +149,19 @@ class CommandChangeModel: public ChatCommand
             std::cout << "Enter file name for the connection: ";
             std::getline(std::cin, file_name);
 
-            std::cout << "Enter model name (e.g., gpt-4o): ";
+            std::cout << "\nEnter model name (e.g., gpt-4o): ";
             std::getline(std::cin, model_name);
 
-            std::cout << "Enter host URL (e.g., http://localhost:8080): ";
+            std::cout << "\nHost URL. ";
+            std::cout << "\nThe host url will be concatenated with '/chat/completions' for chat requests.";
+            std::cout << "\nFor example, local llama.cpp can be http://localhost:8080/v1";
+            std::cout << "\nEnter host URL: ";
             std::getline(std::cin, host);
 
-            std::cout << "Enter context size (optional, leave empty if not set): ";
+            std::cout << "\nEnter context size (optional, leave empty if not set): ";
             std::getline(std::cin, context_size_str);
 
-            std::cout << "Enter API key (leave empty if not required): ";
+            std::cout << "\nEnter API key (leave empty if not required): ";
             std::getline(std::cin, api_key);
 
             std::string models_dir = WorkingDir::GetInstance().GetModelsDir();
@@ -179,7 +182,7 @@ class CommandChangeModel: public ChatCommand
             file << "name=" << model_name << "\n\n";
 
             file << "# Host\n";
-            file << "# The value will be concatenate with '/chat/completions' for requests\n";
+            file << "# The value will be concatenated with '/chat/completions' for requests\n";
             file << "host=" << host << "\n\n";
 
             file << "# Context size: maximum context length for the model (optional)\n";
