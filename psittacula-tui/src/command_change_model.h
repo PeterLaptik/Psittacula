@@ -152,13 +152,10 @@ class CommandChangeModel: public ChatCommand
             std::cout << "\nEnter model name (e.g., gpt-4o): ";
             std::getline(std::cin, model_name);
 
-            std::cout << "\nHost URL. ";
-            std::cout << "\nThe host url will be concatenated with '/chat/completions' for chat requests.";
-            std::cout << "\nFor example, local llama.cpp can be http://localhost:8080/v1";
-            std::cout << "\nEnter host URL: ";
+            std::cout << "\nEnter host URL (e.g. http://localhost:8080): ";
             std::getline(std::cin, host);
 
-            std::cout << "\nEnter context size (optional, leave empty if not set): ";
+            std::cout << "\nEnter context size (leave empty for llama.cpp): ";
             std::getline(std::cin, context_size_str);
 
             std::cout << "\nEnter API key (leave empty if not required): ";

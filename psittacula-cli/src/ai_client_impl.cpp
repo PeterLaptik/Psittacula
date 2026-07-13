@@ -12,7 +12,8 @@
 const int kToolsCallMax = 20; 
 
 const std::string kEndPointHealth = "/health";
-const std::string kEndPointCompletions = "/chat/completions";
+const std::string kEndPointCompletionsLlama = "/v1/chat/completions";
+const std::string kEndPointCompletionsNonLlama = "/chat/completions";
 const std::string kEndPointSlots = "/slots";
 
 
@@ -48,7 +49,8 @@ void AiClientImpl::SendUserMessage(const std::string &message)
 
     ChunkCompletionProcessor proc; // POST response chunk receiver
     proc.SetReasoning(m_show_reasoning);
-    m_http_client.HttpPostStream(kEndPointCompletions, body, &proc);
+    std::string end_point_chat_completions = m_context_size == -1 ? kEndPointCompletionsLlama : kEndPointCompletionsNonLlama;
+    m_http_client.HttpPostStream(end_point_chat_completions, body, &proc);
 
     std::string slots_rsp = GetSlotstInfo();
     proc.ShowStat(slots_rsp, m_context_size);
@@ -166,7 +168,8 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
 
     ChunkCompletionProcessor proc; // POST response chunks receiver
     proc.SetReasoning(m_show_reasoning);
-    m_http_client.HttpPostStream(kEndPointCompletions, body, &proc);
+    std::string end_point_chat_completions = m_context_size == -1 ? kEndPointCompletionsLlama : kEndPointCompletionsNonLlama;
+    m_http_client.HttpPostStream(end_point_chat_completions, body, &proc);
 
     std::string slots_rsp = GetSlotstInfo();
     proc.ShowStat(slots_rsp, m_context_size);

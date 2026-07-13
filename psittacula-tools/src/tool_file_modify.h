@@ -9,9 +9,9 @@ class FileModifyTool : public ToolFile
 {
     public:
         FileModifyTool() = default;
-        virtual ~FileModifyTool() = default;
+        ~FileModifyTool() override = default;
 
-        ToolBase *Clone() override { return new FileModifyTool(); }
+        ToolBase *Clone() override final { return new FileModifyTool(); }
 
         std::string Execute(std::vector<ToolParameter> &params_values) override;
 
