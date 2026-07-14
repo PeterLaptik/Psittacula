@@ -141,7 +141,7 @@ void WorkingDir::CreateWorkingDirs()
     }
 #else
     const char *home = std::getenv("HOME");
-    home_dir = fs::path(home ? home / kDefaultDir : "");
+    home_dir = fs::path(home ? fs::path(home) / kDefaultDir : "");
 #endif
 
     if (!fs::exists(home_dir))
