@@ -15,20 +15,6 @@
 #else
 #include <termios.h>
 #include <unistd.h>
-
-static int getch()
-{
-    termios oldt, newt;
-    tcgetattr(STDIN_FILENO, &oldt);
-    newt = oldt;
-    newt.c_lflag &= ~(ICANON | ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-
-    int ch = getchar();
-
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    return ch;
-}
 #endif
 
 /// Changes or creates model to connect
@@ -63,6 +49,22 @@ class CommandChangeModel: public ChatCommand
 
     private:
         Formatter formatter;
+
+#ifndef _WIN32
+        int getch()
+        {
+            termios oldt, newt;
+            tcgetattr(STDIN_FILENO, &oldt);
+            newt = oldt;
+            newt.c_lflag &= ~(ICANON | ECHO);
+            tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
+            int ch = getchar();
+
+            tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+            return ch;
+        }
+#endif
 
         // Select model from the list of found models in the working directory in interractive mode. 
         void ChooseModel(std::unique_ptr<AiClient> &client)

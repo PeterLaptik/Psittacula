@@ -14,20 +14,6 @@
 #else
 #include <termios.h>
 #include <unistd.h>
-
-static int getch()
-{
-    termios oldt, newt;
-    tcgetattr(STDIN_FILENO, &oldt);
-    newt = oldt;
-    newt.c_lflag &= ~(ICANON | ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-
-    int ch = getchar();
-
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    return ch;
-}
 #endif
 
 /// Selects or shows existing agent rules (system prompt) from Psittacula/settings
@@ -51,6 +37,22 @@ class CommandChangeRules : public ChatCommand
 
     private:
         Formatter formatter;
+
+#ifndef _WIN32
+        int getch()
+        {
+            termios oldt, newt;
+            tcgetattr(STDIN_FILENO, &oldt);
+            newt = oldt;
+            newt.c_lflag &= ~(ICANON | ECHO);
+            tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
+            int ch = getchar();
+
+            tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+            return ch;
+        }
+#endif
 
         void ShowCurrentAgentRules(std::unique_ptr<AiClient> &client)
         {
