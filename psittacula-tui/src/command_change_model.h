@@ -16,7 +16,7 @@
 #include <termios.h>
 #include <unistd.h>
 
-int getch()
+static int getch()
 {
     termios oldt, newt;
     tcgetattr(STDIN_FILENO, &oldt);
@@ -107,7 +107,7 @@ class CommandChangeModel: public ChatCommand
                         int c2 = getch();
                         if (c2 == 'A' && index > 0) index--;                        // Up
                         else if (c2 == 'B' && index < models.size() - 1) index++;   // Down
-                        DrawMenu();
+                        DrawMenu(models, index);
                     }
                 }
                 else if (c == '\n' || c == '\r')

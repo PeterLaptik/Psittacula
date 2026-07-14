@@ -15,7 +15,7 @@
 #include <termios.h>
 #include <unistd.h>
 
-int getch()
+static int getch()
 {
     termios oldt, newt;
     tcgetattr(STDIN_FILENO, &oldt);
