@@ -12,21 +12,21 @@ void FileModifyTool::GetParameters(std::vector<ToolParameter> &params_acc)
     params_acc.push_back({
         "path",
         "string",
-        "Full path of the file to modify.",
+        "The full path of the file to modify.",
         true
         });
     
     params_acc.push_back({
         "content",
         "string",
-        "Content to insert or replace in the file.",
+        "The text or code content to write. Ensure lines are separated with standard system newlines.",
         true
         });
     
     params_acc.push_back({
         "position",
         "integer",
-        "Position to insert content at (0 = beginning, -1 = append, default = -1).",
+        "The character index to insert content. Use 0 for the beginning of the file, or -1 to append to the end. Ignored if replace_all is true.",
         false,
         "-1"
         });
@@ -34,7 +34,7 @@ void FileModifyTool::GetParameters(std::vector<ToolParameter> &params_acc)
     params_acc.push_back({
         "replace_all",
         "boolean",
-        "If true, replaces entire file content; if false, inserts at position (default = false).",
+        "Set to true to entirely erase the existing file and overwrite it with the new content. Set to false to insert/append.",
         false,
         "false"
         });
