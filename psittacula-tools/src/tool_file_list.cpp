@@ -28,6 +28,13 @@ void FileListTool::GetParameters(std::vector<ToolParameter> &params_acc)
         "If true, include hidden files (starting with '.').",
         false
         });
+
+    params_acc.push_back({
+        "summary_only",
+        "boolean",
+        "If true, return only counts instead of full listing.",
+        false
+        });
 }
 
 std::string FileListTool::Execute(std::vector<ToolParameter> &params_values)
@@ -40,8 +47,9 @@ std::string FileListTool::Execute(std::vector<ToolParameter> &params_values)
     std::string path = GetParam(params_values, "path");
     UnescapeSlashesInPath(path);
 
-    bool recursive = GetParamBool(params_values, "recursive", true);
+    bool recursive = GetParamBool(params_values, "recursive", false);
     bool include_hidden = GetParamBool(params_values, "include_hidden", false);
+    bool summary_only = GetParamBool(params_values, "summary_only", false);
 
     if (path.empty())
     {
@@ -49,11 +57,18 @@ std::string FileListTool::Execute(std::vector<ToolParameter> &params_values)
         return R"({"error":{"type":"invalid_arguments","message":"Missing required parameter: path"}})";
     }
 
+    // Prevent catastrophic root listings
+    if (path == "/" || path == "." || path == "./")
+    {
+        return R"({"error":{"type":"invalid_arguments","message":"Listing root or current directory is not allowed"}})";
+    }
+
     console::write_line("Screening: " + path, console::TextOrigin::filesystem);
 
     if (!wdir.IsInWorkDir(path))
     {
-        console::write_line(fmt.Format("Permission_denied: path is outside working directory: %?", path), console::TextOrigin::error);
+        console::write_line(fmt.Format("Permission_denied: path is outside working directory: %?", path),
+            console::TextOrigin::error);
         return fmt.Format(
             "{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory\",\"path\":\"%?\"}}",
             path
@@ -78,37 +93,63 @@ std::string FileListTool::Execute(std::vector<ToolParameter> &params_values)
         );
     }
 
-    return BuildListingJSON(path, recursive, include_hidden);
+    return BuildListingJSON(path, recursive, include_hidden, summary_only);
 }
 
 std::string FileListTool::BuildListingJSON(const std::string &input_path,
     bool recursive,
-    bool include_hidden)
+    bool include_hidden,
+    bool summary_only) const
 {
     Formatter fmt;
     std::ostringstream json;
 
-    // Normalize to absolute path for filesystem traversal
     std::filesystem::path abs_path = std::filesystem::absolute(input_path);
 
+    size_t count_files = 0;
+    size_t count_dirs = 0;
+    size_t total_entries = 0;
+
     json << "{ \"status\": \"success\", "
-        << "\"directory\": \"" << GetEscapedJSONString(input_path) << "\", "
-        << "\"entries\": [";
+        << "\"directory\": \"" << GetEscapedJSONString(input_path) << "\", ";
+
+    if (summary_only)
+    {
+        for (const auto &entry : std::filesystem::directory_iterator(abs_path))
+        {
+            std::string filename = entry.path().filename().string();
+            if (!include_hidden && !filename.empty() && filename[0] == '.')
+                continue;
+
+            total_entries++;
+            if (entry.is_directory()) count_dirs++;
+            else count_files++;
+        }
+
+        json << "\"summary\": {"
+            << "\"total_entries\": " << total_entries << ","
+            << "\"directories\": " << count_dirs << ","
+            << "\"files\": " << count_files
+            << "}, \"complete\": true }";
+
+        return json.str();
+    }
+
+    json << "\"entries\": [";
 
     bool first = true;
+    size_t emitted = 0;
 
     auto process_entry = [&](const std::filesystem::directory_entry &entry)
         {
+            if (emitted >= MAX_ENTRIES)
+                return;
+
             const auto &p = entry.path();
             std::string filename = p.filename().string();
 
-            // Hidden file/dir filtering
             if (!include_hidden && !filename.empty() && filename[0] == '.')
                 return;
-
-            if (!first)
-                json << ",";
-            first = false;
 
             bool is_dir = entry.is_directory();
             std::uintmax_t size = 0;
@@ -119,22 +160,24 @@ std::string FileListTool::BuildListingJSON(const std::string &input_path,
                 catch (...) { size = 0; }
             }
 
-            // Prefer relative path for output
             std::string rel_name;
-            try
-            {
-                rel_name = std::filesystem::relative(p, abs_path).string();
-            }
-            catch (...)
-            {
-                rel_name = filename;
-            }
+            try { rel_name = std::filesystem::relative(p, abs_path).string(); }
+            catch (...) { rel_name = filename; }
+
+            if (!first)
+                json << ",";
+            first = false;
 
             json << "{"
                 << "\"name\":\"" << GetEscapedJSONString(rel_name) << "\","
                 << "\"type\":\"" << (is_dir ? "directory" : "file") << "\","
                 << "\"size_bytes\":" << size
                 << "}";
+
+            emitted++;
+
+            if (json.tellp() > MAX_JSON_SIZE)
+                return;
         };
 
     if (recursive)
@@ -145,7 +188,6 @@ std::string FileListTool::BuildListingJSON(const std::string &input_path,
             const auto &entry = *it;
             std::string filename = entry.path().filename().string();
 
-            // Prevent recursion into hidden directories
             if (!include_hidden && entry.is_directory() &&
                 !filename.empty() && filename[0] == '.')
             {
@@ -153,19 +195,33 @@ std::string FileListTool::BuildListingJSON(const std::string &input_path,
                 continue;
             }
 
+            if (it.depth() > MAX_DEPTH)
+            {
+                it.disable_recursion_pending();
+                continue;
+            }
+
             process_entry(entry);
+
+            if (emitted >= MAX_ENTRIES || json.tellp() > MAX_JSON_SIZE)
+                break;
         }
     }
     else
     {
         for (const auto &entry : std::filesystem::directory_iterator(abs_path))
+        {
             process_entry(entry);
+            if (emitted >= MAX_ENTRIES || json.tellp() > MAX_JSON_SIZE)
+                break;
+        }
     }
 
     json << "], "
         << "\"message\": \"Directory listing"
         << (recursive ? " (recursive)" : "")
-        << " completed\" }";
+        << " completed\", "
+        << "\"complete\": true }";
 
     return json.str();
 }

@@ -26,9 +26,14 @@ class FileListTool : public ToolFile
         bool CanBeReverted() override { return false; }
 
     private:
+        static constexpr size_t MAX_ENTRIES = 500;
+        static constexpr size_t MAX_DEPTH = 4;
+        static constexpr size_t MAX_JSON_SIZE = 500000;
+
         std::string BuildListingJSON(const std::string &path,
             bool recursive,
-            bool include_hidden);
+            bool include_hidden,
+            bool summary_only) const;
 };
 
 #endif // TOOL_FILE_LIST_INCLUDED_H

@@ -149,7 +149,7 @@ void main_loop(std::unique_ptr<AiClient> &client, ChatCommandDispatcher &cmd_dis
         if (line == "/exit")
         {
             console::write("\r");
-            console::write_line("\nBye...", TextOrigin::machine);
+            console::write_line("\nBye...", TextOrigin::normal);
             break;
         }
 

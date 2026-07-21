@@ -39,6 +39,8 @@ void FileSearchTool::GetParameters(std::vector<ToolParameter> &params_acc)
 
 std::string FileSearchTool::Execute(std::vector<ToolParameter> &params_values)
 {
+    console::write_line("File search tool.", console::TextOrigin::filesystem);
+
     std::string query = GetParam(params_values, "query");
 
     std::string path = GetParam(params_values, "path");
