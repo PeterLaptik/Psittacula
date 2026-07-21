@@ -1,11 +1,12 @@
-#ifndef FILE_CONTENT_MODIFY_INCLUDED_H
-#define FILE_CONTENT_MODIFY_INCLUDED_H
+#ifndef TOOL_FILE_CONTENT_MODIFY_INCLUDED_H
+#define TOOL_FILE_CONTENT_MODIFY_INCLUDED_H
 
-#include "tool_base.h"
+#include "tool_file.h"
+#include "working_dir.h"
 #include <string>
 #include <vector>
 
-class FileContentModifyTool : public ToolBase
+class FileContentModifyTool : public ToolFile
 {
     public:
         FileContentModifyTool() = default;
@@ -30,4 +31,4 @@ class FileContentModifyTool : public ToolBase
         bool executed = false;
 };
 
-#endif // FILE_CONTENT_MODIFY_INCLUDED_H
+#endif // TOOL_FILE_CONTENT_MODIFY_INCLUDED_H

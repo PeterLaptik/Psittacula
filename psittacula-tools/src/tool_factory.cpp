@@ -9,6 +9,7 @@
 #include "tool_file_list.h"
 #include "tool_file_move.h"
 #include "tool_file_create_binary.h"
+#include "tool_file_content_modify.h"
 #include "tool_file_search.h"
 #include <memory>
 
@@ -25,4 +26,5 @@ void get_all_tools(std::vector<std::unique_ptr<ToolBase>> &acc)
     acc.push_back(std::make_unique<FileReadTool>());
     acc.push_back(std::make_unique<FileCreateBinaryTool>());
     acc.push_back(std::make_unique<FileSearchTool>());
+    acc.push_back(std::make_unique<FileContentModifyTool>());
 }
