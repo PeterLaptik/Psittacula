@@ -19,14 +19,14 @@ class CommandRestore : public ChatCommand
                 return;
             }
 
-            std::string project_dir = WorkingDir::GetInstance().GetLogsDir();
-            std::string file_path = project_dir + "/" + args[0];
+            std::string log_dir = WorkingDir::GetInstance().GetLogsDir();
+            std::string file_path = log_dir + "/" + args[0];
 
             // Read file contents
             std::ifstream in(file_path, std::ios::in);
             if (!in)
             {
-                console::write_line("Failed to open file for reading: " + file_path,
+                console::write_line("Failed to open file in logs dir for reading: " + file_path,
                     TextOrigin::error);
                 return;
             }

@@ -305,7 +305,24 @@ void DialogueBody::FromJsonString(const std::string data)
     const rapidjson::Value &messages = m_request->body["messages"];
     for (auto &msg : messages.GetArray()) {
         std::string role = msg["role"].GetString();
-        std::string message = msg["content"].GetString();
+
+        std::string message = "[Null content]";
+        if (!msg["content"].IsNull())
+        {
+            message = msg["content"].GetString();
+        }
+        else // On tool calls
+        {
+            if (msg.HasMember("tool_calls")) {
+                const auto &toolCalls = msg["tool_calls"];
+                const auto &call = toolCalls[0]; // usually one per message
+
+                std::string toolName = call["function"]["name"].GetString();
+                std::string args = call["function"]["arguments"].GetString();
+
+                message = "Tool call: " + toolName; // +" args=" + args;
+            }
+        }
 
         console::TextOrigin origin = console::TextOrigin::normal;
         if (role == "system")
