@@ -24,8 +24,8 @@ add_library(${PSITTACULA_TOOLS_NAME} STATIC
 	${SRC_DIR}/tool_file_create.h
 	${SRC_DIR}/tool_file_create_binary.cpp
 	${SRC_DIR}/tool_file_create_binary.h
-	${SRC_DIR}/file_content_modify.cpp
-	${SRC_DIR}/file_content_modify.h
+	${SRC_DIR}/tool_file_content_modify.cpp
+	${SRC_DIR}/tool_file_content_modify.h
 	${SRC_DIR}/tool_dir_create.h
 	${SRC_DIR}/tool_dir_create.cpp
 	${SRC_DIR}/tool_file_remove.h

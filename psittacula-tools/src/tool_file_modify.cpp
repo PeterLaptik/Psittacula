@@ -4,39 +4,57 @@
 #include "console_writer.h"
 #include <fstream>
 #include <filesystem>
-#include <iostream>
 #include <sstream>
 
 void FileModifyTool::GetParameters(std::vector<ToolParameter> &params_acc)
 {
+    params_acc.push_back({ "path", "string", "Path of the file to modify.", true });
+    params_acc.push_back({ "content", "string", "Content to write.", true });
+
     params_acc.push_back({
-        "path",
+        "mode",
         "string",
-        "The full path of the file to modify.",
+        "One of: overwrite, insert, append, replace_range.",
         true
         });
-    
-    params_acc.push_back({
-        "content",
-        "string",
-        "The text or code content to write. Ensure lines are separated with standard system newlines.",
-        true
-        });
-    
+
     params_acc.push_back({
         "position",
         "integer",
-        "The character index to insert content. Use 0 for the beginning of the file, or -1 to append to the end. Ignored if replace_all is true.",
+        "Used only when mode = insert.",
         false,
-        "-1"
+        "0"
         });
-    
+
     params_acc.push_back({
-        "replace_all",
-        "boolean",
-        "Set to true to entirely erase the existing file and overwrite it with the new content. Set to false to insert/append.",
+        "range_start",
+        "integer",
+        "Used only when mode = replace_range.",
         false,
-        "false"
+        "0"
+        });
+
+    params_acc.push_back({
+        "range_end",
+        "integer",
+        "Used only when mode = replace_range.",
+        false,
+        "0"
+        });
+
+    params_acc.push_back({
+        "reason",
+        "string",
+        "Explanation of why modification is needed.",
+        false
+        });
+
+    params_acc.push_back({
+        "diff_required",
+        "boolean",
+        "If true, model must request file content before modifying.",
+        false,
+        "true"
         });
 }
 
@@ -45,104 +63,77 @@ std::string FileModifyTool::Execute(std::vector<ToolParameter> &params_values)
     Formatter fmt;
     WorkingDir &wdir = WorkingDir::GetInstance();
 
-    console::write_line("File modify tool.", console::TextOrigin::filesystem);
-
     std::string path = GetParam(params_values, "path");
     UnescapeSlashesInPath(path);
 
     std::string content = GetParam(params_values, "content");
+    mode = GetParam(params_values, "mode");
 
-    if (path.empty())
-    {
-        console::write_line("Missing required parameter: path", console::TextOrigin::error);
-        return R"({"error":{"type":"invalid_arguments","message":"Missing required parameter: path"}})";
-    }
+    if (path.empty() || mode.empty())
+        return R"({"error":{"type":"invalid_arguments","message":"Missing required parameters"}})";
 
-    if (!wdir.IsInWorkDir(path)) 
-    {
-        console::write_line(fmt.Format("Permission_denied: path is outside working directory: %?", path), console::TextOrigin::error);
+    if (!wdir.IsInWorkDir(path))
         return fmt.Format(
-            "{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory\",\"path\":\"%?\"}}",
+            "{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path outside working directory\",\"path\":\"%?\"}}",
             path
         );
-    }
 
-    // Parse optional parameters
-    int pos_int = -1;
-    bool replace_all_bool = false;
+    // Optional parameters
+    position = static_cast<size_t>(std::stoll(GetParam(params_values, "position", "0")));
+    range_start = static_cast<size_t>(std::stoll(GetParam(params_values, "range_start", "0")));
+    range_end = static_cast<size_t>(std::stoll(GetParam(params_values, "range_end", "0")));
 
-    for (auto &p : params_values) 
-    {
-        if (p.name == "position") 
-        {
-            try { 
-                pos_int = std::stoi(p.value); 
-            }
-            catch (...) 
-            { 
-                pos_int = -1; 
-            }
-        }
-        if (p.name == "replace_all") 
-        {
-            replace_all_bool = (p.value == "true" || p.value == "1");
-        }
-    }
-
-    position = static_cast<size_t>(pos_int);
-    replace_all = replace_all_bool;
-
-    console::write_line("Modifying file: " + path, console::TextOrigin::filesystem);
-    console::write_line("Position: " + std::to_string(pos_int), console::TextOrigin::filesystem);
-    std::string replase_str = replace_all ? "yes" : "no";
-    console::write_line("Replace all: " + replase_str, console::TextOrigin::filesystem);
-
-    // Read old content if file exists
-    if (std::filesystem::exists(path)) 
-    {
+    // Read old content
+    if (std::filesystem::exists(path)) {
         std::ifstream in(path);
-        if (in) 
-        {
-            std::stringstream buffer;
-            buffer << in.rdbuf();
-            old_content = buffer.str();
-        }
-        in.close();
+        std::stringstream buffer;
+        buffer << in.rdbuf();
+        old_content = buffer.str();
     }
-    else 
-    {
-        old_content = "";
+    else {
+        old_content.clear();
     }
 
-    // Compute new content
-    if (replace_all || old_content.empty()) 
-    {
+    // Compute new content based on mode
+    if (mode == "overwrite") {
         new_content = content;
     }
-    else 
-    {
-        if (position == static_cast<size_t>(-1) || position >= old_content.length()) 
-        {
-            new_content = old_content + content;  // append
-        }
-        else 
-        {
-            new_content = old_content.substr(0, position) +
-                content +
-                old_content.substr(position);
-        }
+    else if (mode == "append") {
+        new_content = old_content + content;
+    }
+    else if (mode == "insert") {
+        if (position > old_content.size())
+            position = old_content.size();
+
+        new_content =
+            old_content.substr(0, position) +
+            content +
+            old_content.substr(position);
+    }
+    else if (mode == "replace_range") {
+        if (range_start > old_content.size())
+            range_start = old_content.size();
+        if (range_end > old_content.size())
+            range_end = old_content.size();
+        if (range_start > range_end)
+            std::swap(range_start, range_end);
+
+        new_content =
+            old_content.substr(0, range_start) +
+            content +
+            old_content.substr(range_end);
+    }
+    else {
+        return R"({"error":{"type":"invalid_arguments","message":"Invalid mode"}})";
     }
 
     // Write new content
     std::ofstream out(path);
-    if (!out) 
-    {
-        console::write_line(fmt.Format("Failed to write file: %?", path), console::TextOrigin::error);
+    if (!out)
         return fmt.Format(
             "{\"error\":{\"type\":\"runtime_error\",\"message\":\"Failed to write file\",\"path\":\"%?\"}}",
             path
         );
-    }
 
     out << new_content;
     out.close();
@@ -150,28 +141,26 @@ std::string FileModifyTool::Execute(std::vector<ToolParameter> &params_values)
     last_path = path;
     executed = true;
 
-    // Success JSON
-    std::string result_template =
-        "{"
-        "  \"status\": \"success\","
-        "  \"file_modified\": {"
-        "    \"path\": \"%?\","
-        "    \"old_size\": %?,"
-        "    \"new_size\": %?,"
-        "    \"replace_all\": %?,"
-        "    \"position\": %?"
-        "  },"
-        "  \"message\": \"File %?\""
-        "}";
-
     return fmt.Format(
-        result_template,
+        "{"
+        "\"status\":\"success\","
+        "\"file_modified\":{"
+        "\"path\":\"%?\","
+        "\"old_size\":%?,"
+        "\"new_size\":%?,"
+        "\"mode\":\"%?\","
+        "\"position\":%?,"
+        "\"range_start\":%?,"
+        "\"range_end\":%?"
+        "}"
+        "}",
         path,
         old_content.size(),
         new_content.size(),
-        replace_all ? "true" : "false",
-        pos_int,
-        replace_all ? "fully replaced" : "modified"
+        mode,
+        position,
+        range_start,
+        range_end
     );
 }
 
@@ -180,17 +169,10 @@ void FileModifyTool::Undo()
     if (!executed)
         return;
 
-    console::write_line("Restoring file: " + last_path, console::TextOrigin::filesystem);
-
     std::ofstream out(last_path);
-    if (out) 
-    {
+    if (out) {
         out << old_content;
         out.close();
-    }
-    else 
-    {
-        console::write_line("Failed to restore file: " + last_path, console::TextOrigin::error);
     }
 }
 
@@ -199,16 +181,9 @@ void FileModifyTool::Redo()
     if (!executed)
         return;
 
-    console::write_line("Reapplying modification: " + last_path, console::TextOrigin::filesystem);
-
     std::ofstream out(last_path);
-    if (out) 
-    {
+    if (out) {
         out << new_content;
         out.close();
-    }
-    else 
-    {
-        console::write_line("Failed to reapply modification to file: " + last_path, console::TextOrigin::error);
     }
 }
