@@ -11,29 +11,36 @@ void FileSearchTool::GetParameters(std::vector<ToolParameter> &params_acc)
     params_acc.push_back({
         "query",
         "string",
-        "Query.",
+        "Plain-text search query.",
+        false
+        });
+
+    params_acc.push_back({
+        "regex",
+        "string",
+        "Regex pattern to match.",
+        false
+        });
+
+    params_acc.push_back({
+        "regex_mode",
+        "boolean",
+        "If true, use regex pattern instead of plain-text search.",
         false
         });
 
     params_acc.push_back({
         "path",
         "string",
-        "Path",
+        "Directory path to search.",
         true
         });
 
     params_acc.push_back({
         "case_sensitive",
         "boolean",
-        "If true, it is case sensitive",
-        true
-        });
-
-    params_acc.push_back({
-        "regex",
-        "string",
-        "Regex",
-        true
+        "If true, search is case-sensitive.",
+        false
         });
 }
 
@@ -41,54 +48,72 @@ std::string FileSearchTool::Execute(std::vector<ToolParameter> &params_values)
 {
     console::write_line("File search tool.", console::TextOrigin::filesystem);
 
-    std::string query = GetParam(params_values, "query");
-
     std::string path = GetParam(params_values, "path");
     UnescapeSlashesInPath(path);
 
     bool case_sensitive = GetParamBool(params_values, "case_sensitive", false);
-    bool use_regex = GetParamBool(params_values, "regex", false);
+    bool regex_mode = GetParamBool(params_values, "regex_mode", false);
+
+    std::string query = GetParam(params_values, "query");
+    std::string regex_pattern = GetParam(params_values, "regex");
+    console::write_line(query.empty() ? regex_pattern : query, console::TextOrigin::filesystem);
 
     if (path.empty())
     {
-        console::write_line("Missing required parameter: path", console::TextOrigin::error);
         return R"({"error":{"type":"invalid_arguments","message":"Missing required parameter: path"}})";
     }
 
-    if (query.empty())
+    if (regex_mode)
     {
-        console::write_line("Missing required field: query", console::TextOrigin::error);
-        return R"({"error":{"type":"invalid_arguments","message":"Missing required parameter: path"}})";
+        if (regex_pattern.empty())
+        {
+            return R"({"error":{"type":"invalid_arguments","message":"regex_mode=true but no regex pattern provided"}})";
+        }
+    }
+    else
+    {
+        if (query.empty())
+        {
+            return R"({"error":{"type":"invalid_arguments","message":"Missing required parameter: query"}})";
+        }
     }
 
-    auto matches = SearchDirectory(path, query, case_sensitive, use_regex);
+    auto matches = SearchDirectory(
+        path,
+        regex_mode ? regex_pattern : query,
+        case_sensitive,
+        regex_mode
+    );
 
     Formatter fmt;
     std::string result;
-    for (int i = 0, max_sz = matches.size(); i < max_sz; i++)
+
+    for (int i = 0; i < matches.size(); i++)
     {
         auto &m = matches[i];
-        result += fmt.Format("{\"file\": \"%?\",\"line\": %?,\"snippet\":\"%?\"}", m.file, m.line, m.snippet);
-        if (i != max_sz - 1)
+        result += fmt.Format(
+            "{\"file\":\"%?\",\"line\":%?,\"snippet\":\"%?\"}",
+            m.file, m.line, m.snippet
+        );
+        if (i + 1 < matches.size())
             result += ",";
     }
 
-    std::string response = fmt.Format(
+    return fmt.Format(
         "{"
-        "\"success\": true,"
-        "\"result\": [%?],"
-        "\"message\": \"Found %? match%?\""
+        "\"success\":true,"
+        "\"result\":[%?],"
+        "\"message\":\"Found %? match%?\""
         "}",
         result,
         matches.size(),
         matches.size() == 1 ? "" : "es"
     );
-    return response;
 }
 
 std::vector<FileSearchTool::Match> FileSearchTool::SearchDirectory(
     const std::string &root,
-    const std::string &query,
+    const std::string &pattern,
     bool case_sensitive,
     bool use_regex)
 {
@@ -99,7 +124,13 @@ std::vector<FileSearchTool::Match> FileSearchTool::SearchDirectory(
         if (!entry.is_regular_file())
             continue;
 
-        auto file_matches = SearchFile(entry.path().string(), query, case_sensitive, use_regex);
+        auto file_matches = SearchFile(
+            entry.path().string(),
+            pattern,
+            case_sensitive,
+            use_regex
+        );
+
         results.insert(results.end(), file_matches.begin(), file_matches.end());
     }
 
@@ -108,7 +139,7 @@ std::vector<FileSearchTool::Match> FileSearchTool::SearchDirectory(
 
 std::vector<FileSearchTool::Match> FileSearchTool::SearchFile(
     const std::string &path,
-    const std::string &query,
+    const std::string &pattern,
     bool case_sensitive,
     bool use_regex)
 {
@@ -125,7 +156,7 @@ std::vector<FileSearchTool::Match> FileSearchTool::SearchFile(
     {
         auto flags = case_sensitive ? std::regex::ECMAScript
             : (std::regex::ECMAScript | std::regex::icase);
-        re = std::regex(query, flags);
+        re = std::regex(pattern, flags);
     }
 
     while (std::getline(file, line))
@@ -141,7 +172,7 @@ std::vector<FileSearchTool::Match> FileSearchTool::SearchFile(
         else
         {
             std::string hay = line;
-            std::string needle = query;
+            std::string needle = pattern;
 
             if (!case_sensitive)
             {
