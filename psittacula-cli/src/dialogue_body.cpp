@@ -8,13 +8,24 @@
 #include <rapidjson/error/en.h>
 
 // Double escaping backslashes
-auto prepare_obj_string = [](const std::string &s) {
+auto escape_slashes_string = [](const std::string &s) {
     std::string out;
     out.reserve(s.size());
     for (char c : s)
     {
         if (c == '\\') out += "\\\\";
         else out += c;
+    }
+    return out;
+};
+
+auto unescape_slashes_string = [](const std::string &s) {
+    std::string out = s;
+    size_t pos = 0;
+    while ((pos = out.find("\\\\", pos)) != std::string::npos)
+    {
+        out.replace(pos, 2, "\\");
+        pos += 1;
     }
     return out;
 };
@@ -121,6 +132,8 @@ bool DialogueBody::AddResponse(const std::string &response)
 void DialogueBody::AddToolResponses(const std::vector<ToolResponse> &responses)
 {
     AddToolCallMessages(responses);
+
+    PurgePreviousFileContents(responses);
 
     auto it = m_request->body.FindMember("messages");
     if (it != m_request->body.MemberEnd() && it->value.IsArray())
@@ -423,6 +436,139 @@ void DialogueBody::ClearContext()
         if (has_system)
         {
             messages.PushBack(system_msg, alloc);
+        }
+    }
+}
+
+auto get_file_path_from_content_string = [](const std::string &content) {
+    std::string escaped_content;
+    for (char c : content) {
+        if (c == '\\') 
+            escaped_content += R"(\\)";
+        else 
+            escaped_content += c;
+    }
+
+    std::string result = "null";
+
+    rapidjson::Document parsed;
+    parsed.Parse(escaped_content.c_str());
+    if (!parsed.HasParseError())
+    {
+        if (parsed.HasMember("file") && parsed["file"].IsObject()) // Pervious calls results path extraction
+        {
+            auto file = parsed["file"].GetObject();
+            if (file.HasMember("path") && file["path"].IsString())
+                result = file["path"].GetString();
+        }
+    }
+    else
+    {
+        std::cout << "Tool file path JSON parse error: " << rapidjson::GetParseError_En(parsed.GetParseError()) << std::endl;
+    }
+
+    // Unescape slashes
+    size_t pos = 0;
+    while ((pos = result.find("\\\\", pos)) != std::string::npos) 
+    {
+        result.replace(pos, 2, "\\");
+        pos += 1;
+    }
+
+    return result;
+};
+
+// Exchange previous file contents with a success message if the file was read in the current responses
+void DialogueBody::PurgePreviousFileContents(const std::vector<ToolResponse> &responses)
+{
+    if (responses.empty())
+        return;
+
+    auto it = m_request->body.FindMember("messages");
+    if (it != m_request->body.MemberEnd() && it->value.IsArray())
+    {
+        rapidjson::Value &messages = it->value;
+        rapidjson::SizeType messages_size = messages.Size();
+
+        // Collect file paths from current responses where recipient == 'read_file'
+        // To purge obsolette file contents later
+        std::vector<std::string> current_file_paths;
+        for (const ToolResponse &rsp : responses)
+        {
+            if (rsp.name == "read_file")
+            {
+                rapidjson::Document parsed;
+                parsed.Parse(rsp.input_content.c_str());
+                if (!parsed.HasParseError())
+                {
+                    if(parsed.HasMember("path") && parsed["path"].IsString())
+                        current_file_paths.emplace_back(parsed["path"].GetString());
+                }
+            }
+        }
+
+        if (current_file_paths.empty())
+            return;
+
+        // Iterate through all tool messages (role == "tool")
+        for (rapidjson::SizeType idx = 0; idx < messages_size; idx++)
+        {
+            rapidjson::Value &msg = messages[idx];
+            
+            // Skip non-tool messages
+            if (!msg.HasMember("role") || !msg["role"].IsString() ||
+                std::string(msg["role"].GetString()) != "tool")
+            {
+                continue;
+            }
+
+            // Only process messages with "recipient" == 'read_file'
+            if (!msg.HasMember("recipient") || !msg["recipient"].IsString() ||
+                std::string(msg["recipient"].GetString()) != "read_file")
+            {
+                continue;
+            }
+
+            // Get the file path from this previous tool message
+            if (!msg.HasMember("content") || !msg["content"].IsString())
+            {
+                continue;
+            }
+
+            // Check if this file path matches any previous file path
+            std::string prev_file_path = "null";
+            for (const auto &current_path : current_file_paths)
+            {
+                std::string escaped_content = escape_slashes_string(msg["content"].GetString());
+
+                rapidjson::Document parsed;
+                parsed.Parse(escaped_content.c_str());
+                if (!parsed.HasParseError())
+                {
+                    if (parsed.HasMember("file") && parsed["file"].IsObject())
+                    {
+                        auto file = parsed["file"].GetObject();
+                        if (file.HasMember("path") && file["path"].IsString())
+                        {
+                            prev_file_path = file["path"].GetString();
+                        }
+                    }
+
+                    if (prev_file_path != current_path)
+                        continue;
+
+                    std::string test = parsed["file"]["content"].GetString();
+                    parsed["file"]["content"].SetString("File was successfully read. See updated content in the latest response.", 
+                        m_request->body.GetAllocator());
+                    rapidjson::StringBuffer buffer;
+                    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                    parsed.Accept(writer);
+
+                    // Replace tool message content
+                    rapidjson::Document::AllocatorType &alloc = m_request->body.GetAllocator();
+                    msg["content"].SetString(buffer.GetString(), alloc);
+                }
+            }
         }
     }
 }

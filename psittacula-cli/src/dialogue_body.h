@@ -44,6 +44,7 @@ class DialogueBody
 
     private:
         void AddToolCallMessages(const std::vector<ToolResponse> &responses);
+        void PurgePreviousFileContents(const std::vector<ToolResponse> &responses);
 
         std::string m_model = "any";
         

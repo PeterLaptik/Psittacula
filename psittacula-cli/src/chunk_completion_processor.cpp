@@ -355,7 +355,7 @@ void ChunkCompletionProcessor::GetResponseTools(std::vector<ToolCall> &calls_acc
             continue;
         }
 
-        // Assembling th full content like JSON stringified object:
+        // Assembling the full content like JSON stringified object:
         // {\"arg1\": 1, \"arg2\": \"2str\", etc.}
         std::string full_content;
 
