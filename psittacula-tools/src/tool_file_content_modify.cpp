@@ -105,14 +105,6 @@ std::string FileContentModifyTool::Execute(std::vector<ToolParameter> &params_va
     old_content = buffer.str();
     in.close();
 
-    // Check if old_str appears exactly once in the file
-    size_t count = old_content.find(old_str);
-    while (count != std::string::npos) 
-    {
-        count += old_content.find(old_str, count + old_str.length());
-        count++;
-    }
-
     // Count occurrences
     size_t occurrence_count = 0;
     size_t pos = 0;
