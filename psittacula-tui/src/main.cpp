@@ -152,6 +152,14 @@ void main_loop(std::unique_ptr<AiClient> &client, ChatCommandDispatcher &cmd_dis
             continue;
         }
 
+        // Interractive command select
+        if (line == "/")
+        {
+            std::string command_name = cmd_dispatcher.SelectCommand();
+            std::cout << "/" << command_name << std::endl;
+            line = "/" + command_name;
+        }
+
         // Exit from query input mode and clear accumulated lines
         if (line == "/q")
         {

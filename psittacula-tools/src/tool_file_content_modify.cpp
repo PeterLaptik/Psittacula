@@ -43,8 +43,6 @@ std::string FileContentModifyTool::Execute(std::vector<ToolParameter> &params_va
 
     std::string old_str = GetParam(params_values, "old_str");
     std::string new_str = GetParam(params_values, "new_str");
-    console::write_line("Old value: " + old_str, console::TextOrigin::filesystem);
-    console::write_line("New value: " + new_str, console::TextOrigin::filesystem);
 
     if (file_path.empty())
     {

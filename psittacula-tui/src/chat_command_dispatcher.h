@@ -10,6 +10,12 @@
 #include <algorithm>
 #include <iterator>
 #include <memory>
+#ifdef _WIN32
+#include <conio.h>
+#else
+#include <termios.h>
+#include <unistd.h>
+#endif
 
 class AiClient;
 
@@ -55,7 +61,103 @@ class ChatCommandDispatcher
             }
         }
 
-        // Shows list of aviable commands
+        // Shows list of available commands with descriptions in an interactive menu
+        std::string SelectCommand()
+        {
+            ActivateAlternateScreen();
+
+            std::vector<std::pair<std::string, std::string>> cmd_list;
+            for (auto &cmd : m_commands)
+            {
+                cmd_list.emplace_back(cmd.first, cmd.second->Description());
+            }
+
+            std::sort(cmd_list.begin(), cmd_list.end(), [](auto item_1, auto item_2) {
+                return item_1.first < item_2.first;
+                });
+
+            int index = 0;
+            DrawCommandMenu(cmd_list, index);
+
+            while (true)
+            {
+#ifdef _WIN32
+                int c = _getch();
+                if (c == 224)
+                {
+                    int arrow = _getch();
+                    if (arrow == 72 && index > 0) index--;
+                    else if (arrow == 80 && index < cmd_list.size() - 1) index++;
+                    DrawCommandMenu(cmd_list, index);
+                }
+                else if (c == 27)
+                {
+                    // Escape to quit without selecting
+                    RestoreMainScreen();
+                    return "";
+                }
+                else if (c == 13)
+                {
+                    // Enter to select command
+                    break;
+                }
+#else
+                int c = getch();
+                if (c == '\x1b')
+                {
+                    int c1 = getch();
+                    if (c1 == '[')
+                    {
+                        int c2 = getch();
+                        if (c2 == 'A' && index > 0) index--;
+                        else if (c2 == 'B' && index < cmd_list.size() - 1) index++;
+                        DrawCommandMenu(cmd_list, index);
+                    }
+                }
+                else if (c == '\x1b' || c == 27)
+                {
+                    // Escape to quit without selecting
+                    RestoreMainScreen();
+                    return "";
+                }
+                else if (c == '\n' || c == '\r')
+                {
+                    // Enter to select command
+                    break;
+                }
+#endif
+            }
+
+            // Selected command
+            std::string selected_cmd = cmd_list[index].first;
+            std::string selected_desc = cmd_list[index].second;
+
+            RestoreMainScreen();
+            return selected_cmd;
+        }
+
+        void DrawCommandMenu(const std::vector<std::pair<std::string, std::string>> &commands, int index)
+        {
+            std::cout << "\x1b[2J\x1b[H";
+            console::write_line("--------------------------------------------------------------", console::TextOrigin::filesystem);
+            console::write_line("\033[1mSelect a command to execute\033[0m");
+            console::write_line("Use Up/Down to navigate, Enter to select, Escape to quit.\n");
+
+            for (int i = 0; i < commands.size(); ++i)
+            {
+                if (i == index)
+                    std::cout << "\x1b[7m";
+
+                std::cout << "\033[1m" << commands[i].first << "\033[0m" << " - " << commands[i].second;
+                if (i == index)
+                    std::cout << "\x1b[0m";
+                else
+                    std::cout << "\033[0m";
+                std::cout << "\n";
+            }
+        }
+
+        // Shows list of aviable commands (non-interactive)
         void ShowHelp()
         {
             std::cout << "\x1b[?1049h\x1b[2J\x1b[H";
@@ -86,6 +188,17 @@ class ChatCommandDispatcher
         }
 
     private:
+        // Sets alternate screen buffer for command interractive mode, if necessary
+        void  ActivateAlternateScreen() const
+        {
+            std::cout << "\x1b[?1049h\x1b[2J\x1b[H";
+        }
+        // Sets back to main dialogue screen
+        void RestoreMainScreen() const
+        {
+            std::cout << "\x1b[?1049l";
+        }
+
         std::map<std::string, std::unique_ptr<ChatCommand>> m_commands;
 };
 
