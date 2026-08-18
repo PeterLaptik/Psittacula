@@ -8,6 +8,10 @@
 #include <vector>
 #include <memory>
 #include <algorithm>
+#ifdef _WIN32
+#include <windows.h>
+#include <codecvt>
+#endif
 
 using console::TextOrigin;
 
@@ -19,6 +23,10 @@ void process_query(std::unique_ptr<AiClient> &client, const std::vector<std::str
 
 // Proceses a chat command (set project dir, set model, etc)
 void process_command(std::unique_ptr<AiClient> &client, const std::string &command, ChatCommandDispatcher &cmd_dispatcher);
+
+#ifdef _WIN32
+std::string utf16_to_utf8(const std::wstring &w);
+#endif
 
 
 // Limit for lines in a single query
@@ -53,6 +61,7 @@ int main(int argc, char **argv)
     Formatter formatter;
 
     // Windows console setup
+
     console::set_up_console();
 
     // Logo + info
@@ -117,7 +126,14 @@ void main_loop(std::unique_ptr<AiClient> &client, ChatCommandDispatcher &cmd_dis
     console::write("\n>");
 
     std::string line;
+
+#ifdef _WIN32
+    std::wstring ws;
+    while (std::getline(std::wcin, ws)) {
+        line = utf16_to_utf8(ws);
+#else
     while (std::getline(std::cin, line)) {
+#endif
         // Double enter -- process query
         if (line.empty())
         {
@@ -197,3 +213,11 @@ void process_command(std::unique_ptr<AiClient> &client, const std::string &comma
 
     cmd_dispatcher.DispatchCommand(cmd_name, cmd_args, client);
 }
+
+#ifdef _WIN32
+std::string utf16_to_utf8(const std::wstring &w)
+{
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
+    return conv.to_bytes(w);
+}
+#endif
