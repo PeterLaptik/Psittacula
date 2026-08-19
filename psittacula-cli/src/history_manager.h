@@ -29,11 +29,16 @@ class HistoryManager
 
         void Undo() 
         {
-            if (undo_stack.empty()) 
+            if (undo_stack.empty())
+            {
+                console::write_line("No operations to undo", console::TextOrigin::filesystem);
                 return;
+            } 
+
             auto cmd = std::move(undo_stack.top());
             undo_stack.pop();
-            try {
+            try 
+            {
                 cmd->Undo();
                 redo_stack.push(std::move(cmd));
             } 
@@ -51,11 +56,16 @@ class HistoryManager
 
         void Redo() 
         {
-            if (redo_stack.empty()) 
+            if (redo_stack.empty())
+            {
+                console::write_line("No operations to redo.", console::TextOrigin::filesystem);
                 return;
+            }
+
             auto cmd = std::move(redo_stack.top());
             redo_stack.pop();
-            try {
+            try 
+            {
                 cmd->Redo();
                 undo_stack.push(std::move(cmd));
             } 
