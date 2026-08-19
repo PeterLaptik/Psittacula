@@ -126,6 +126,7 @@ void main_loop(std::unique_ptr<AiClient> &client, ChatCommandDispatcher &cmd_dis
     console::write("\n>");
 
     std::string line;
+    std::string line_prefix; // forse a prefix for a line (for example, command name selected via / command)
 
 #ifdef _WIN32
     std::wstring ws;
@@ -134,6 +135,12 @@ void main_loop(std::unique_ptr<AiClient> &client, ChatCommandDispatcher &cmd_dis
 #else
     while (std::getline(std::cin, line)) {
 #endif
+        if (!line_prefix.empty())
+        {
+            line = line_prefix + line;
+            line_prefix.clear();
+        }
+
         // Double enter -- process query
         if (line.empty())
         {
@@ -156,8 +163,9 @@ void main_loop(std::unique_ptr<AiClient> &client, ChatCommandDispatcher &cmd_dis
         if (line == "/")
         {
             std::string command_name = cmd_dispatcher.SelectCommand();
-            std::cout << "/" << command_name << std::endl;
-            line = "/" + command_name;
+            std::cout << ">/" << command_name;
+            line_prefix = "/" + command_name;
+            continue;
         }
 
         // Exit from query input mode and clear accumulated lines
