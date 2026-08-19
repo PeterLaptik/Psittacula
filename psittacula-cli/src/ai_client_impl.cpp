@@ -254,6 +254,11 @@ std::string AiClientImpl::GetDialogueBody() const
     return m_body_obj.ToJsonString();
 }
 
+std::string AiClientImpl::GetDialogueText() const
+{
+    return m_body_obj.ToPureText();
+}
+
 std::string AiClientImpl::GetAgentRules() const
 {
     return m_body_obj.GetSystemMessage();

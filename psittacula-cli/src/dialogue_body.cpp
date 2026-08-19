@@ -299,7 +299,7 @@ std::string DialogueBody::ToPureText() const
         std::string role = msg["role"].GetString();
         std::string message = msg["content"].GetString();
         pure_text += "[" + role + "]: \n" + message + "\n";
-        pure_text += "--------------------------";
+        pure_text += "--------------------------\n";
     }
     return pure_text;
 }

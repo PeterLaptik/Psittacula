@@ -42,6 +42,8 @@ class AiClientImpl: public AiClient
 
         std::string GetDialogueBody() const override;
 
+        std::string GetDialogueText() const override;
+
         std::string GetAgentRules() const override;
 
         void ClearContext() override;

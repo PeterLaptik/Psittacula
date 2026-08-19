@@ -5,6 +5,7 @@
 #include "command_undo.h"
 #include "command_redo.h"
 #include "command_dump.h"
+#include "command_dump_text.h"
 #include "command_change_agent.h"
 #include "command_change_project_dir.h"
 #include "command_clean_context.h"
@@ -20,6 +21,7 @@ void init_commands(ChatCommandDispatcher &dsp)
     dsp.RegisterCommand("undo", std::make_unique<CommandUndo>());
     dsp.RegisterCommand("redo", std::make_unique<CommandRedo>());
     dsp.RegisterCommand("dump", std::make_unique<CommandDump>());
+    dsp.RegisterCommand("dump_text", std::make_unique<CommandDumpText>());
     dsp.RegisterCommand("rules", std::make_unique<CommandChangeRules>());
     dsp.RegisterCommand("project", std::make_unique<CommandChangeProjectDir>());
     dsp.RegisterCommand("clear", std::make_unique<CommandCleanContext>());

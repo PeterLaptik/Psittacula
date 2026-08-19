@@ -6,7 +6,7 @@
 #include <memory>
 
 /// Default interface for the LLM client
-///\see AiClientImpl
+///\\see AiClientImpl
 class AiClient
 {
     public:
@@ -47,6 +47,9 @@ class AiClient
         /// Returns full data body from the last POST request
         /// May be useful for debug and manual testing
         virtual std::string GetDialogueBody() const = 0;
+
+        /// Returns pure dialogue text from the active session
+        virtual std::string GetDialogueText() const = 0;
 
         /// Clears all context: removes all messages excepting of the first system-role message
         /// Leaves undo / redo tools history untouched
