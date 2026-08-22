@@ -43,8 +43,8 @@ std::string FileCopyTool::Execute(std::vector<ToolParameter> &params_values)
         return R"({"error":{"type":"invalid_arguments","message":"Missing required parameters: from, to"}})";
     }
 
-    src_path = std::filesystem::path(wdir.GetProjectDir() + rel_from).string();
-    dst_path = std::filesystem::path(wdir.GetProjectDir() + rel_to).string();
+    src_path = std::filesystem::path(rel_from).string();
+    dst_path = std::filesystem::path(rel_to).string();
 
     if (!wdir.IsInWorkDir(src_path) || !wdir.IsInWorkDir(dst_path))
     {
