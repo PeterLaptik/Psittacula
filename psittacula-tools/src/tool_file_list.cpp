@@ -46,6 +46,7 @@ std::string FileListTool::Execute(std::vector<ToolParameter> &params_values)
 
     std::string path = GetParam(params_values, "path");
     UnescapeSlashesInPath(path);
+    console::write_line("Path: " + path, console::TextOrigin::filesystem);
 
     bool recursive = GetParamBool(params_values, "recursive", false);
     bool include_hidden = GetParamBool(params_values, "include_hidden", false);
