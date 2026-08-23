@@ -11,6 +11,7 @@
 #include "tool_file_create_binary.h"
 #include "tool_file_content_modify.h"
 #include "tool_file_search.h"
+#include "tool_web_fetch.h"
 #include <memory>
 
 void get_all_tools(std::vector<std::unique_ptr<ToolBase>> &acc)
@@ -27,4 +28,5 @@ void get_all_tools(std::vector<std::unique_ptr<ToolBase>> &acc)
     acc.push_back(std::make_unique<FileCreateBinaryTool>());
     acc.push_back(std::make_unique<FileSearchTool>());
     acc.push_back(std::make_unique<FileContentModifyTool>());
+    acc.push_back(std::make_unique<WebFetchTool>());
 }
