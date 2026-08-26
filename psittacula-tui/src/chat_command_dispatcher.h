@@ -10,6 +10,8 @@
 #include <algorithm>
 #include <iterator>
 #include <memory>
+#include <cstddef>
+
 #ifdef _WIN32
 #include <conio.h>
 #else
@@ -18,6 +20,28 @@
 #endif
 
 class AiClient;
+
+// Raw terminal input: puts terminal in raw mode, reads one byte, restores mode.
+// Must be declared before any class that uses it.
+static int GetKey()
+{
+#ifdef _WIN32
+    return _getch();
+#else
+    struct termios old_tios, new_tios;
+    tcgetattr(STDIN_FILENO, &old_tios);
+    new_tios = old_tios;
+    new_tios.c_lflag &= ~(ICANON | ECHO);
+    new_tios.c_cc[VMIN] = 1;
+    new_tios.c_cc[VTIME] = 0;
+    tcsetattr(STDIN_FILENO, TCSANOW, &new_tios);
+
+    int c = fgetc(stdin);
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &old_tios);
+    return c;
+#endif
+}
 
 /// Keeps and dispatches chat commands
 class ChatCommandDispatcher
@@ -102,13 +126,13 @@ class ChatCommandDispatcher
                     break;
                 }
 #else
-                int c = getch();
+                int c = GetKey();
                 if (c == '\x1b')
                 {
-                    int c1 = getch();
+                    int c1 = GetKey();
                     if (c1 == '[')
                     {
-                        int c2 = getch();
+                        int c2 = GetKey();
                         if (c2 == 'A' && index > 0) index--;
                         else if (c2 == 'B' && index < cmd_list.size() - 1) index++;
                         DrawCommandMenu(cmd_list, index);
@@ -188,7 +212,7 @@ class ChatCommandDispatcher
         }
 
     private:
-        // Sets alternate screen buffer for command interractive mode, if necessary
+        // Sets alternate screen buffer for command interactive mode, if necessary
         void  ActivateAlternateScreen() const
         {
             std::cout << "\x1b[?1049h\x1b[2J\x1b[H";
