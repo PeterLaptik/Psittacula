@@ -24,6 +24,7 @@ std::string DirCreateTool::Execute(std::vector<ToolParameter> &params_values)
 
     std::string path = GetParam(params_values, "path");
     UnescapeSlashesInPath(path);
+    console::write_line("Path: " + path, console::TextOrigin::filesystem);
 
     if (path.empty())
     {
