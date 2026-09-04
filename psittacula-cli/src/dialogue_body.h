@@ -42,6 +42,10 @@ class DialogueBody
 
         void ClearContext();
 
+        /// Returns a new dialogue body for asking LLM to summarize context
+        /// The method implementation returns new dialogue body without msg_num last messages
+        std::string GetBodyForSummarizing(int msg_num) const;
+
     private:
         void AddToolCallMessages(const std::vector<ToolResponse> &responses);
         void PurgePreviousFileContents(const std::vector<ToolResponse> &responses);

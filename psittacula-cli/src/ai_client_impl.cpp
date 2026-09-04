@@ -234,6 +234,11 @@ void AiClientImpl::ClearContext()
     m_body_obj.ClearContext();
 }
 
+void AiClientImpl::CompressContext()
+{
+    // TODO: implement context compression
+}
+
 void AiClientImpl::RestoreDialogueFrom(const std::string &data)
 {
     m_body_obj.FromJsonString(data);

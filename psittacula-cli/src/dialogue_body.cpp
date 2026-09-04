@@ -578,3 +578,57 @@ void DialogueBody::PurgePreviousFileContents(const std::vector<ToolResponse> &re
         }
     }
 }
+
+std::string DialogueBody::GetBodyForSummarizing(int msg_num) const
+{
+    auto it = m_request->body.FindMember("messages");
+    if (it == m_request->body.MemberEnd() || !it->value.IsArray())
+    {
+        return "";
+    }
+    
+    const rapidjson::Value &messages = it->value;
+    
+    if (msg_num <= 0 || static_cast<int>(messages.Size()) <= msg_num)
+    {
+        return ToJsonString();
+    }
+    
+    // Create a new document for the summarization request
+    rapidjson::Document summary_body;
+    summary_body.SetObject();
+    rapidjson::Document::AllocatorType &alloc = summary_body.GetAllocator();
+    
+    // Copy the model
+    summary_body.AddMember("model", rapidjson::Value(m_model.c_str(), alloc).Move(), alloc);
+    
+    // Copy all messages except the last msg_num messages
+    rapidjson::Value summary_messages(rapidjson::kArrayType);
+    for (rapidjson::SizeType i = 0; i < messages.Size(); ++i)
+    {
+        if (static_cast<int>(i) >= static_cast<int>(messages.Size()) - msg_num)
+        {
+            continue; // Skip last msg_num messages
+        }
+        rapidjson::Value copy_val;
+        copy_val.CopyFrom(messages[i], alloc);
+        summary_messages.PushBack(copy_val, alloc);
+    }
+    summary_body.AddMember("messages", summary_messages, alloc);
+    
+    // Copy tools (for context during summarization)
+    rapidjson::Value tools(rapidjson::kArrayType);
+    summary_body.AddMember("tools", tools, alloc);
+    
+    // Add other request fields
+    summary_body.AddMember("stream", true, alloc);
+    summary_body.AddMember("reasoning_format", "auto", alloc);
+    summary_body.AddMember("return_progress", true, alloc);
+    summary_body.AddMember("timings_per_token", true, alloc);
+    
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    summary_body.Accept(writer);
+    
+    return buffer.GetString();
+}

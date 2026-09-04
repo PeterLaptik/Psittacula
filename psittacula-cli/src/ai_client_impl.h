@@ -48,6 +48,8 @@ class AiClientImpl: public AiClient
 
         void ClearContext() override;
 
+        void CompressContext() override;
+
         void RestoreDialogueFrom(const std::string &data) override;
 
     private:

@@ -55,6 +55,9 @@ class AiClient
         /// Leaves undo / redo tools history untouched
         virtual void ClearContext() = 0;
 
+        /// Compresses the context, reducing its size while preserving key information
+        virtual void CompressContext() = 0;
+
         /// Restores session data (dialogue, etc) from a JSON string
         virtual void RestoreDialogueFrom(const std::string &data) = 0;
 };
