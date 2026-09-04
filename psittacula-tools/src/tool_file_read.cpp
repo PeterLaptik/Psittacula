@@ -66,7 +66,7 @@ std::string FileReadTool::Execute(std::vector<ToolParameter> &params_values)
 
     bool binary_mode = GetParamBool(params_values, "binary", false);
 
-    console::write_line(fmt.Format("Reading file: %?", path), console::TextOrigin::filesystem);
+    console::write_line(fmt.Format("Path: %?", path), console::TextOrigin::filesystem);
 
     if (path.empty())
     {
@@ -76,11 +76,8 @@ std::string FileReadTool::Execute(std::vector<ToolParameter> &params_values)
 
     if (!wdir.IsInWorkDir(path))
     {
-        console::write_line(fmt.Format("Permission_denied: path is outside working directory: %?", path), console::TextOrigin::error);
-        return fmt.Format(
-            "{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory\",\"path\":\"%?\"}}",
-            path
-        );
+        console::write_line(fmt.Format("Permission_denied: path is outside working directory:\n path: %?\n working directory: %?", path, wdir.GetProjectDir()), console::TextOrigin::error);
+        return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory (%?)\",\"path\":\"%?\"}}", wdir.GetProjectDir(), path);
     }
 
     if (!std::filesystem::exists(path))

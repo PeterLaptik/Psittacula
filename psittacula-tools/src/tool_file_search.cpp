@@ -1,6 +1,7 @@
 #include "tool_file_search.h"
 #include "console_writer.h"
 #include "format_util.h"
+#include "working_dir.h"
 #include <filesystem>
 #include <fstream>
 #include <regex>
@@ -46,6 +47,9 @@ void FileSearchTool::GetParameters(std::vector<ToolParameter> &params_acc)
 
 std::string FileSearchTool::Execute(std::vector<ToolParameter> &params_values)
 {
+    Formatter fmt;
+    WorkingDir &wdir = WorkingDir::GetInstance();
+
     console::write_line("File search tool.", console::TextOrigin::filesystem);
 
     std::string path = GetParam(params_values, "path");
@@ -62,6 +66,12 @@ std::string FileSearchTool::Execute(std::vector<ToolParameter> &params_values)
     if (path.empty())
     {
         return R"({"error":{"type":"invalid_arguments","message":"Missing required parameter: path"}})";
+    }
+
+    if (!wdir.IsInWorkDir(path))
+    {
+        console::write_line(fmt.Format("Permission_denied: path is outside working directory:\n path: %?\n working directory: %?", path, wdir.GetProjectDir()), console::TextOrigin::error);
+        return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory (%?)\",\"path\":\"%?\"}}", wdir.GetProjectDir(), path);
     }
 
     if (regex_mode)
@@ -86,7 +96,6 @@ std::string FileSearchTool::Execute(std::vector<ToolParameter> &params_values)
         regex_mode
     );
 
-    Formatter fmt;
     std::string result;
 
     for (int i = 0; i < matches.size(); i++)

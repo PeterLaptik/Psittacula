@@ -45,13 +45,16 @@ std::string FileMoveTool::Execute(std::vector<ToolParameter> &params_values)
     old_path = std::filesystem::path(wdir.GetProjectDir() + rel_from).string();
     new_path = std::filesystem::path(wdir.GetProjectDir() + rel_to).string();
 
-    if (!wdir.IsInWorkDir(old_path) || !wdir.IsInWorkDir(new_path))
+    if (!wdir.IsInWorkDir(old_path))
     {
-        console::write_line("Permission denied: path outside working directory", console::TextOrigin::error);
-        return fmt.Format(
-            "{\"error\":{\"type\":\"permission_denied\",\"message\":\"One or both paths are outside working directory\",\"from\":\"%?\",\"to\":\"%?\"}}",
-            rel_from, rel_to
-        );
+        console::write_line(fmt.Format("Permission_denied: path is outside working directory:\n path: %?\n working directory: %?", old_path, wdir.GetProjectDir()), console::TextOrigin::error);
+        return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory (%?)\",\"path\":\"%?\"}}", wdir.GetProjectDir(), old_path);
+    }
+
+    if (!wdir.IsInWorkDir(new_path))
+    {
+        console::write_line(fmt.Format("Permission_denied: path is outside working directory:\n path: %?\n working directory: %?", new_path, wdir.GetProjectDir()), console::TextOrigin::error);
+        return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory (%?)\",\"path\":\"%?\"}}", wdir.GetProjectDir(), new_path);
     }
 
     if (!std::filesystem::exists(old_path))

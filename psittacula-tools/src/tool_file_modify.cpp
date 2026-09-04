@@ -75,10 +75,10 @@ std::string FileModifyTool::Execute(std::vector<ToolParameter> &params_values)
         return R"({"error":{"type":"invalid_arguments","message":"Missing required parameters"}})";
 
     if (!wdir.IsInWorkDir(path))
-        return fmt.Format(
-            "{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path outside working directory\",\"path\":\"%?\"}}",
-            path
-        );
+    {
+        console::write_line(fmt.Format("Permission_denied: path is outside working directory:\n path: %?\n working directory: %?", path, wdir.GetProjectDir()), console::TextOrigin::error);
+        return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory (%?)\",\"path\":\"%?\"}}", wdir.GetProjectDir(), path);
+    }
 
     // Optional parameters
     position = static_cast<size_t>(std::stoll(GetParam(params_values, "position", "0")));

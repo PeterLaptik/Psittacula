@@ -46,13 +46,10 @@ std::string FileCopyTool::Execute(std::vector<ToolParameter> &params_values)
     src_path = std::filesystem::path(rel_from).string();
     dst_path = std::filesystem::path(rel_to).string();
 
-    if (!wdir.IsInWorkDir(src_path) || !wdir.IsInWorkDir(dst_path))
+    if (!wdir.IsInWorkDir(src_path))
     {
-        console::write_line("Permission denied: path outside working directory", console::TextOrigin::error);
-        return fmt.Format(
-            "{\"error\":{\"type\":\"permission_denied\",\"message\":\"One or both paths are outside working directory\",\"from\":\"%?\",\"to\":\"%?\"}}",
-            rel_from, rel_to
-        );
+        console::write_line(fmt.Format("Permission_denied: path is outside working directory:\n path: %?\n working directory: %?", src_path, wdir.GetProjectDir()), console::TextOrigin::error);
+        return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory (%?)\",\"path\":\"%?\"}}", wdir.GetProjectDir(), src_path);
     }
 
     if (!std::filesystem::exists(src_path))

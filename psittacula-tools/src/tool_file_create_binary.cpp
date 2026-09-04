@@ -85,8 +85,8 @@ std::string FileCreateBinaryTool::Execute(std::vector<ToolParameter> &params_val
 
     if (!wdir.IsInWorkDir(path))
     {
-        console::write_line(fmt.Format("Permission denied: %?", path), console::TextOrigin::error);
-        return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory\",\"path\":\"%?\"}}", path);
+        console::write_line(fmt.Format("Permission_denied: path is outside working directory:\n path: %?\n working directory: %?", path, wdir.GetProjectDir()), console::TextOrigin::error);
+        return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory (%?)\",\"path\":\"%?\"}}", wdir.GetProjectDir(), path);
     }
 
     console::write_line("Creating binary file: " + path, console::TextOrigin::filesystem);
