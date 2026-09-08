@@ -339,7 +339,7 @@ void DialogueBody::FromJsonString(const std::string data)
                 std::string toolName = call["function"]["name"].GetString();
                 std::string args = call["function"]["arguments"].GetString();
 
-                message = "Tool call: " + toolName; // +" args=" + args;
+                message = "Tool call: " + toolName;
             }
         }
 
@@ -589,7 +589,7 @@ std::string DialogueBody::GetBodyForSummarizing(int msg_num) const
     
     const rapidjson::Value &messages = it->value;
     
-    if (msg_num <= 0 || static_cast<int>(messages.Size()) <= msg_num)
+    if (msg_num <= 0 || static_cast<int>(messages.Size()) <= msg_num + 1)
     {
         return ToJsonString();
     }
@@ -614,6 +614,17 @@ std::string DialogueBody::GetBodyForSummarizing(int msg_num) const
         copy_val.CopyFrom(messages[i], alloc);
         summary_messages.PushBack(copy_val, alloc);
     }
+
+    // Add a user message asking the LLM to summarize the dialogue
+    rapidjson::Value summary_msg(rapidjson::kObjectType);
+    summary_msg.AddMember("role", rapidjson::Value("user", alloc), alloc);
+    summary_msg.AddMember("content", rapidjson::Value(
+        "Please summarize the above dialogue to compress the context. "
+        "Provide a concise summary that captures the essential conversation flow, "
+        "key decisions, and important information. The summary should be suitable "
+        "for replacing the full dialogue in future interactions.", alloc).Move(), alloc);
+    summary_messages.PushBack(summary_msg, alloc);
+
     summary_body.AddMember("messages", summary_messages, alloc);
     
     // Copy tools (for context during summarization)
@@ -631,4 +642,53 @@ std::string DialogueBody::GetBodyForSummarizing(int msg_num) const
     summary_body.Accept(writer);
     
     return buffer.GetString();
+}
+
+void DialogueBody::Compress(std::string summarized_msg, int msg_left)
+{
+    auto it = m_request->body.FindMember("messages");
+    if (it == m_request->body.MemberEnd() || !it->value.IsArray())
+    {
+        return;
+    }
+    
+    rapidjson::Value &messages = it->value;
+    rapidjson::Document::AllocatorType &alloc = m_request->body.GetAllocator();
+    
+    rapidjson::SizeType total_messages = messages.Size();
+    
+    if (total_messages <= 1)
+    {
+        return;
+    }
+    
+    // Create a new array with the system message, summarized message, and last msg_left messages
+    rapidjson::Value new_messages(rapidjson::kArrayType);
+    
+    // Keep the first message (system message)
+    rapidjson::Value first_msg;
+    first_msg.CopyFrom(messages[0], alloc);
+    new_messages.PushBack(first_msg, alloc);
+    
+    // Add the summarized message after the system message
+    rapidjson::Value summary_msg(rapidjson::kObjectType);
+    summary_msg.AddMember("role", rapidjson::Value("assistant", alloc), alloc);
+    summary_msg.AddMember("content", rapidjson::Value(summarized_msg.c_str(), alloc).Move(), alloc);
+    new_messages.PushBack(summary_msg, alloc);
+    
+    // Add the last msg_left messages
+    rapidjson::SizeType start_idx = total_messages - static_cast<rapidjson::SizeType>(msg_left);
+    for (rapidjson::SizeType i = start_idx; i < total_messages; ++i)
+    {
+        rapidjson::Value msg_copy;
+        msg_copy.CopyFrom(messages[i], alloc);
+        new_messages.PushBack(msg_copy, alloc);
+    }
+    
+    // Replace the messages array
+    messages.Clear();
+    for (rapidjson::SizeType i = 0; i < new_messages.Size(); ++i)
+    {
+        messages.PushBack(new_messages[i], alloc);
+    }
 }

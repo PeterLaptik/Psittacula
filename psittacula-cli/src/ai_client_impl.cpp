@@ -236,7 +236,39 @@ void AiClientImpl::ClearContext()
 
 void AiClientImpl::CompressContext()
 {
-    // TODO: implement context compression
+    // Number of most recent messages to keep in full after compression.
+    // The older context is replaced by an LLM-generated summary.
+    constexpr int kMessagesToKeep = 2;
+
+    // Build a summarization request: the dialogue without the last messages,
+    // plus an instruction for the LLM to summarize the remaining context.
+    std::string summary_body = m_body_obj.GetBodyForSummarizing(kMessagesToKeep);
+    if (summary_body.empty())
+    {
+        console::write_line("\nError: not enough context to compress", console::TextOrigin::error);
+        return;
+    }
+
+    // Send the summarization request using the same streaming flow as a normal reply.
+    // Only the response text is needed here; tool calls are intentionally ignored.
+    ChunkCompletionProcessor proc; // POST response chunk receiver
+    proc.SetReasoning(m_show_reasoning);
+    std::string end_point_chat_completions = m_context_size == -1 ? kEndPointCompletionsLlama : kEndPointCompletionsNonLlama;
+    m_http_client.HttpPostStream(end_point_chat_completions, summary_body, &proc);
+
+    std::string slots_rsp = GetSlotstInfo();
+    proc.ShowStat(slots_rsp, m_context_size);
+
+    if (proc.HasErrors())
+    {
+        console::write_line("\nError: " + proc.GetError(), console::TextOrigin::error);
+        return;
+    }
+
+    // Rewrite the dialogue in place: keep the system message, the generated
+    // summary, and the last kMessagesToKeep messages.
+    std::string summarized_msg = proc.GetResponseMessage();
+    m_body_obj.Compress(summarized_msg, kMessagesToKeep);
 }
 
 void AiClientImpl::RestoreDialogueFrom(const std::string &data)

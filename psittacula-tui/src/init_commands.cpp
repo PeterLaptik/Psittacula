@@ -10,6 +10,7 @@
 #include "command_change_project_dir.h"
 #include "command_clean_context.h"
 #include "command_restore.h"
+#include "command_compress.h"
 
 #include <memory>
 
@@ -26,4 +27,5 @@ void init_commands(ChatCommandDispatcher &dsp)
     dsp.RegisterCommand("project", std::make_unique<CommandChangeProjectDir>());
     dsp.RegisterCommand("clear", std::make_unique<CommandCleanContext>());
     dsp.RegisterCommand("restore", std::make_unique<CommandRestore>());
+    dsp.RegisterCommand("compress", std::make_unique<CommandCompress>());
 }

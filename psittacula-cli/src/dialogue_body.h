@@ -46,6 +46,9 @@ class DialogueBody
         /// The method implementation returns new dialogue body without msg_num last messages
         std::string GetBodyForSummarizing(int msg_num) const;
 
+        // Compress the dialogue with summarized information
+        void Compress(std::string summarized_msg, int msg_left);
+
     private:
         void AddToolCallMessages(const std::vector<ToolResponse> &responses);
         void PurgePreviousFileContents(const std::vector<ToolResponse> &responses);

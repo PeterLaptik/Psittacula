@@ -23,6 +23,7 @@ add_executable(${PSITTACULA_TUI_NAME}
     ${SRC_DIR}/command_change_model.h
     ${SRC_DIR}/command_change_project_dir.h
     ${SRC_DIR}/command_clean_context.h
+    ${SRC_DIR}/command_compress.h
     ${SRC_DIR}/command_dump.h
     ${SRC_DIR}/command_reasoning.h
     ${SRC_DIR}/command_redo.h
