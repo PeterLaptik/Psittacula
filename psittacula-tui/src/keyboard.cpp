@@ -39,6 +39,10 @@ int tui::Keyboard::ReadKey()
                 return Keys::keyUp;
             if (code == 80)
                 return Keys::keyDown;
+            if (code == 73)
+                return Keys::keyPageUp;
+            if (code == 81)
+                return Keys::keyPageDown;
             return Keys::nothing;
         }
         if (fallback < 0 || fallback == 0xFFFF)
@@ -75,7 +79,8 @@ int tui::Keyboard::ReadKey()
             continue;
 
         WORD vk = rec.Event.KeyEvent.wVirtualKeyCode;
-        if (vk == VK_LEFT || vk == VK_RIGHT || vk == VK_DELETE || vk == VK_UP || vk == VK_DOWN)
+        if (vk == VK_LEFT || vk == VK_RIGHT || vk == VK_DELETE || vk == VK_UP || vk == VK_DOWN ||
+            vk == VK_PRIOR || vk == VK_NEXT)
             pending_high = -1; // navigation breaks a pending pair: drop it
         if (vk == VK_LEFT)
             return Keys::keyLeft;
@@ -87,6 +92,10 @@ int tui::Keyboard::ReadKey()
             return Keys::keyDown;
         if (vk == VK_DELETE)
             return Keys::keyDel;
+        if (vk == VK_PRIOR)
+            return Keys::keyPageUp;
+        if (vk == VK_NEXT)
+            return Keys::keyPageDown;
 
         wchar_t ch = rec.Event.KeyEvent.uChar.UnicodeChar;
         if (ch == 0)
@@ -193,6 +202,10 @@ int tui::Keyboard::ReadKey()
         return Keys::keyRight;
     if (final == '~' && params == "3")
         return Keys::keyDel;
+    if (final == '~' && params == "5")
+        return Keys::keyPageUp;
+    if (final == '~' && params == "6")
+        return Keys::keyPageDown;
     return Keys::nothing;
 
 #endif

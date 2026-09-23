@@ -51,6 +51,7 @@ tui::PanelText::PanelText(Panel *parent)
 void tui::PanelText::AddText(const std::string & txt, TextOrigin origin)
 {
     m_text_content.AddText(txt, origin);
+    m_view_shift = 0;
     Refresh();
 }
 
@@ -87,7 +88,7 @@ void tui::PanelText::Draw()
             line.push_back(ch);
         }
 
-        moveCursor(m_anchor_x, m_anchor_y + row);
+        MoveCursorTo(m_anchor_x, m_anchor_y + row);
         std::cout << "\033[34m" << line << "\033[0m";
     }
     std::cout.flush();
@@ -97,11 +98,15 @@ void tui::PanelText::Draw()
 void tui::PanelText::Clear()
 {
     m_text_content.Clear();
+    m_view_shift = 0;
     Refresh();
 }
 
 void tui::PanelText::Refresh()
 {
+    int cursor_old_x, cursor_old_y;
+    GetCursorPosition(cursor_old_x, cursor_old_y);
+
     int x = m_anchor_x + kTextPaddingLeft;
     int y = m_anchor_y + 1;
     int w = m_width - kTextPaddingLeft - kTextPaddingRight;
@@ -112,11 +117,11 @@ void tui::PanelText::Refresh()
 
     std::vector<std::string> acc;
     acc.reserve(static_cast<size_t>(h));
-    m_text_content.GetTextWindowForHeight(h, acc);
+    m_text_content.GetTextWindowForHeight(h, m_view_shift, acc);
 
     for (int line_num = 0; line_num < h; ++line_num)
     {
-        moveCursor(x, y + line_num);
+        MoveCursorTo(x, y + line_num);
         if (line_num < static_cast<int>(acc.size()))
         {
             const std::string &line = acc[static_cast<size_t>(line_num)];
@@ -131,6 +136,8 @@ void tui::PanelText::Refresh()
         }
     }
     std::cout.flush();
+
+    MoveCursorTo(cursor_old_x, cursor_old_y);
 }
 
 void tui::PanelText::UpdateSize(int width, int height)
@@ -144,5 +151,59 @@ void tui::PanelText::UpdateSize(int width, int height)
     if (m_text_content.GetMaxLineLength() != actual_line_length)
         m_text_content.SetMaxLineLength(actual_line_length);
 
+    int max_shift = MaxViewShift();
+    if (m_view_shift > max_shift)
+        m_view_shift = max_shift;
+
     NotifyParentAboutChanges();
+}
+
+void tui::PanelText::ScrollUp(int lines)
+{
+    if (lines <= 0)
+        return;
+
+    int max_shift = MaxViewShift();
+    if (m_view_shift >= max_shift)
+        return;
+
+    m_view_shift += lines;
+    if (m_view_shift > max_shift)
+        m_view_shift = max_shift;
+
+    Refresh();
+}
+
+void tui::PanelText::ScrollDown(int lines)
+{
+    if (lines <= 0 || m_view_shift <= 0)
+        return;
+
+    m_view_shift -= lines;
+    if (m_view_shift < 0)
+        m_view_shift = 0;
+
+    Refresh();
+}
+
+void tui::PanelText::ScrollPageUp()
+{
+    ScrollUp(TextWindowHeight());
+}
+
+void tui::PanelText::ScrollPageDown()
+{
+    ScrollDown(TextWindowHeight());
+}
+
+int tui::PanelText::TextWindowHeight() const
+{
+    int h = m_height - 2;
+    return h > 0 ? h : 1;
+}
+
+int tui::PanelText::MaxViewShift() const
+{
+    int max_shift = m_text_content.GetRenderedLinesCount() - TextWindowHeight() + 1;
+    return max_shift > 0 ? max_shift : 0;
 }

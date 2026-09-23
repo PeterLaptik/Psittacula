@@ -1,4 +1,5 @@
 #include "screen.h"
+#include "keyboard.h"
 #include <iostream>
 #include <clocale>
 #ifdef _WIN32
@@ -52,6 +53,31 @@ void tui::Screen::Show()
 
 tui::Response tui::Screen::PutChar(int key)
 {
+    if (key == Keyboard::Keys::keyPageUp)
+    {
+        m_panel_text.ScrollPageUp();
+        return Response();
+    }
+
+    if (key == Keyboard::Keys::keyPageDown)
+    {
+        m_panel_text.ScrollPageDown();
+        return Response();
+    }
+
+    // Arrow keys scroll the text unless the autocomplete list consumes them
+    if (key == Keyboard::Keys::keyUp && !m_panel_input.IsAutocompleteActive())
+    {
+        m_panel_text.ScrollUp(1);
+        return Response();
+    }
+
+    if (key == Keyboard::Keys::keyDown && !m_panel_input.IsAutocompleteActive())
+    {
+        m_panel_text.ScrollDown(1);
+        return Response();
+    }
+
     return m_panel_input.PutChar(key);
 }
 
@@ -170,7 +196,7 @@ void tui::Screen::GetSize(int &x, int &y) const
 
 void tui::Screen::ClearScreen(int columns, int rows)
 {
-    moveCursor(0, 0);
+    MoveCursorTo(0, 0);
     for (int row = 0; row < rows; ++row)
     {
         for (int col = 0; col < columns; ++col)

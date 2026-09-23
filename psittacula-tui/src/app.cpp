@@ -120,7 +120,7 @@ void tui::App::MainLoop()
 
             if (response.result == ResponseResult::enter)
             {
-                m_screen.PutText(" \n " + response.data + " \n ", TextOrigin::normal);
+                m_screen.PutText(response.data + " \n ", TextOrigin::normal);
                 ProcessQuery(response.data);
             }
 

@@ -47,7 +47,7 @@ std::string tui::InputTextContent::PopBackInputLine()
     {
         last_line = m_input_lines.back();
         m_input_lines.pop_back();
-        FitInputContentToSize(); // Visible lines quantity has been changed: needs to be updated
+        RenderText(); // Visible lines quantity has been changed: needs to be updated
     }
     else
     {
@@ -93,7 +93,7 @@ std::string tui::InputTextContent::PopBackInputLine()
         m_input_lines.pop_back();
         if (!remainder.empty())
             m_input_lines.push_back(remainder);
-        FitInputContentToSize();
+        RenderText();
     }
     
     return last_line;
@@ -108,7 +108,7 @@ void tui::InputTextContent::Clear()
 void tui::InputTextContent::SetLineLength(int line_length)
 {
     m_text_line_max_length = line_length;
-    FitInputContentToSize();
+    RenderText();
 }
 
 int tui::InputTextContent::GetLineLength() const
@@ -127,7 +127,7 @@ const std::vector<std::string>&tui::InputTextContent::GetRenderedInputLines() co
 }
 
 
-void tui::InputTextContent::FitInputContentToSize()
+void tui::InputTextContent::RenderText()
 {
     m_input_lines_rendered.clear();
 

@@ -74,7 +74,8 @@ int main(int argc, char **argv)
     console::write(get_logo_raw());
     console::write(formatter.Format("Actual workdir: %?\n", WorkingDir::GetInstance().GetWorkDir()));
     console::write(formatter.Format("Actual project: %?\n--------------\n", WorkingDir::GetInstance().GetProjectDir()));
-    
+    console::write(" ");
+
     // Init chat commands: /help or /h for info about commands
     std::unique_ptr<ChatCommandDispatcher> cmd_dispatcher = std::make_unique<ChatCommandDispatcher>();
     init_commands(cmd_dispatcher.get(), &app);

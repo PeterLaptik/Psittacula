@@ -12,7 +12,9 @@ namespace tui {
 
             virtual ~Panel() = default;
 
-            void moveCursor(int x, int y);
+            void MoveCursorTo(int x, int y);
+
+            void GetCursorPosition(int &x, int &y);
 
             void SetDimensions(int anchor_x, int anchor_y, int width, int heigth);
 

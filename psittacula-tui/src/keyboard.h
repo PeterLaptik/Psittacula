@@ -24,6 +24,8 @@ namespace tui {
                 static const int resize = -5;
                 static const int keyUp = -6;
                 static const int keyDown = -7;
+                static const int keyPageUp = -8;
+                static const int keyPageDown = -9;
                 // Regular values
                 static const int keyEnter = 13;
                 static const int keyBackSpace = 8;

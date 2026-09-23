@@ -19,8 +19,12 @@ namespace tui {
 
             int GetMaxLineLength() const;
 
-            /// Returns text window content for a defined height
-            void GetTextWindowForHeight(int height, std::vector<std::string> &acc) const;
+            /// Returns text window content for a defined height;
+            /// shift > 0 moves the window towards older text (0 = latest)
+            void GetTextWindowForHeight(int height, int shift, std::vector<std::string> &acc) const;
+
+            /// Number of currently rendered lines
+            int GetRenderedLinesCount() const;
 
             void Clear();
 
@@ -29,7 +33,7 @@ namespace tui {
             void CutByLinesBuffer();
             void Split(const std::string &s, std::vector<std::string> &vec);
 
-            void FitInputContentToSize();
+            void RenderText();
             const char* GetTextColour(TextOrigin origin);
             void PostProcess();
 

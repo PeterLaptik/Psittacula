@@ -23,13 +23,13 @@ void tui::ScreenTextContent::AddText(const std::string &txt, TextOrigin origin)
     }
 
     m_buffer.txt += txt;
-    FitInputContentToSize();
+    RenderText();
 }
 
 void tui::ScreenTextContent::SetMaxLineLength(int length)
 {
     m_text_line_max_length = length;
-    FitInputContentToSize();
+    RenderText();
 }
 
 int tui::ScreenTextContent::GetMaxLineLength() const
@@ -37,19 +37,28 @@ int tui::ScreenTextContent::GetMaxLineLength() const
     return m_text_line_max_length;
 }
 
-void tui::ScreenTextContent::GetTextWindowForHeight(int height, std::vector<std::string> &acc) const
+int tui::ScreenTextContent::GetRenderedLinesCount() const
+{
+    return static_cast<int>(m_text_rendered.size());
+}
+
+void tui::ScreenTextContent::GetTextWindowForHeight(int height, int shift, std::vector<std::string> &acc) const
 {
     if (height <= 0)
         return;
 
+    int max_shift = static_cast<int>(m_text_rendered.size()) - height + 1;
+    if (max_shift < 0)
+        max_shift = 0;
+    if (shift > max_shift)
+        shift = max_shift;
+    if (shift < 0)
+        shift = 0;
+
     size_t first = acc.size();
     int counter = 1;
 
-
-    //acc.push_back(m_buffer.txt);
-
-
-    for (int i = static_cast<int>(m_text_rendered.size()) - 1; counter < height && i >= 0; --i)
+    for (int i = static_cast<int>(m_text_rendered.size()) - 1 - shift; counter < height && i >= 0; --i)
     {
         acc.push_back(m_text_rendered[i]);
         counter++;
@@ -117,7 +126,7 @@ void tui::ScreenTextContent::Split(const std::string &s, std::vector<std::string
     }
 }
 
-void tui::ScreenTextContent::FitInputContentToSize()
+void tui::ScreenTextContent::RenderText()
 {
     TextSplitter splitter{ m_text_line_max_length };
 
@@ -127,9 +136,14 @@ void tui::ScreenTextContent::FitInputContentToSize()
     std::vector<std::string> split_lines;
     for (auto &line : m_text)
     {
+        std::vector<std::string> uncoloured_lines;
+        splitter.SplitText(line.txt, uncoloured_lines);
+
         const char *colour = GetTextColour(line.origin);
-        std::string to_split_coloured = std::string(colour) + line.txt;
-        splitter.SplitText(to_split_coloured, split_lines);
+        for (auto &r_line : uncoloured_lines)
+        {
+            split_lines.push_back(std::string(colour) + r_line + std::string(colour));
+        }
     }
 
     const char *buffer_colour = GetTextColour(m_buffer.origin);

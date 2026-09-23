@@ -30,7 +30,7 @@ namespace tui
             const std::vector<std::string> &GetRenderedInputLines() const;
 
         private:
-            void FitInputContentToSize();
+            void RenderText();
 
             int m_text_line_max_length = 10;                 // maximum line text length for the current screen state
             std::vector<std::string> m_input_lines;          // lines user input

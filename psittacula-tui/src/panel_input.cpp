@@ -11,7 +11,7 @@ tui::PanelInput::PanelInput(Panel *parent)
 void tui::PanelInput::Draw()
 {
     // Draw frame
-    moveCursor(m_anchor_x, m_anchor_y);
+    MoveCursorTo(m_anchor_x, m_anchor_y);
     for (int row = 0; row <= m_height; ++row)
     {
         bool top = false; // Or use row == 0 if no border for upper frame
@@ -191,6 +191,11 @@ int tui::PanelInput::GetInputRowsNumber() const
     return static_cast<int>(m_text_content.GetRenderedInputLines().size());
 }
 
+bool tui::PanelInput::IsAutocompleteActive() const
+{
+    return m_autocomplete_active;
+}
+
 void tui::PanelInput::DrawCurrentInput()
 {
     m_input_cursor_pos_y = m_anchor_y + m_height - 1;
@@ -216,12 +221,12 @@ void tui::PanelInput::DrawTextInputLine(int x, int y, const std::string &line)
     if (clear_count < 0)
         clear_count = 0;
 
-    moveCursor(kTextPaddingLeft, y);
+    MoveCursorTo(kTextPaddingLeft, y);
     std::cout << std::string(static_cast<size_t>(clear_count), ' ') << '\r' << std::flush;
 
-    moveCursor(kTextPaddingLeft, y);
+    MoveCursorTo(kTextPaddingLeft, y);
     std::cout << '>' << line;
-    moveCursor(x + kTextPaddingLeft, y);
+    MoveCursorTo(x + kTextPaddingLeft, y);
     std::cout.flush();
 }
 
@@ -495,14 +500,14 @@ void tui::PanelInput::DrawAutocompleteList()
         if (static_cast<int>(row.size()) < list_width)
             row.resize(static_cast<size_t>(list_width), ' ');
 
-        moveCursor(kTextPaddingLeft, y);
+        MoveCursorTo(kTextPaddingLeft, y);
         if (idx == m_autocomplete_selected)
             std::cout << "\033[7m" << row << "\033[0m";
         else
             std::cout << row;
     }
 
-    moveCursor(m_input_cursor_pos_x + kTextPaddingLeft, m_input_cursor_pos_y);
+    MoveCursorTo(m_input_cursor_pos_x + kTextPaddingLeft, m_input_cursor_pos_y);
     std::cout.flush();
 }
 

@@ -29,6 +29,8 @@ namespace tui {
 
             int GetInputRowsNumber() const;
 
+            bool IsAutocompleteActive() const;
+
         private:
             void DrawCurrentInput();
             void DrawTextInputLine(int x, int y, const std::string &line);
