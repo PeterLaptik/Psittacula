@@ -12,6 +12,8 @@
 class CommandChangeProjectDir : public ChatCommand
 {
     public:
+        using ChatCommand::ChatCommand;
+
         void Execute(std::unique_ptr<AiClient> &client, const std::vector<std::string> &args) override
         {
             ActivateAlternateScreen();
@@ -39,6 +41,7 @@ class CommandChangeProjectDir : public ChatCommand
             }
             else
             {
+                console::LineInputScope line_input;
                 std::cout << "Enter new project directory path: ";
                 std::getline(std::cin, new_path);
             }
@@ -60,8 +63,11 @@ class CommandChangeProjectDir : public ChatCommand
 
                 std::cout << "Create it? (y/n): ";
                 char c;
-                std::cin >> c;
-                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                {
+                    console::LineInputScope line_input;
+                    std::cin >> c;
+                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                }
 
                 if (c == 'y' || c == 'Y')
                 {

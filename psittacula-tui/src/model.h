@@ -26,7 +26,7 @@ class Model final
 
         int GetContextSize() const;
 
-        AiClient* GetClient() const;
+        std::unique_ptr<AiClient> GetClient() const;
 
     private:
         static inline std::string Trim(const std::string &s);

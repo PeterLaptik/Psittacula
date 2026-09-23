@@ -21,6 +21,8 @@
 class CommandChangeModel: public ChatCommand
 {
     public:
+        using ChatCommand::ChatCommand;
+
         void Execute(std::unique_ptr<AiClient> &client, const std::vector<std::string> &args) override
         {
             if (args.empty())
@@ -121,12 +123,12 @@ class CommandChangeModel: public ChatCommand
 
             // Load selected model
             Model model = Model::FromFile(models[index]);
-            AiClient *created_client = model.GetClient();
+            std::unique_ptr<AiClient> created_client = model.GetClient();
 
             if(client.get() != nullptr)
                 created_client->RestoreDialogueFrom(client->GetDialogueBody());
 
-            client.reset(created_client);
+            client.reset(created_client.release());
 
             RestoreMainScreen();
         }
@@ -148,20 +150,24 @@ class CommandChangeModel: public ChatCommand
             std::string api_key;
             std::string context_size_str;
 
-            std::cout << "Enter file name for the connection: ";
-            std::getline(std::cin, file_name);
+            {
+                console::LineInputScope line_input;
 
-            std::cout << "\nEnter model name (e.g., gpt-4o): ";
-            std::getline(std::cin, model_name);
+                std::cout << "Enter file name for the connection: ";
+                std::getline(std::cin, file_name);
 
-            std::cout << "\nEnter host URL (e.g. http://localhost:8080): ";
-            std::getline(std::cin, host);
+                std::cout << "\nEnter model name (e.g., gpt-4o): ";
+                std::getline(std::cin, model_name);
 
-            std::cout << "\nEnter context size (leave empty for llama.cpp): ";
-            std::getline(std::cin, context_size_str);
+                std::cout << "\nEnter host URL (e.g. http://localhost:8080): ";
+                std::getline(std::cin, host);
 
-            std::cout << "\nEnter API key (leave empty if not required): ";
-            std::getline(std::cin, api_key);
+                std::cout << "\nEnter context size (leave empty for llama.cpp): ";
+                std::getline(std::cin, context_size_str);
+
+                std::cout << "\nEnter API key (leave empty if not required): ";
+                std::getline(std::cin, api_key);
+            }
 
             std::string models_dir = WorkingDir::GetInstance().GetModelsDir();
 

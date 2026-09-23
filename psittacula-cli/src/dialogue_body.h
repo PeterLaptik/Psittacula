@@ -17,6 +17,10 @@ class DialogueBody
 
         void AddUserMessage(const std::string &message);
 
+        /// Removes the last exchange: trailing user message plus any assistant /
+        /// tool messages that followed it (used to roll back after ESC cancel)
+        void RemoveLastExchange();
+
         void AddSystemMessage(const std::string &sys_message);
 
         bool AddResponse(const std::string &response);

@@ -72,6 +72,34 @@ void DialogueBody::AddUserMessage(const std::string &message)
     }
 }
 
+void DialogueBody::RemoveLastExchange()
+{
+    auto it = m_request->body.FindMember("messages");
+    if (it == m_request->body.MemberEnd() || !it->value.IsArray())
+        return;
+
+    rapidjson::Value &messages = it->value;
+    if (messages.Empty())
+        return;
+
+    // Find the last user message; erase it and everything after it
+    // (partial assistant reply, tool calls, tool results)
+    rapidjson::SizeType last_user = messages.Size();
+    for (rapidjson::SizeType i = messages.Size(); i > 0; --i)
+    {
+        const rapidjson::Value &msg = messages[i - 1];
+        if (msg.HasMember("role") && msg["role"].IsString() &&
+            std::string(msg["role"].GetString()) == "user")
+        {
+            last_user = i - 1;
+            break;
+        }
+    }
+
+    if (last_user < messages.Size())
+        messages.Erase(messages.Begin() + last_user, messages.End());
+}
+
 void DialogueBody::AddSystemMessage(const std::string &sys_message)
 {
     auto it = m_request->body.FindMember("messages");
@@ -324,6 +352,8 @@ void DialogueBody::FromJsonString(const std::string data)
     const rapidjson::Value &messages = m_request->body["messages"];
     for (auto &msg : messages.GetArray()) {
         std::string role = msg["role"].GetString();
+        if (role == "tool")
+            continue;
 
         std::string message = "[Null content]";
         if (!msg["content"].IsNull())
@@ -339,6 +369,7 @@ void DialogueBody::FromJsonString(const std::string data)
                 std::string toolName = call["function"]["name"].GetString();
                 std::string args = call["function"]["arguments"].GetString();
 
+                role = "tool";
                 message = "Tool call: " + toolName;
             }
         }

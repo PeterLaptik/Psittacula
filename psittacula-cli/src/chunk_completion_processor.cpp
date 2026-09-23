@@ -434,6 +434,16 @@ std::string ChunkCompletionProcessor::GetResponseReasoning() const
     return m_reasoning;
 }
 
+void ChunkCompletionProcessor::SetCancelFlag(std::atomic<bool> *flag)
+{
+    m_cancel_flag = flag;
+}
+
+bool ChunkCompletionProcessor::IsCancelled() const
+{
+    return m_cancel_flag && m_cancel_flag->load();
+}
+
 bool ChunkCompletionProcessor::HasErrors() const
 {
     return !m_error.empty();

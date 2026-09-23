@@ -10,6 +10,8 @@
 class CommandTools : public ChatCommand
 {
     public:
+        using ChatCommand::ChatCommand;
+
         void Execute(std::unique_ptr<AiClient> &client, const std::vector<std::string> &args) override
         {
             ActivateAlternateScreen();
@@ -24,7 +26,10 @@ class CommandTools : public ChatCommand
             }
 
             console::write_line("\n\nPress Enter to continue...");
-            std::cin.get();
+            {
+                console::LineInputScope line_input;
+                std::cin.get();
+            }
 
             RestoreMainScreen();
         }

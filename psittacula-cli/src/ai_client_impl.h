@@ -6,6 +6,7 @@
 #include "format_util.h"
 #include "history_manager.h"
 #include "dialogue_body.h"
+#include <atomic>
 #include <map>
 #include <memory>
 
@@ -25,6 +26,8 @@ class AiClientImpl: public AiClient
         void SetAgentRules(const std::string &rules) override;
 
         void SendUserMessage(const std::string &message = "") override;
+
+        void CancelRequest() override;
 
         void SetReasoning(bool is_shown = true) override;
 
@@ -79,6 +82,8 @@ class AiClientImpl: public AiClient
         HttpClient m_http_client; // CURL client for network requests
 
         HistoryManager m_history_mgr; // Tool calls undo / redo manager
+        // Interrupt flag: set by CancelRequest from the UI thread
+        std::atomic<bool> m_cancelled{false};
         std::map<std::string, std::unique_ptr<ToolBase>> m_tools_dispatcher; // tool name -> tool prototype object
 };
 

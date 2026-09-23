@@ -3,6 +3,7 @@
 
 #include "chunk_processor.h"
 #include "tool_base.h"
+#include <atomic>
 #include <string>
 #include <vector>
 
@@ -22,6 +23,9 @@ class ChunkCompletionProcessor: public ChunkProcessor
         /// Process a chenk data: extract message, reasoning, tools, errors, etc
         void ProcessChunk(const std::string &chunk) override;
 
+        /// ChunkProcessor: true when CancelRequest was called from the UI thread
+        bool IsCancelled() const override;
+
         /// Shows/ hides reasoning text
         void SetReasoning(bool is_shown);
 
@@ -33,6 +37,9 @@ class ChunkCompletionProcessor: public ChunkProcessor
 
         /// Outputs statistic to a console (tokens used, context)
         void ShowStat(std::string slots_info_rsp, int context_size = -1) const;
+
+        /// Sets external interrupt flag checked by CURL progress for ESC cancel
+        void SetCancelFlag(std::atomic<bool> *flag);
 
         /// Returns whether a server returned error message for a request
         bool HasErrors() const;
@@ -81,6 +88,9 @@ class ChunkCompletionProcessor: public ChunkProcessor
         std::vector<FunctionToEvoke> m_tools;   // all tool lists
 
         std::string m_error; // error message
+
+        // Points to the client's atomic interrupt flag (never owned, may be null)
+        std::atomic<bool> *m_cancel_flag = nullptr;
 };
 
 #endif // CHUNK_COMPLETION_PROCESOR_INCLUDED_H

@@ -71,9 +71,9 @@ int Model::GetContextSize() const
     return m_context_size;
 }
 
-AiClient *Model::GetClient() const
+std::unique_ptr<AiClient> Model::GetClient() const
 {
-    AiClient *client = create_base_client(m_host, m_context_size);
+    std::unique_ptr<AiClient> client = create_base_client(m_host, m_context_size);
     client->SetApiKey(m_api_key);
     client->SetModel(m_name);
     // Note: Setting context size on the client is not supported by the current AI client interface.

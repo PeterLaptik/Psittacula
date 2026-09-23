@@ -121,12 +121,17 @@ void HttpClient::HttpPostStream(const std::string &end_point, const std::string 
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, responses_fn::write_callback_stream);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, receiver);
 
+    // Abort the transfer on UI-thread ESC: poll receiver->IsCancelled()
+    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+    curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, responses_fn::progress_abort_on_cancel);
+    curl_easy_setopt(curl, CURLOPT_XFERINFODATA, receiver);
+
     // Optional: disable buffering
     curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
 
     CURLcode res = curl_easy_perform(curl);
 
-    if (res != CURLE_OK) 
+    if (res != CURLE_OK && res != CURLE_ABORTED_BY_CALLBACK && res != CURLE_WRITE_ERROR)
         std::cout << "CURL error: " + std::string(curl_easy_strerror(res)) << std::endl;
 
 

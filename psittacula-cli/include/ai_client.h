@@ -20,6 +20,9 @@ class AiClient
         /// Sends message from user
         virtual void SendUserMessage(const std::string &message) = 0;
 
+        /// Interrupts an in-progress SendUserMessage streaming / tool loop
+        virtual void CancelRequest() = 0;
+
         /// Sets whether a reasoning text is shown
         virtual void SetReasoning(bool is_shown = true) = 0;
 

@@ -4,6 +4,11 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+#define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#endif
+#else
+#include <unistd.h>
 #endif
 
 const char *const kDefault = "\033[0m";
@@ -12,6 +17,7 @@ const char *const kRed = "\033[31m";
 const char *const kCyan = "\033[36m";
 const char *const kGrey = "\033[90m";
 
+static console::TextReceiver *text_receiver = nullptr;
 static ConsoleHistory history;
 
 const char* console::get_origin_colour(TextOrigin origin)
@@ -40,8 +46,18 @@ const char* console::get_origin_colour(TextOrigin origin)
     return result;
 }
 
-void console::set_up_console()
+void console::set_up_console(TextReceiver *receiver)
 {
+    if (receiver)
+    {
+        text_receiver = receiver;
+        return;
+    }
+    else
+    {
+        text_receiver = nullptr;
+    }
+
 #ifdef _WIN32
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     DWORD dwMode = 0;
@@ -50,8 +66,66 @@ void console::set_up_console()
 #endif
 }
 
+console::TextReceiver* console::get_current_receiver()
+{
+    return text_receiver;
+}
+
+console::LineInputScope::LineInputScope()
+{
+#ifdef _WIN32
+    HANDLE h_in = GetStdHandle(STD_INPUT_HANDLE);
+    if (h_in == INVALID_HANDLE_VALUE || h_in == nullptr)
+        return;
+    DWORD mode = 0;
+    if (!GetConsoleMode(h_in, &mode))
+        return;
+    m_handle = static_cast<void*>(h_in);
+    m_mode = static_cast<unsigned long>(mode);
+    // Restore cooked input: line assembly, echo and CR->LF translation
+    DWORD cooked = mode | (ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_PROCESSED_INPUT);
+    cooked &= ~static_cast<DWORD>(ENABLE_WINDOW_INPUT);
+    SetConsoleMode(h_in, cooked);
+    FlushConsoleInputBuffer(h_in);
+    m_saved = true;
+#else
+    m_fd = STDIN_FILENO;
+    if (tcgetattr(m_fd, &m_termios) != 0)
+    {
+        m_fd = -1;
+        return;
+    }
+    struct termios cooked = m_termios;
+    cooked.c_lflag |= (ECHO | ICANON | ISIG);
+    tcsetattr(m_fd, TCSANOW, &cooked);
+    tcflush(m_fd, TCIFLUSH);
+    m_saved = true;
+#endif
+    // Drop any stale input buffered while in raw mode, so the first
+    // getline starts with a clean line
+    std::cin.clear();
+    std::cin.sync();
+}
+
+console::LineInputScope::~LineInputScope()
+{
+#ifdef _WIN32
+    if (m_saved && m_handle != nullptr)
+        SetConsoleMode(static_cast<HANDLE>(m_handle), static_cast<DWORD>(m_mode));
+#else
+    if (m_saved && m_fd >= 0)
+        tcsetattr(m_fd, TCSANOW, &m_termios);
+#endif
+}
+
 void console::write_line(const std::string &message, TextOrigin origin)
 {
+    if (text_receiver)
+    {
+        text_receiver->WriteLine(message, origin);
+        return;
+    }
+
     const char *colour = get_origin_colour(origin);
     std::cout << colour << message << std::endl;
     history.AddLine(colour + message);
@@ -59,6 +133,12 @@ void console::write_line(const std::string &message, TextOrigin origin)
 
 void console::write(const std::string &message, TextOrigin origin)
 {
+    if (text_receiver)
+    {
+        text_receiver->Write(message, origin);
+        return;
+    }
+
     const char *colour = get_origin_colour(origin);
     std::cout << colour << message;
     history.AddText(colour + message);
@@ -66,25 +146,33 @@ void console::write(const std::string &message, TextOrigin origin)
 
 void console::write_splitter(TextOrigin origin)
 {
+    if (text_receiver)
+    {
+        text_receiver->WriteLine("---------------------------------------------------", origin);
+        return;
+    }
+
     const char *colour = get_origin_colour(origin);
     std::cout << colour << "---------------------------------------------------" << std::endl;
 }
 
 void console::flush()
 {
+    if (text_receiver)
+    {
+        return;
+    }
+
     std::cout << std::flush;
 }
 
 void console::clear()
 {
-    std::cout << "\033[2J\033[1;1H";
-}
-
-void console::show_history()
-{
-    auto history_text = history.GetHistory();
-    for (const auto &line : history_text)
+    if (text_receiver)
     {
-        std::cout << line << std::endl;
+        text_receiver->Clear();
+        return;
     }
+
+    std::cout << "\033[2J\033[1;1H";
 }

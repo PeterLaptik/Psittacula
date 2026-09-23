@@ -14,18 +14,18 @@
 
 #include <memory>
 
-void init_commands(ChatCommandDispatcher &dsp)
+void init_commands(ChatCommandDispatcher *dsp, tui::App *app)
 {
-    dsp.RegisterCommand("model", std::make_unique<CommandChangeModel>());
-    dsp.RegisterCommand("tools", std::make_unique<CommandTools>());
-    dsp.RegisterCommand("reasoning", std::make_unique<CommandReasoning>());
-    dsp.RegisterCommand("undo", std::make_unique<CommandUndo>());
-    dsp.RegisterCommand("redo", std::make_unique<CommandRedo>());
-    dsp.RegisterCommand("dump", std::make_unique<CommandDump>());
-    dsp.RegisterCommand("dump_text", std::make_unique<CommandDumpText>());
-    dsp.RegisterCommand("rules", std::make_unique<CommandChangeRules>());
-    dsp.RegisterCommand("project", std::make_unique<CommandChangeProjectDir>());
-    dsp.RegisterCommand("clear", std::make_unique<CommandCleanContext>());
-    dsp.RegisterCommand("restore", std::make_unique<CommandRestore>());
-    dsp.RegisterCommand("compress", std::make_unique<CommandCompress>());
+    dsp->RegisterCommand("model", std::make_unique<CommandChangeModel>(app));
+    dsp->RegisterCommand("tools", std::make_unique<CommandTools>(app));
+    dsp->RegisterCommand("reasoning", std::make_unique<CommandReasoning>(app));
+    dsp->RegisterCommand("undo", std::make_unique<CommandUndo>(app));
+    dsp->RegisterCommand("redo", std::make_unique<CommandRedo>(app));
+    dsp->RegisterCommand("dump", std::make_unique<CommandDump>(app));
+    dsp->RegisterCommand("dump_text", std::make_unique<CommandDumpText>(app));
+    dsp->RegisterCommand("rules", std::make_unique<CommandChangeRules>(app));
+    dsp->RegisterCommand("project", std::make_unique<CommandChangeProjectDir>(app));
+    dsp->RegisterCommand("clear", std::make_unique<CommandCleanContext>(app));
+    dsp->RegisterCommand("restore", std::make_unique<CommandRestore>(app));
+    dsp->RegisterCommand("compress", std::make_unique<CommandCompress>(app));
 }

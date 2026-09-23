@@ -85,6 +85,12 @@ class ChatCommandDispatcher
             }
         }
 
+        void GetCommandList(std::vector<std::string>& acc) const
+        {
+            for (auto &[key, value] : m_commands)
+                acc.push_back('/' + key);
+        }
+
         // Shows list of available commands with descriptions in an interactive menu
         std::string SelectCommand()
         {
@@ -184,6 +190,9 @@ class ChatCommandDispatcher
         // Shows list of aviable commands (non-interactive)
         void ShowHelp()
         {
+            auto *console_rcv = console::get_current_receiver();
+            console::set_up_console();
+
             std::cout << "\x1b[?1049h\x1b[2J\x1b[H";
             std::vector<std::pair<std::string, std::string>> cmd_list;
             for (auto &cmd : m_commands)
@@ -206,9 +215,13 @@ class ChatCommandDispatcher
             console::write_line("\033[1mexit -\033[0m Exit form the program.");
 
             console::write_line("\n\nPress Enter to continue...");
-            std::cin.get();
+            {
+                console::LineInputScope line_input;
+                std::cin.get();
+            }
 
             std::cout << "\x1b[?1049l";
+            console::set_up_console(console_rcv);
         }
 
     private:

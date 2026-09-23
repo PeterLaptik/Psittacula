@@ -20,6 +20,8 @@
 class CommandChangeRules : public ChatCommand
 {
     public:
+        using ChatCommand::ChatCommand;
+
         void Execute(std::unique_ptr<AiClient> &client, const std::vector<std::string> &args) override
         {
             if (!args.empty() && args[0] == "show")
@@ -68,7 +70,10 @@ class CommandChangeRules : public ChatCommand
             
             console::write_line("\n\nPress any key to continue...");
             
-            std::cin.get();
+            {
+                console::LineInputScope line_input;
+                std::cin.get();
+            }
 
             RestoreMainScreen();
         }

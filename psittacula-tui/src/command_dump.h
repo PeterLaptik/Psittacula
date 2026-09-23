@@ -14,6 +14,8 @@
 class CommandDump : public ChatCommand
 {
     public:
+        using ChatCommand::ChatCommand;
+
         void Execute(std::unique_ptr<AiClient> &client, const std::vector<std::string> &args) override
         {
             std::string dir_to_save = WorkingDir::GetInstance().GetLogsDir();

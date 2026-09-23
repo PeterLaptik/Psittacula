@@ -2,6 +2,7 @@
 #define CHAT_COMMAND_INCLUDED_H
 
 #include "ai_client.h"
+#include "app.h"
 #include "console_writer.h"
 #include <iostream>
 #include <string>
@@ -17,7 +18,9 @@ using console::TextOrigin;
 class ChatCommand
 {
     public:
-        ChatCommand() = default;
+        ChatCommand(tui::App *app)
+            : m_app(app)
+        { }
 
         virtual ~ChatCommand() = default;
 
@@ -26,15 +29,19 @@ class ChatCommand
         virtual std::string Description() = 0;
 
     protected:
-        // Sets alternate screen buffer for command interractive mode, if necessary
+        tui::App *m_app;
+
+        // Sets alternate screen buffer for command interactive mode, if necessary
         void  ActivateAlternateScreen() const
         {
+            console::set_up_console();
             std::cout << "\x1b[?1049h\x1b[2J\x1b[H";
         }
         // Sets back to main dialogue screen
         void RestoreMainScreen() const
         {
             std::cout << "\x1b[?1049l";
+            console::set_up_console(m_app);
         }
 
 };

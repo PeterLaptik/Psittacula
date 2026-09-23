@@ -40,6 +40,7 @@ AiClientImpl::~AiClientImpl()
 
 void AiClientImpl::SendUserMessage(const std::string &message)
 {
+    m_cancelled.store(false);
     m_tool_loop_counter = 0;
 
     // Add message to a dialogue body and send to a server
@@ -49,8 +50,16 @@ void AiClientImpl::SendUserMessage(const std::string &message)
 
     ChunkCompletionProcessor proc; // POST response chunk receiver
     proc.SetReasoning(m_show_reasoning);
+    proc.SetCancelFlag(&m_cancelled);
     std::string end_point_chat_completions = m_context_size == -1 ? kEndPointCompletionsLlama : kEndPointCompletionsNonLlama;
     m_http_client.HttpPostStream(end_point_chat_completions, body, &proc);
+
+    if (m_cancelled.load())
+    {
+        m_body_obj.RemoveLastExchange();
+        console::write_line("\nInterrupted by user.", console::TextOrigin::reasoning);
+        return;
+    }
 
     std::string slots_rsp = GetSlotstInfo();
     proc.ShowStat(slots_rsp, m_context_size);
@@ -70,14 +79,39 @@ void AiClientImpl::SendUserMessage(const std::string &message)
     std::vector<ToolCall> tool_calls;
     proc.GetResponseTools(tool_calls);
 
+    if (m_cancelled.load())
+    {
+        m_body_obj.RemoveLastExchange();
+        console::write_line("\nInterrupted by user.", console::TextOrigin::reasoning);
+        return;
+    }
+
     std::vector<ToolResponse> responses;
     for (auto &tool_call : tool_calls)
     {
+        if (m_cancelled.load())
+        {
+            m_body_obj.RemoveLastExchange();
+            console::write_line("\nInterrupted by user.", console::TextOrigin::reasoning);
+            return;
+        }
         ToolResponse rsp = EvokeTool(tool_call);
         responses.push_back(rsp);
     }
 
+    if (m_cancelled.load())
+    {
+        m_body_obj.RemoveLastExchange();
+        console::write_line("\nInterrupted by user.", console::TextOrigin::reasoning);
+        return;
+    }
+
     SendToolsResponses(responses);
+}
+
+void AiClientImpl::CancelRequest()
+{
+    m_cancelled.store(true);
 }
 
 void AiClientImpl::RegisterTool(std::unique_ptr<ToolBase> tool)
@@ -150,7 +184,7 @@ ToolResponse AiClientImpl::EvokeTool(ToolCall &call)
 
 void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_responses, const std::string &response)
 {
-    if (tools_responses.empty())
+    if (tools_responses.empty() || m_cancelled.load())
         return;
 
     // Infinit loop check
@@ -168,8 +202,16 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
 
     ChunkCompletionProcessor proc; // POST response chunks receiver
     proc.SetReasoning(m_show_reasoning);
+    proc.SetCancelFlag(&m_cancelled);
     std::string end_point_chat_completions = m_context_size == -1 ? kEndPointCompletionsLlama : kEndPointCompletionsNonLlama;
     m_http_client.HttpPostStream(end_point_chat_completions, body, &proc);
+
+    if (m_cancelled.load())
+    {
+        m_body_obj.RemoveLastExchange();
+        console::write_line("\nInterrupted by user.", console::TextOrigin::reasoning);
+        return;
+    }
 
     std::string slots_rsp = GetSlotstInfo();
     proc.ShowStat(slots_rsp, m_context_size);
@@ -196,6 +238,12 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
     std::vector<ToolResponse> secondary_responses;
     for (auto &tool_call : tool_calls)
     {
+        if (m_cancelled.load())
+        {
+            m_body_obj.RemoveLastExchange();
+            console::write_line("\nInterrupted by user.", console::TextOrigin::reasoning);
+            return;
+        }
         ToolResponse rsp = EvokeTool(tool_call);
         secondary_responses.push_back(rsp);
     }
@@ -253,8 +301,15 @@ void AiClientImpl::CompressContext()
     // Only the response text is needed here; tool calls are intentionally ignored.
     ChunkCompletionProcessor proc; // POST response chunk receiver
     proc.SetReasoning(m_show_reasoning);
+    proc.SetCancelFlag(&m_cancelled);
     std::string end_point_chat_completions = m_context_size == -1 ? kEndPointCompletionsLlama : kEndPointCompletionsNonLlama;
     m_http_client.HttpPostStream(end_point_chat_completions, summary_body, &proc);
+
+    if (m_cancelled.load())
+    {
+        console::write_line("\nInterrupted by user.", console::TextOrigin::reasoning);
+        return;
+    }
 
     std::string slots_rsp = GetSlotstInfo();
     proc.ShowStat(slots_rsp, m_context_size);

@@ -7,6 +7,8 @@
 class CommandUndo : public ChatCommand
 {
     public:
+        using ChatCommand::ChatCommand;
+
         void Execute(std::unique_ptr<AiClient> &client, const std::vector<std::string> &args) override
         {
             client->ToolUndo();
