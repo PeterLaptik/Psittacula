@@ -48,6 +48,8 @@ add_executable(${PSITTACULA_TUI_NAME}
     ${SRC_DIR}/panel.h
     ${SRC_DIR}/panel_input.cpp
     ${SRC_DIR}/panel_input.h
+    ${SRC_DIR}/panel_status.cpp
+    ${SRC_DIR}/panel_status
     ${SRC_DIR}/panel_text.cpp
     ${SRC_DIR}/panel_text.h
     ${SRC_DIR}/param_reader.cpp

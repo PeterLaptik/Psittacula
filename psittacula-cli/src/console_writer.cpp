@@ -1,6 +1,9 @@
 #include "console_writer.h"
 #include "console_history.h"
+#include "chunk_processor.h"
 #include <iostream>
+#include <sstream>
+#include <iomanip>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -154,6 +157,49 @@ void console::write_splitter(TextOrigin origin)
 
     const char *colour = get_origin_colour(origin);
     std::cout << colour << "---------------------------------------------------" << std::endl;
+}
+
+void console::write_status(const ChunkProcessor *proc, int context_size)
+{
+    int total, completion, prompt;
+    double cost;
+    proc->GetTokensStat(total, completion, prompt, cost);
+
+    double ratio_ctx = context_size > 0 ? static_cast<double>(total) / static_cast<double>(context_size) : 0;
+    double percentage_ctx = std::round(ratio_ctx * 10000) / 100;
+
+    std::ostringstream oss;
+
+    if (text_receiver)
+    {
+        oss << "   Tokens: " << std::to_string(total);
+        oss << " (prompt: " << std::to_string(prompt);
+        oss << " / completion: " << std::to_string(completion) << ") ";
+        oss << std::fixed << std::setprecision(2) << percentage_ctx << " %";
+
+        // TODO:  Add persantage of context graphic view
+        // [|||||||||||]
+
+        text_receiver->RefreshStatus(oss.str());
+    }
+    else
+    {
+        oss << std::fixed << std::setprecision(2) << percentage_ctx;
+        std::string percentage_ctx_str = oss.str();
+
+        // context_size, m_total_tokens
+        std::string context_usage_str = context_size > 0 ?
+            percentage_ctx_str + "% of context (" + std::to_string(context_size) + ")" : "";
+
+        console::write_line("\nTokens: " + std::to_string(total)
+            + " (prompt: " + std::to_string(prompt) +
+            +" / completion: " + std::to_string(completion)
+            + ") \t"
+            + context_usage_str
+            + (cost > 0 ? "cost: " + std::to_string(cost) : "")
+            + "\n", console::TextOrigin::reasoning);
+        console::write_splitter();
+    }
 }
 
 void console::flush()

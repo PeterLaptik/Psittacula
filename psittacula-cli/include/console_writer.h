@@ -6,6 +6,11 @@
 #include <termios.h>
 #endif
 
+class ChunkProcessor;
+
+// A legacy common output functions.
+// The functions are adopted to work with TextReceiver object
+// Use non-empty set_up_console call to work via TextReceiver
 namespace console {
 
     enum class TextOrigin {
@@ -22,17 +27,19 @@ namespace console {
         public:
             virtual void WriteLine(const std::string &message, TextOrigin origin = TextOrigin::normal) = 0;
             virtual void Write(const std::string &message, TextOrigin origin = TextOrigin::normal) = 0;
+            virtual void RefreshStatus(const std::string &message) = 0;
             virtual void Clear() = 0;
             virtual void Flush() = 0;
+            
     };
 
     void set_up_console(TextReceiver *receiver = nullptr);
 
     TextReceiver* get_current_receiver();
 
-    /// RAII guard: temporarily restores cooked console input so std::cin
-    /// line reads (getline, operator>>, get) work inside the raw-mode TUI.
-    /// Restores the previous (raw) input mode on destruction.
+    // RAII guard: temporarily restores cooked console input so std::cin
+    // line reads (getline, operator>>, get) work inside the raw-mode TUI.
+    // Restores the previous (raw) input mode on destruction.
     class LineInputScope
     {
         public:
@@ -60,12 +67,13 @@ namespace console {
 
     void write_splitter(TextOrigin origin = TextOrigin::splitter);
 
+    void write_status(const ChunkProcessor *proc, int context_size);
+
     void flush();
 
     void clear();
 
     inline const char* get_origin_colour(TextOrigin origin);
-
 }
 
 #endif // CONSOLE_WRITER_INCLUDED_H

@@ -51,7 +51,7 @@ class ChunkCompletionProcessor: public ChunkProcessor
         void GetResponseTools(std::vector<ToolCall> &calls_acc);
 
         /// Returns token statistic after response
-        void GetTokensStat(int &total, int &completion, int &prompt, double &cost) const;
+        void GetTokensStat(int &total, int &completion, int &prompt, double &cost) const override;
 
     private:
         void OutputSystemMessage(const std::string &msg);

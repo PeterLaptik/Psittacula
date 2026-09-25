@@ -86,6 +86,11 @@ void tui::Screen::PutText(const std::string &txt, TextOrigin origin)
     m_panel_text.AddText(txt, origin);
 }
 
+void tui::Screen::SetStatusLine(const std::string &status)
+{
+    m_panel_status.SetStatus(status);
+}
+
 void tui::Screen::Clear()
 {
     m_panel_text.Clear();
@@ -214,11 +219,15 @@ void tui::Screen::ClearScreen(int columns, int rows)
 void tui::Screen::DrawFrame()
 {
     int input_rows = m_panel_input.GetInputRowsNumber() + 1; // all input + one current input line
-    int text_height = m_props.rows - input_rows - 1;
+    int text_height = m_props.rows - input_rows - 2; // substract border + status panel size
     int text_width = m_props.columns;
+
+    m_panel_status.SetDimensions(0, 0, text_width, 1);
+    m_panel_status.Draw();
+
     if (text_height > 0)
     {
-        m_panel_text.SetDimensions(0, 0, text_width, text_height);
+        m_panel_text.SetDimensions(0, 1, text_width, text_height);
         m_panel_text.Draw();
     }
 

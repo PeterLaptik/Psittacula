@@ -13,6 +13,7 @@ set(SRC_DIR ./src)
 
 add_library(${PSITTACULA_CLI_NAME} STATIC
 	${INCLUDE_DIR}/ai_client.h
+	${INCLUDE_DIR}/chunk_processor.h
 	${INCLUDE_DIR}/clients_factory.h
 	${INCLUDE_DIR}/console_writer.h
 	${INCLUDE_DIR}/format_util.h
@@ -21,7 +22,6 @@ add_library(${PSITTACULA_CLI_NAME} STATIC
 	${SRC_DIR}/ai_client_impl.h
 	${SRC_DIR}/chunk_completion_processor.cpp
 	${SRC_DIR}/chunk_completion_processor.h
-	${SRC_DIR}/chunk_processor.h
 	${SRC_DIR}/clients_factory.cpp
 	${SRC_DIR}/console_history.cpp
 	${SRC_DIR}/console_history.h

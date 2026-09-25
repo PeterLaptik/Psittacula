@@ -58,7 +58,7 @@ void tui::ScreenTextContent::GetTextWindowForHeight(int height, int shift, std::
     size_t first = acc.size();
     int counter = 1;
 
-    for (int i = static_cast<int>(m_text_rendered.size()) - 1 - shift; counter < height && i >= 0; --i)
+    for (int i = static_cast<int>(m_text_rendered.size()) - 1 - shift; counter <= height && i >= 0; --i)
     {
         acc.push_back(m_text_rendered[i]);
         counter++;

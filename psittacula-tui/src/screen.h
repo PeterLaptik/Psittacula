@@ -5,6 +5,7 @@
 #include "panel.h"
 #include "panel_text.h"
 #include "panel_input.h"
+#include "panel_status.h"
 #include "console_writer.h"
 #include <string>
 #ifndef _WIN32
@@ -27,6 +28,8 @@ namespace tui {
 
             /// Adds a text chunk to a text area
             void PutText(const std::string &txt, TextOrigin origin);
+
+            void SetStatusLine(const std::string &status);
 
             void Clear();
 
@@ -65,6 +68,7 @@ namespace tui {
 
             PanelInput m_panel_input;
             PanelText m_panel_text;
+            PanelStatus m_panel_status;
     };
 }
 

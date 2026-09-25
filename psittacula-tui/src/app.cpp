@@ -1,6 +1,7 @@
 #include "app.h"
 #include "console_writer.h"
 #include "chat_command_dispatcher.h"
+#include "chunk_processor.h"
 #include <iostream>
 #include <sstream>
 
@@ -70,6 +71,11 @@ void tui::App::WriteLine(const std::string &message, TextOrigin origin)
 void tui::App::Write(const std::string &message, TextOrigin origin)
 {
     SendText(message, origin);
+}
+
+void tui::App::RefreshStatus(const std::string &status)
+{
+    m_screen.SetStatusLine(status);
 }
 
 void tui::App::Clear()

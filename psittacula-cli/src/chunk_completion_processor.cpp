@@ -1,8 +1,6 @@
 #include "chunk_completion_processor.h"
 #include "console_writer.h"
 #include "format_util.h"
-#include <sstream>
-#include <iomanip>
 #include <random>
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
@@ -104,24 +102,7 @@ void ChunkCompletionProcessor::ShowStat(std::string slots_info_rsp, int context_
         }
     }
 
-    double ratio_ctx = context_size > 0 ? static_cast<double>(m_total_tokens) / static_cast<double>(context_size) : 0;
-    double percentage_ctx = std::round(ratio_ctx * 10000) / 100;
-
-    std::ostringstream oss;
-    oss << std::fixed << std::setprecision(2) << percentage_ctx;
-    std::string percentage_ctx_str = oss.str();
-
-    std::string context_usage_str = context_size > 0 ?
-        percentage_ctx_str + "% of context (" + std::to_string(context_size) + ")" : "";
-
-    console::write_line("\nTokens: " + std::to_string(m_total_tokens)
-        + " (prompt: " + std::to_string(m_prompt_tokens) +
-        + " / completion: " + std::to_string(m_completion_tokens)
-        + ") \t"
-        + context_usage_str
-        + (m_tokens_cost > 0 ? "cost: " + std::to_string(m_tokens_cost) : "")
-        + "\n", console::TextOrigin::reasoning);
-    console::write_splitter();
+    console::write_status(this, context_size);
 }
 
 void ChunkCompletionProcessor::CheckMessage(JsonDocument &doc)
