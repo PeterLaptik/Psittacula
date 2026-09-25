@@ -1,5 +1,6 @@
 #include "panel_input.h"
 #include "keyboard.h"
+#include "working_dir.h"
 #include <algorithm>
 #include <iostream>
 #include <sstream>
@@ -160,16 +161,10 @@ tui::Response tui::PanelInput::PutChar(int key)
     return rsp_ok;
 }
 
-void tui::PanelInput::UpdateFilesAutocompleteList(std::vector<std::string> &files)
-{
-    kMockFiles.clear();
-    kMockFiles.insert(kMockFiles.begin(), files.begin(), files.end());
-}
-
 void tui::PanelInput::UpdateCommandsAutocompleteList(std::vector<std::string> &commands)
 {
-    kMockCommands.clear();
-    kMockCommands.insert(kMockCommands.begin(), commands.begin(), commands.end());
+    m_commands_list.clear();
+    m_commands_list.insert(m_commands_list.begin(), commands.begin(), commands.end());
 }
 
 void tui::PanelInput::UpdateSize(int width, int height)
@@ -391,7 +386,7 @@ void tui::PanelInput::UpdateAutocomplete()
 
 void tui::PanelInput::FilterCommands(const std::string &prefix, std::vector<std::string> &out) const
 {
-    for (const std::string &cmd : kMockCommands)
+    for (const std::string &cmd : m_commands_list)
     {
         if (cmd.compare(0, prefix.size(), prefix) == 0)
             out.push_back(cmd);
@@ -400,10 +395,11 @@ void tui::PanelInput::FilterCommands(const std::string &prefix, std::vector<std:
 
 void tui::PanelInput::FilterFiles(const std::string &prefix, std::vector<std::string> &out) const
 {
-    for (const std::string &file : kMockFiles)
+    auto project_files = WorkingDir::GetInstance().GetProjectFilesList();
+    for (const auto &file : project_files)
     {
-        if (file.compare(0, prefix.size(), prefix) == 0)
-            out.push_back(file);
+        if (file.name.compare(0, prefix.size(), prefix) == 0)
+            out.push_back(file.name);
     }
 }
 
@@ -441,10 +437,20 @@ void tui::PanelInput::AcceptAutocomplete()
         m_autocomplete_selected >= static_cast<int>(m_autocomplete_items.size()))
         return;
 
-    const std::string &selected = m_autocomplete_items[static_cast<size_t>(m_autocomplete_selected)];
+    std::string selected = m_autocomplete_items[static_cast<size_t>(m_autocomplete_selected)];
 
     if (m_autocomplete_file_mode)
     {
+        auto project_files = WorkingDir::GetInstance().GetProjectFilesList();
+        for (auto &file : project_files)
+        {
+            if (file.name == selected)
+            {
+                selected = file.path;
+                break;
+            }
+        }
+
         // Replace only the '@' token, keep the rest of the line
         size_t at_pos = m_input_line.rfind('@');
         if (at_pos == std::string::npos)

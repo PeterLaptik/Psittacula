@@ -49,7 +49,7 @@ void AiClientImpl::SendUserMessage(const std::string &message)
     std::string body = m_body_obj.ToJsonString();
 
     ChunkCompletionProcessor proc; // POST response chunk receiver
-    proc.SetReasoning(m_show_reasoning);
+    proc.SetShowReasoning(m_show_reasoning);
     proc.SetCancelFlag(&m_cancelled);
     std::string end_point_chat_completions = m_context_size == -1 ? kEndPointCompletionsLlama : kEndPointCompletionsNonLlama;
     m_http_client.HttpPostStream(end_point_chat_completions, body, &proc);
@@ -201,7 +201,7 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
     std::string body = m_body_obj.ToJsonString();
 
     ChunkCompletionProcessor proc; // POST response chunks receiver
-    proc.SetReasoning(m_show_reasoning);
+    proc.SetShowReasoning(m_show_reasoning);
     proc.SetCancelFlag(&m_cancelled);
     std::string end_point_chat_completions = m_context_size == -1 ? kEndPointCompletionsLlama : kEndPointCompletionsNonLlama;
     m_http_client.HttpPostStream(end_point_chat_completions, body, &proc);
@@ -252,9 +252,10 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
     SendToolsResponses(secondary_responses);
 }
 
-void AiClientImpl::SetReasoning(bool is_shown)
+void AiClientImpl::SetShowReasoning(bool is_shown)
 {
-    m_show_reasoning = is_shown;
+    // Mocked. Always true here
+    // Screen view controls reasoning output
 }
 
 void AiClientImpl::SetApiKey(const std::string &key)
@@ -279,6 +280,7 @@ std::string AiClientImpl::GetSlotstInfo()
 
 void AiClientImpl::ClearContext()
 {
+    console::clear();
     m_body_obj.ClearContext();
 }
 
@@ -297,10 +299,12 @@ void AiClientImpl::CompressContext()
         return;
     }
 
+    console::write_line("Compressing context. Please wait...", console::TextOrigin::error);
+
     // Send the summarization request using the same streaming flow as a normal reply.
     // Only the response text is needed here; tool calls are intentionally ignored.
     ChunkCompletionProcessor proc; // POST response chunk receiver
-    proc.SetReasoning(m_show_reasoning);
+    proc.SetShowReasoning(false);
     proc.SetCancelFlag(&m_cancelled);
     std::string end_point_chat_completions = m_context_size == -1 ? kEndPointCompletionsLlama : kEndPointCompletionsNonLlama;
     m_http_client.HttpPostStream(end_point_chat_completions, summary_body, &proc);
@@ -324,6 +328,7 @@ void AiClientImpl::CompressContext()
     // summary, and the last kMessagesToKeep messages.
     std::string summarized_msg = proc.GetResponseMessage();
     m_body_obj.Compress(summarized_msg, kMessagesToKeep);
+    proc.SetShowReasoning(m_show_reasoning);
 }
 
 void AiClientImpl::RestoreDialogueFrom(const std::string &data)

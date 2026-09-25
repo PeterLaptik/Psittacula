@@ -158,6 +158,17 @@ void tui::PanelText::UpdateSize(int width, int height)
     NotifyParentAboutChanges();
 }
 
+void tui::PanelText::SetShowReasoning(bool reasoning)
+{
+    m_text_content.SetShowReasoning(reasoning);
+    NotifyParentAboutChanges();
+}
+
+bool tui::PanelText::GetReasoning() const
+{
+    return m_text_content.GetShowReasoning();
+}
+
 void tui::PanelText::ScrollUp(int lines)
 {
     if (lines <= 0)

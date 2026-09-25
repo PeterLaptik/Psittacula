@@ -29,7 +29,7 @@ class AiClientImpl: public AiClient
 
         void CancelRequest() override;
 
-        void SetReasoning(bool is_shown = true) override;
+        void SetShowReasoning(bool is_shown = true) override;
 
         void SetApiKey(const std::string &key) override;
 
@@ -74,10 +74,10 @@ class AiClientImpl: public AiClient
 
         Formatter fmt; // Simple string formatter
 
-        std::string m_api_key;      // Optional: API bearing key
-        int m_context_size = -1;    // Can be set directly, if not set (for llama.cpp) then /slots endpoint is used to get the actual size
-        bool m_show_reasoning = true;
-        int m_tool_loop_counter = 0;  // Counts tool calls loop iterations to avoid infinite loops
+        std::string m_api_key;          // Optional: API bearing key
+        int m_context_size = -1;        // Can be set directly, if not set (for llama.cpp) then /slots endpoint is used to get the actual size
+        bool m_show_reasoning = true;   // Always true in this implementation. Logic has been moved to a view. See SetShowReasoning method
+        int m_tool_loop_counter = 0;    // Counts tool calls loop iterations to avoid infinite loops
 
         HttpClient m_http_client; // CURL client for network requests
 

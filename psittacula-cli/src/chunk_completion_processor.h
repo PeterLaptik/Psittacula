@@ -27,7 +27,7 @@ class ChunkCompletionProcessor: public ChunkProcessor
         bool IsCancelled() const override;
 
         /// Shows/ hides reasoning text
-        void SetReasoning(bool is_shown);
+        void SetShowReasoning(bool is_shown);
 
         /// Returns full response message
         std::string GetResponseMessage() const;

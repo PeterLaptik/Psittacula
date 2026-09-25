@@ -33,6 +33,10 @@ namespace tui {
 
             void SetCommandDispatcher(std::unique_ptr<ChatCommandDispatcher> &cmd_dispatcher);
 
+            void SetShowReasoning(bool reasoning);
+
+            bool GetReasoning() const;
+
             // Text receiver interface
             void WriteLine(const std::string &message, TextOrigin origin = TextOrigin::normal) override;
             void Write(const std::string &message, TextOrigin origin = TextOrigin::normal) override;

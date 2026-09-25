@@ -20,9 +20,9 @@ class CommandChangeProjectDir : public ChatCommand
 
             namespace fs = std::filesystem;
 
-            std::string current = WorkingDir::GetInstance().GetWorkDir();
+            std::string current_dir = WorkingDir::GetInstance().GetWorkDir();
             console::write_line("Current project directory:", TextOrigin::filesystem);
-            console::write_line("  " + current + "\n");
+            console::write_line("  " + current_dir + "\n");
 
             std::string new_path;
 

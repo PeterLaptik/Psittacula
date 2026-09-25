@@ -10,7 +10,7 @@ namespace tui {
     class PanelText: public Panel
     {
         public:
-            PanelText(Panel *parent = nullptr);
+            explicit PanelText(Panel *parent = nullptr);
 
             /// Add text (chunk): LLM response, tool response info, etc.
             void AddText(const std::string &txt, TextOrigin origin);
@@ -22,6 +22,10 @@ namespace tui {
             void Refresh();
 
             void UpdateSize(int width, int height);
+
+            void SetShowReasoning(bool reasoning);
+
+            bool GetReasoning() const;
 
             /// Scrolls visible text: up = towards older lines, down = back to the newest
             void ScrollUp(int lines);

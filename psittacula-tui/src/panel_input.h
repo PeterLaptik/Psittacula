@@ -19,9 +19,6 @@ namespace tui {
             // Append char from keyboard
             Response PutChar(int key);
 
-            // Project file list for autocomplete
-            void UpdateFilesAutocompleteList(std::vector<std::string> &files);
-
             // Commands list for autocomplete
             void UpdateCommandsAutocompleteList(std::vector<std::string> &commands);
 
@@ -75,14 +72,7 @@ namespace tui {
             bool m_autocomplete_active = false;
             bool m_autocomplete_file_mode = false;
 
-            std::vector<std::string> kMockCommands;
-
-            std::vector<std::string> kMockFiles = {
-                "main.cpp", "app.cpp", "app.h", "screen.cpp", "screen.h",
-                "panel.cpp", "panel.h", "panel_input.cpp", "panel_input.h",
-                "panel_text.cpp", "panel_text.h", "keyboard.cpp", "keyboard.h",
-                "response.h", "input_text_content.cpp", "text_splitter.h", "README.md", "CMakeLists.txt"
-            };
+            std::vector<std::string> m_commands_list;
 
             constexpr static int kTextPaddingLeft = 3;
             constexpr static int kTextPaddingRight = 1;

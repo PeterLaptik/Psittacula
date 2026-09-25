@@ -31,12 +31,12 @@ class CommandReasoning : public ChatCommand
 
             if (value == "true" || value == "1" || value == "on")
             {
-                client->SetReasoning(true);
+                m_app->SetShowReasoning(true);
                 console::write_line("Reasoning mode enabled.", TextOrigin::reasoning);
             }
             else if (value == "false" || value == "0" || value == "off")
             {
-                client->SetReasoning(false);
+                m_app->SetShowReasoning(false);
                 console::write_line("Reasoning mode disabled.", TextOrigin::reasoning);
             }
             else

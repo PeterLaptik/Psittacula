@@ -76,6 +76,17 @@ void tui::ScreenTextContent::Clear()
     m_text_rendered.clear();
 }
 
+void tui::ScreenTextContent::SetShowReasoning(bool reasoning)
+{
+    m_show_reasoning = reasoning;
+    RenderText();
+}
+
+bool tui::ScreenTextContent::GetShowReasoning() const
+{
+    return m_show_reasoning;
+}
+
 void tui::ScreenTextContent::SplitBuffer()
 {
     TextSplitter splitter{ m_text_line_max_length };
@@ -136,10 +147,18 @@ void tui::ScreenTextContent::RenderText()
     std::vector<std::string> split_lines;
     for (auto &line : m_text)
     {
+        const char *colour = GetTextColour(line.origin);
+
+        if (line.origin == TextOrigin::reasoning && !m_show_reasoning)
+        {
+            split_lines.push_back(std::string(colour) + "[Reasoning]" + std::string(kDefault));
+            continue;
+        }
+
         std::vector<std::string> uncoloured_lines;
         splitter.SplitText(line.txt, uncoloured_lines);
 
-        const char *colour = GetTextColour(line.origin);
+        
         for (auto &r_line : uncoloured_lines)
         {
             split_lines.push_back(std::string(colour) + r_line + std::string(colour));

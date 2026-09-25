@@ -24,7 +24,7 @@ class AiClient
         virtual void CancelRequest() = 0;
 
         /// Sets whether a reasoning text is shown
-        virtual void SetReasoning(bool is_shown = true) = 0;
+        virtual void SetShowReasoning(bool is_shown = true) = 0;
 
         /// Sets API bearing key, if necessary
         virtual void SetApiKey(const std::string &key) = 0;

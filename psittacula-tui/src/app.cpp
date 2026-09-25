@@ -52,6 +52,16 @@ void tui::App::SetCommandDispatcher(std::unique_ptr<ChatCommandDispatcher> &cmd_
     m_screen.UpdateCommandsAutocompleteList(cmd_list);
 }
 
+void tui::App::SetShowReasoning(bool reasoning)
+{
+    m_screen.SetShowReasoning(reasoning);
+}
+
+bool tui::App::GetReasoning() const
+{
+    return m_screen.GetReasoning();
+}
+
 void tui::App::WriteLine(const std::string &message, TextOrigin origin)
 {
     SendText(message + '\n', origin);

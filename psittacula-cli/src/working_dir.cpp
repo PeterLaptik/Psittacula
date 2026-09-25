@@ -18,6 +18,7 @@ WorkingDir& WorkingDir::GetInstance()
     {
         instance.CreateWorkingDirs();
         instance.FindModels();
+        instance.SetProjectDir(instance.GetProjectDir());
     }
 
     return instance;
@@ -47,6 +48,32 @@ void WorkingDir::SetWorkDir(const std::string &path)
 void WorkingDir::SetProjectDir(const std::string &path)
 {
     m_project_dir = path;
+
+    m_projects_files.clear();
+
+    try
+    {
+        fs::directory_entry dir(path);
+        if (!dir.exists() || !dir.is_directory())
+        {
+            console::write_line("Project dir is not found or is not a directory!", TextOrigin::error);
+            return;
+        }
+
+        for (const auto &entry : fs::recursive_directory_iterator(dir))
+        {
+            if (entry.is_regular_file())
+            {
+                const fs::path full_path = entry.path();
+                m_projects_files.emplace_back(full_path.filename().string(), full_path.generic_string());
+            }
+        }
+    }
+    catch (const std::exception &e)
+    {
+        console::write_line("Error on searching project files:", TextOrigin::error);
+        console::write_line(e.what(), TextOrigin::error);
+    }
 }
 
 void WorkingDir::UpdateModels()
@@ -78,6 +105,11 @@ std::string WorkingDir::GetSettingsDir() const
 std::string WorkingDir::GetLogsDir() const
 {
     return m_workdir + '/' + "logs/";
+}
+
+const std::vector<ProjectFile>& WorkingDir::GetProjectFilesList() const
+{
+    return m_projects_files;
 }
 
 std::string WorkingDir::GetWorkDir() const

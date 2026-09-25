@@ -28,6 +28,10 @@ namespace tui {
 
             void Clear();
 
+            void SetShowReasoning(bool reasoning);
+
+            bool GetShowReasoning() const;
+
         private:
             void SplitBuffer();
             void CutByLinesBuffer();
@@ -46,6 +50,7 @@ namespace tui {
             };
 
             int m_text_line_max_length = 100;
+            bool m_show_reasoning = true;
 
             TextLine m_buffer;
             TextLine m_buffer_no_render;

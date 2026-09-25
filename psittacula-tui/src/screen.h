@@ -18,7 +18,7 @@ namespace tui {
     {
         public:
             Screen();
-            virtual ~Screen() = default;
+            ~Screen() override = default;
 
             virtual void Show();
 
@@ -30,8 +30,9 @@ namespace tui {
 
             void Clear();
 
-            // Project file list for autocomplete
-            void UpdateFilesAutocompleteList(std::vector<std::string> &files);
+            void SetShowReasoning(bool reasoning);
+
+            bool GetReasoning() const;
 
             // Commands list for autocomplete
             void UpdateCommandsAutocompleteList(std::vector<std::string> &commands);

@@ -91,9 +91,14 @@ void tui::Screen::Clear()
     m_panel_text.Clear();
 }
 
-void tui::Screen::UpdateFilesAutocompleteList(std::vector<std::string> &files)
+void tui::Screen::SetShowReasoning(bool reasoning)
 {
-    m_panel_input.UpdateFilesAutocompleteList(files);
+    m_panel_text.SetShowReasoning(reasoning);
+}
+
+bool tui::Screen::GetReasoning() const
+{
+    return m_panel_text.GetReasoning();
 }
 
 void tui::Screen::UpdateCommandsAutocompleteList(std::vector<std::string> &commands)

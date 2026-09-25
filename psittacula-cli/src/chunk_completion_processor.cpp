@@ -419,7 +419,7 @@ void ChunkCompletionProcessor::GetTokensStat(int &total, int &completion, int &p
     cost = m_tokens_cost;
 }
 
-void ChunkCompletionProcessor::SetReasoning(bool is_shown)
+void ChunkCompletionProcessor::SetShowReasoning(bool is_shown)
 {
     m_show_reasoning = is_shown;
 }
