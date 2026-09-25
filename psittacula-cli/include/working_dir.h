@@ -2,7 +2,6 @@
 #define WORKING_DIR_INCLUDED_H
 
 #include "format_util.h"
-#include "files_holder.h"
 #include <string>
 #include <vector>
 
