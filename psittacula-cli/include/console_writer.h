@@ -30,7 +30,7 @@ namespace console {
             virtual void RefreshStatus(const std::string &message) = 0;
             virtual void Clear() = 0;
             virtual void Flush() = 0;
-            
+            virtual void MoveSpinner() = 0;
     };
 
     void set_up_console(TextReceiver *receiver = nullptr);
@@ -72,6 +72,8 @@ namespace console {
     void flush();
 
     void clear();
+
+    void move_spinner();
 
     inline const char* get_origin_colour(TextOrigin origin);
 }

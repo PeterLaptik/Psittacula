@@ -29,6 +29,8 @@ namespace tui {
             /// Callback to send a chunk of LLM text response to output at a screen
             void SendText(const std::string txt, TextOrigin origin = TextOrigin::normal);
 
+            void MoveSpinner() override;
+
             void SetClient(std::unique_ptr<AiClient> &client);
 
             void SetCommandDispatcher(std::unique_ptr<ChatCommandDispatcher> &cmd_dispatcher);

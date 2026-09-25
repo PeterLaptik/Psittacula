@@ -91,6 +91,11 @@ void tui::Screen::SetStatusLine(const std::string &status)
     m_panel_status.SetStatus(status);
 }
 
+void tui::Screen::MoveSpinner()
+{
+    m_panel_status.MoveSpinner();
+}
+
 void tui::Screen::Clear()
 {
     m_panel_text.Clear();

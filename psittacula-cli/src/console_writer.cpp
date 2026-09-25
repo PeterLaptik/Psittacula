@@ -168,24 +168,38 @@ void console::write_status(const ChunkProcessor *proc, int context_size)
     double ratio_ctx = context_size > 0 ? static_cast<double>(total) / static_cast<double>(context_size) : 0;
     double percentage_ctx = std::round(ratio_ctx * 10000) / 100;
 
-    std::ostringstream oss;
+    std::ostringstream bar;
 
     if (text_receiver)
     {
-        oss << "   Tokens: " << std::to_string(total);
-        oss << " (prompt: " << std::to_string(prompt);
-        oss << " / completion: " << std::to_string(completion) << ") ";
-        oss << std::fixed << std::setprecision(2) << percentage_ctx << " %";
+        // Add percentage of context graphic view
+        const int bar_width = 30;
+        int filled_blocks = static_cast<int>(bar_width * ratio_ctx);
+        
+        bar << "   [";
+        for (int i = 0; i < filled_blocks; ++i)
+        {
+            bar << "\xE2\x96\x93";
+        }
+        for (int i = filled_blocks; i < bar_width; ++i)
+        {
+            bar << "\xE2\x96\x91";
+        }
+        bar << "] ";
+        bar << " " << std::fixed << std::setprecision(2) << percentage_ctx << "%    ";
+        bar << "tokens: " << std::to_string(total);
+        bar << " (prompt: " << std::to_string(prompt);
+        bar << " / completion: " << std::to_string(completion) << ")";
 
-        // TODO:  Add persantage of context graphic view
-        // [|||||||||||]
+        if (cost > 0)
+            bar << "    cost: " << std::to_string(cost);
 
-        text_receiver->RefreshStatus(oss.str());
+        text_receiver->RefreshStatus(bar.str());
     }
     else
     {
-        oss << std::fixed << std::setprecision(2) << percentage_ctx;
-        std::string percentage_ctx_str = oss.str();
+        bar << std::fixed << std::setprecision(2) << percentage_ctx;
+        std::string percentage_ctx_str = bar.str();
 
         // context_size, m_total_tokens
         std::string context_usage_str = context_size > 0 ?
@@ -221,4 +235,12 @@ void console::clear()
     }
 
     std::cout << "\033[2J\033[1;1H";
+}
+
+void console::move_spinner()
+{
+    if (text_receiver)
+    {
+        text_receiver->MoveSpinner();
+    }
 }

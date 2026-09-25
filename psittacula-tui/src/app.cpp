@@ -32,6 +32,11 @@ void tui::App::SendText(const std::string txt, TextOrigin origin)
     m_screen.PutText(txt, origin);
 }
 
+void tui::App::MoveSpinner()
+{
+    m_screen.MoveSpinner();
+}
+
 void tui::App::SetClient(std::unique_ptr<AiClient> &client)
 {
     if (!client)

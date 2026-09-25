@@ -81,6 +81,8 @@ void ChunkCompletionProcessor::ProcessChunk(const std::string &chunk)
     {
         // Skip: ignore unsupported chunks
     }
+
+    console::move_spinner();
 }
 
 void ChunkCompletionProcessor::ShowStat(std::string slots_info_rsp, int context_size) const

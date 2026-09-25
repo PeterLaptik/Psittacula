@@ -31,6 +31,8 @@ namespace tui {
 
             void SetStatusLine(const std::string &status);
 
+            void MoveSpinner();
+
             void Clear();
 
             void SetShowReasoning(bool reasoning);

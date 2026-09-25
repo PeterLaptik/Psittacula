@@ -23,6 +23,8 @@ namespace tui {
 
             void Refresh();
 
+            void MoveSpinner();
+
             /// Updates the size of the status panel
             void UpdateSize(int width, int height);
 
