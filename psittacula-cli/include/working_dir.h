@@ -8,7 +8,7 @@
 struct ProjectFile
 {
     ProjectFile(const std::string &file_name, const std::string &file_path)
-        : name(file_name), path(file_path)
+        : path(file_path), name(file_name)
     { }
 
     std::string path;
