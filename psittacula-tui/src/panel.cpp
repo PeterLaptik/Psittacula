@@ -75,6 +75,21 @@ void tui::Panel::GetCursorPosition(int &x, int &y)
 #endif
 }
 
+void tui::Panel::HideCursor(bool hide)
+{
+#ifdef _WIN32
+    HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
+    HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_CURSOR_INFO info;
+    GetConsoleCursorInfo(handle, &info);
+    info.bVisible = !hide;
+    SetConsoleCursorInfo(handle, &info);
+#else
+    std::string sequence = hide ? "\033[?25l" : "\033[?25h";
+    std::cout << sequence << std::flush;
+#endif
+}
+
 void tui::Panel::SetDimensions(int anchor_x, int anchor_y, int width, int heigth)
 {
     m_anchor_x = anchor_x;

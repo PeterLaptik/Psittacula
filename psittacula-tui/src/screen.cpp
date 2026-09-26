@@ -223,6 +223,7 @@ void tui::Screen::ClearScreen(int columns, int rows)
 
 void tui::Screen::DrawFrame()
 {
+    HideCursor(true);
     int input_rows = m_panel_input.GetInputRowsNumber() + 1; // all input + one current input line
     int text_height = m_props.rows - input_rows - 2; // substract border + status panel size
     int text_width = m_props.columns;
@@ -240,6 +241,7 @@ void tui::Screen::DrawFrame()
     int input_width = m_props.columns;
     m_panel_input.SetDimensions(0, m_props.rows - input_rows, input_width, input_height);
     m_panel_input.Draw();
+    HideCursor(false);
 }
 
 #ifndef _WIN32

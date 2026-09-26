@@ -3,7 +3,9 @@
 
 #include "ai_client.h"
 
+class Model;
+
 // Creates standard base AI API client
-std::unique_ptr<AiClient> create_base_client(const std::string &host, int context_size);
+std::unique_ptr<AiClient> create_base_client(const Model &model);
 
 #endif // CLIENTS_FACTORY_INCLUDED_H

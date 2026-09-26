@@ -11,28 +11,27 @@
 // Maximum number of tool calls per response, to prevent infinite loops in case of errors
 const int kToolsCallMax = 20; 
 
+// Number of most recent messages to keep in full after compression.
+// The older context is replaced by an LLM-generated summary.
+constexpr int kMessagesToKeep = 2;
+
 const std::string kEndPointHealth = "/health";
 const std::string kEndPointCompletionsLlama = "/v1/chat/completions";
 const std::string kEndPointCompletionsNonLlama = "/chat/completions";
 const std::string kEndPointSlots = "/slots";
 
-
-AiClientImpl::AiClientImpl(const std::string &host_and_port, int context_size)
-    : m_http_client(host_and_port), m_context_size(context_size)
-{ 
-    InitTools();
-
-    DefaultRuleProvider provider;
-    m_body_obj.AddSystemMessage(provider.GetDefaultSystemPrompt());
-}
-
-AiClientImpl::AiClientImpl(const std::string &host, int port, int context_size)
-    : m_http_client(host, port), m_context_size(context_size)
+AiClientImpl::AiClientImpl(const Model &model)
+    : m_http_client(model.GetHost(), 
+        model.GetApiKey()), 
+        m_context_size(model.GetContextSize()),
+        m_chat_endpoint(model.GetChatEndpoint())
 {
     InitTools();
 
     DefaultRuleProvider provider;
     m_body_obj.AddSystemMessage(provider.GetDefaultSystemPrompt());
+
+    m_body_obj.SetModel(model.GetName());
 }
 
 AiClientImpl::~AiClientImpl()
@@ -51,7 +50,7 @@ void AiClientImpl::SendUserMessage(const std::string &message)
     ChunkCompletionProcessor proc; // POST response chunk receiver
     proc.SetShowReasoning(m_show_reasoning);
     proc.SetCancelFlag(&m_cancelled);
-    std::string end_point_chat_completions = m_context_size == -1 ? kEndPointCompletionsLlama : kEndPointCompletionsNonLlama;
+    std::string end_point_chat_completions = GetChatCompletionsEndpoint();
     m_http_client.HttpPostStream(end_point_chat_completions, body, &proc);
 
     if (m_cancelled.load())
@@ -187,7 +186,7 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
     if (tools_responses.empty() || m_cancelled.load())
         return;
 
-    // Infinit loop check
+    // Infinite loop check
     m_tool_loop_counter++;
     if (m_tool_loop_counter > kToolsCallMax)
     {
@@ -203,7 +202,7 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
     ChunkCompletionProcessor proc; // POST response chunks receiver
     proc.SetShowReasoning(m_show_reasoning);
     proc.SetCancelFlag(&m_cancelled);
-    std::string end_point_chat_completions = m_context_size == -1 ? kEndPointCompletionsLlama : kEndPointCompletionsNonLlama;
+    std::string end_point_chat_completions = GetChatCompletionsEndpoint();
     m_http_client.HttpPostStream(end_point_chat_completions, body, &proc);
 
     if (m_cancelled.load())
@@ -278,18 +277,24 @@ std::string AiClientImpl::GetSlotstInfo()
     return m_http_client.HttpGet(kEndPointSlots);
 }
 
+std::string AiClientImpl::GetChatCompletionsEndpoint() const
+{
+    if (!m_chat_endpoint.empty())
+        return m_chat_endpoint;
+
+    return m_context_size == -1 ? kEndPointCompletionsLlama : kEndPointCompletionsNonLlama;
+}
+
 void AiClientImpl::ClearContext()
 {
     console::clear();
     m_body_obj.ClearContext();
 }
 
+// A simple way compressing: summarizing + last two messages (kMessagesToKeep)
+// It can be done smarter
 void AiClientImpl::CompressContext()
 {
-    // Number of most recent messages to keep in full after compression.
-    // The older context is replaced by an LLM-generated summary.
-    constexpr int kMessagesToKeep = 2;
-
     // Build a summarization request: the dialogue without the last messages,
     // plus an instruction for the LLM to summarize the remaining context.
     std::string summary_body = m_body_obj.GetBodyForSummarizing(kMessagesToKeep);
@@ -306,7 +311,7 @@ void AiClientImpl::CompressContext()
     ChunkCompletionProcessor proc; // POST response chunk receiver
     proc.SetShowReasoning(false);
     proc.SetCancelFlag(&m_cancelled);
-    std::string end_point_chat_completions = m_context_size == -1 ? kEndPointCompletionsLlama : kEndPointCompletionsNonLlama;
+    std::string end_point_chat_completions = GetChatCompletionsEndpoint();
     m_http_client.HttpPostStream(end_point_chat_completions, summary_body, &proc);
 
     if (m_cancelled.load())

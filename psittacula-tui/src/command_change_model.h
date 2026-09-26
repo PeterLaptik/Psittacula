@@ -46,7 +46,7 @@ class CommandChangeModel: public ChatCommand
 
         std::string Description() override
         {
-            return "Change model in interractive mode. Does not clear current context. \n\r\t[ARG]: [create] is to create model connection in an interactive mode and connect to a new model.";
+            return "Change model in interactive mode. Does not clear current context. \n\r\t[ARG]: [create] is to create model connection in an interactive mode and connect to a new model.";
         }
 
     private:
@@ -68,7 +68,7 @@ class CommandChangeModel: public ChatCommand
         }
 #endif
 
-        // Select model from the list of found models in the working directory in interractive mode. 
+        // Select model from the list of found models in the working directory in interactive mode. 
         void ChooseModel(std::unique_ptr<AiClient> &client)
         {
             ActivateAlternateScreen();
@@ -149,6 +149,7 @@ class CommandChangeModel: public ChatCommand
             std::string host;
             std::string api_key;
             std::string context_size_str;
+            std::string chat_endpoint;
 
             {
                 console::LineInputScope line_input;
@@ -161,6 +162,9 @@ class CommandChangeModel: public ChatCommand
 
                 std::cout << "\nEnter host URL (e.g. http://localhost:8080): ";
                 std::getline(std::cin, host);
+
+                std::cout << "\nEnter chat completion endpoint (leave empty for default '/v1/chat/completions'): ";
+                std::getline(std::cin, chat_endpoint);
 
                 std::cout << "\nEnter context size (leave empty for llama.cpp): ";
                 std::getline(std::cin, context_size_str);
@@ -187,8 +191,14 @@ class CommandChangeModel: public ChatCommand
             file << "name=" << model_name << "\n\n";
 
             file << "# Host\n";
-            file << "# The value will be concatenated with '/chat/completions' for requests\n";
+            file << "# The value will be concatenated with the chat completion endpoint for requests\n";
             file << "host=" << host << "\n\n";
+
+            file << "# Chat completion endpoint (optional)\n";
+            if (!chat_endpoint.empty())
+                file << "chat_endpoint=" << chat_endpoint << "\n\n";
+            else
+                file << "# chat_endpoint=/v1/chat/completions\n\n";
 
             file << "# Context size: maximum context length for the model (optional)\n";
             if (!context_size_str.empty())

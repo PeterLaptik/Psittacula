@@ -42,8 +42,6 @@ add_executable(${PSITTACULA_TUI_NAME}
     ${SRC_DIR}/keyboard.cpp
     ${SRC_DIR}/keyboard.h
     ${SRC_DIR}/logo.h
-    ${SRC_DIR}/model.cpp
-    ${SRC_DIR}/model.h
     ${SRC_DIR}/panel.cpp
     ${SRC_DIR}/panel.h
     ${SRC_DIR}/panel_input.cpp

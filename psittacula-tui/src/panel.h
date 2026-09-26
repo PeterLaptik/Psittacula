@@ -16,6 +16,8 @@ namespace tui {
 
             void GetCursorPosition(int &x, int &y);
 
+            void HideCursor(bool hide);
+
             void SetDimensions(int anchor_x, int anchor_y, int width, int heigth);
 
             virtual void OnUpdatedChild(Panel *updated_panel = nullptr)

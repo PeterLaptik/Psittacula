@@ -6,20 +6,19 @@
 #include "format_util.h"
 #include "history_manager.h"
 #include "dialogue_body.h"
+#include "model.h"
 #include <atomic>
 #include <map>
 #include <memory>
 
 class ToolBase;
 
-/// Standars client implementation
+/// Regular client implementation
 ///\see AiClient for details
 class AiClientImpl: public AiClient
 {
     public:
-        explicit AiClientImpl(const std::string &host_and_port, int context_size);
-
-        AiClientImpl(const std::string &host, int port, int context_size);
+        explicit AiClientImpl(const Model &model);
 
         ~AiClientImpl() override;
 
@@ -68,6 +67,10 @@ class AiClientImpl: public AiClient
         // Gets actual context size via /slots endpoint
         std::string GetSlotstInfo();
 
+        // Returns the chat completions endpoint:
+        // m_chat_endpoint if set, otherwise chosen by context size (llama.cpp / non-llama)
+        std::string GetChatCompletionsEndpoint() const;
+
         // POST JSON data object
         // Keeps all messages, tool calls, tool calls responses
         DialogueBody m_body_obj;
@@ -78,6 +81,7 @@ class AiClientImpl: public AiClient
         int m_context_size = -1;        // Can be set directly, if not set (for llama.cpp) then /slots endpoint is used to get the actual size
         bool m_show_reasoning = true;   // Always true in this implementation. Logic has been moved to a view. See SetShowReasoning method
         int m_tool_loop_counter = 0;    // Counts tool calls loop iterations to avoid infinite loops
+        std::string m_chat_endpoint;
 
         HttpClient m_http_client; // CURL client for network requests
 

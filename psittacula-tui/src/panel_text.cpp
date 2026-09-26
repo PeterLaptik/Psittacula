@@ -104,6 +104,7 @@ void tui::PanelText::Clear()
 
 void tui::PanelText::Refresh()
 {
+    HideCursor(true);
     int cursor_old_x, cursor_old_y;
     GetCursorPosition(cursor_old_x, cursor_old_y);
 
@@ -138,6 +139,7 @@ void tui::PanelText::Refresh()
     std::cout.flush();
 
     MoveCursorTo(cursor_old_x, cursor_old_y);
+    HideCursor(false);
 }
 
 void tui::PanelText::UpdateSize(int width, int height)

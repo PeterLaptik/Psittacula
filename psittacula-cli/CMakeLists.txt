@@ -17,6 +17,7 @@ add_library(${PSITTACULA_CLI_NAME} STATIC
 	${INCLUDE_DIR}/clients_factory.h
 	${INCLUDE_DIR}/console_writer.h
 	${INCLUDE_DIR}/format_util.h
+	${INCLUDE_DIR}/model.h
 	${INCLUDE_DIR}/working_dir.h
 	${SRC_DIR}/ai_client_impl.cpp
 	${SRC_DIR}/ai_client_impl.h
@@ -33,6 +34,7 @@ add_library(${PSITTACULA_CLI_NAME} STATIC
 	${SRC_DIR}/history_manager.h
 	${SRC_DIR}/http_client.cpp
 	${SRC_DIR}/http_client.h
+	${SRC_DIR}/model.cpp
 	${SRC_DIR}/response_readers.cpp
 	${SRC_DIR}/response_readers.h
 	${SRC_DIR}/default_rule_provider.h

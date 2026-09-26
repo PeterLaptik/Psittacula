@@ -5,8 +5,8 @@
 #include <sstream>
 #include <algorithm>
 
-Model::Model(const std::string &name, const std::string &host, const std::string api_key, int context_size)
-    : m_name(name), m_host(host), m_api_key(api_key), m_context_size(context_size)
+Model::Model(const std::string &name, const std::string &host, const std::string api_key, const std::string &chat_endpoint, int context_size)
+    : m_name(name), m_host(host), m_api_key(api_key), m_chat_endpoint(chat_endpoint), m_context_size(context_size)
 { }
 
 Model Model::FromFile(const std::string &file_path)
@@ -38,8 +38,9 @@ Model Model::FromFile(const std::string &file_path)
     std::string host = params.count("host") ? params["host"] : "";
     std::string api_key = params.count("api_key") ? params["api_key"] : "";
     std::string context_size_str = params.count("api_key") ? params["context_size"] : "-1";
+    std::string chat_endpoint = params.count("chat_endpoint") ? params["chat_endpoint"] : "/v1/chat/completions";
 
-    int context_size = -1;
+    int context_size = -1; // -1 if not set
     try
     {
         context_size = std::stoi(context_size_str);
@@ -48,7 +49,7 @@ Model Model::FromFile(const std::string &file_path)
         // ignore errors
     }
 
-    return Model(model_name, host, api_key, context_size);
+    return Model(model_name, host, api_key, chat_endpoint, context_size);
 }
 
 std::string Model::GetName() const
@@ -71,14 +72,14 @@ int Model::GetContextSize() const
     return m_context_size;
 }
 
+std::string Model::GetChatEndpoint() const
+{
+    return m_chat_endpoint;
+}
+
 std::unique_ptr<AiClient> Model::GetClient() const
 {
-    std::unique_ptr<AiClient> client = create_base_client(m_host, m_context_size);
-    client->SetApiKey(m_api_key);
-    client->SetModel(m_name);
-    // Note: Setting context size on the client is not supported by the current AI client interface.
-    // If needed in the future, we can add a SetContextSize method to AiClient.
-    return client;
+    return create_base_client(*this);
 }
 
 inline std::string Model::Trim(const std::string &line)
