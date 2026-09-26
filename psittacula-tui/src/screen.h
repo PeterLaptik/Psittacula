@@ -37,7 +37,7 @@ namespace tui {
 
             void SetShowReasoning(bool reasoning);
 
-            bool GetReasoning() const;
+            bool GetShowReasoning() const;
 
             // Commands list for autocomplete
             void UpdateCommandsAutocompleteList(std::vector<std::string> &commands);

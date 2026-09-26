@@ -106,9 +106,9 @@ void tui::Screen::SetShowReasoning(bool reasoning)
     m_panel_text.SetShowReasoning(reasoning);
 }
 
-bool tui::Screen::GetReasoning() const
+bool tui::Screen::GetShowReasoning() const
 {
-    return m_panel_text.GetReasoning();
+    return m_panel_text.GetShowReasoning();
 }
 
 void tui::Screen::UpdateCommandsAutocompleteList(std::vector<std::string> &commands)

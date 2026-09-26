@@ -12,8 +12,14 @@ class CommandCompress : public ChatCommand
         void Execute(std::unique_ptr<AiClient> &client,
             const std::vector<std::string> &args) override
         {
+            bool reasoning_show_val = m_app->GetShowReasoning();
+            m_app->SetShowReasoning(false);
+
             client->CompressContext();
-            console::write_line("Context compressed.", console::TextOrigin::filesystem);
+
+            console::write_line(" \n Context compressed. \n ", console::TextOrigin::filesystem);
+
+            m_app->SetShowReasoning(reasoning_show_val);
         }
 
         std::string Description() override

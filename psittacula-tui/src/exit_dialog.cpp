@@ -1,6 +1,15 @@
 #include "exit_dialog.h"
 #include <iostream>
 #include <string>
+#ifdef _WIN32
+#include <conio.h>
+#include <windows.h>
+#else
+#include <sys/ioctl.h>
+#include <sys/select.h>
+#include <termios.h>
+#include <unistd.h>
+#endif
 
 tui::ExitDialog::ExitDialog(Screen &screen, Keyboard &keyboard)
     : m_screen(screen)
@@ -56,6 +65,16 @@ bool tui::ExitDialog::Confirm()
             std::cout << std::endl << std::endl;
 
             is_screen_updated = false;
+
+#ifdef _WIN32
+            HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
+            COORD position;
+            position.X = static_cast<SHORT>(0);
+            position.Y = static_cast<SHORT>(0);
+            SetConsoleCursorPosition(console, position);
+#else
+            std::cout << "\033[" << (0 + 1) << ';' << (0 + 1) << 'H';
+#endif
         }
 
         int key = m_keyboard.ReadKey();

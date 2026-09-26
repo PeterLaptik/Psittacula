@@ -1,5 +1,6 @@
 #include "http_client.h"
 #include "response_readers.h"
+#include <chrono>
 #include <iostream>
 #include <curl/curl.h>
 
@@ -59,6 +60,55 @@ std::string HttpClient::HttpGet(const std::string &end_point)
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
     return response;
+}
+
+HttpResult HttpClient::HttpGetFull(const std::string &end_point, long timeout_ms)
+{
+    HttpResult result;
+
+    CURL *curl = curl_easy_init();
+    if (!curl)
+    {
+        result.error = "Failed to init curl";
+        return result;
+    }
+
+    bool full_url = end_point.rfind("http://", 0) == 0 || end_point.rfind("https://", 0) == 0;
+    std::string url = full_url ? end_point : m_host + end_point;
+
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+
+    if (timeout_ms > 0)
+    {
+        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, timeout_ms);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, timeout_ms);
+    }
+
+    struct curl_slist *headers = nullptr;
+    if (!m_api_key.empty())
+    {
+        headers = curl_slist_append(headers, ("Authorization: Bearer " + m_api_key).c_str());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    }
+
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, responses_fn::write_callback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &result.body);
+
+    auto start = std::chrono::steady_clock::now();
+    CURLcode res = curl_easy_perform(curl);
+    auto elapsed = std::chrono::steady_clock::now() - start;
+
+    if (res == CURLE_OK)
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &result.status);
+    else
+        result.error = curl_easy_strerror(res);
+
+    result.latency_ms = (long)std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
+
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+    return result;
 }
 
 void HttpClient::HttpPost(const std::string &end_point, const std::string &data, void *receiver)

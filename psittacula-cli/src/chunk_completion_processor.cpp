@@ -226,7 +226,6 @@ void ChunkCompletionProcessor::CheckTools(JsonDocument &doc)
                 if (fn.HasMember("id") && fn["id"].IsString())
                 {
                     id = fn["id"].GetString();
-                    std::cout << "ID ========== " << id << std::endl;
                 }
 
                 std::string name;
@@ -285,15 +284,6 @@ void ChunkCompletionProcessor::OutputReasoning(const std::string &msg) const
     {
         console::write(msg, TextOrigin::reasoning);
         console::flush();
-    }
-    else
-    {
-        progress_cursor = (progress_cursor >= 3 ? 0 : progress_cursor + 1);
-        std::string r_msg = "\rReasoning ";
-        r_msg += progress[progress_cursor];
-        console::write(r_msg, TextOrigin::reasoning);
-        if (m_total_tokens > 0)
-            console::write("\ttokens: " + std::to_string(m_total_tokens), TextOrigin::reasoning);
     }
 }
 

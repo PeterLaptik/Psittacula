@@ -138,7 +138,11 @@ void console::write(const std::string &message, TextOrigin origin)
 {
     if (text_receiver)
     {
-        text_receiver->Write(message, origin);
+        // Ignore: trailing '\r' spoils text in receiver 
+        // It is used for hidden reasoning for old-way console
+        if(!message.empty() && message[0] != '\r') 
+            text_receiver->Write(message, origin);
+
         return;
     }
 

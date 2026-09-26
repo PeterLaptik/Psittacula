@@ -477,44 +477,6 @@ void DialogueBody::ClearContext()
     }
 }
 
-auto get_file_path_from_content_string = [](const std::string &content) {
-    std::string escaped_content;
-    for (char c : content) {
-        if (c == '\\') 
-            escaped_content += R"(\\)";
-        else 
-            escaped_content += c;
-    }
-
-    std::string result = "null";
-
-    rapidjson::Document parsed;
-    parsed.Parse(escaped_content.c_str());
-    if (!parsed.HasParseError())
-    {
-        if (parsed.HasMember("file") && parsed["file"].IsObject()) // Pervious calls results path extraction
-        {
-            auto file = parsed["file"].GetObject();
-            if (file.HasMember("path") && file["path"].IsString())
-                result = file["path"].GetString();
-        }
-    }
-    else
-    {
-        std::cout << "Tool file path JSON parse error: " << rapidjson::GetParseError_En(parsed.GetParseError()) << std::endl;
-    }
-
-    // Unescape slashes
-    size_t pos = 0;
-    while ((pos = result.find("\\\\", pos)) != std::string::npos) 
-    {
-        result.replace(pos, 2, "\\");
-        pos += 1;
-    }
-
-    return result;
-};
-
 // Exchange previous file contents with a success message if the file was read in the current responses
 void DialogueBody::PurgePreviousFileContents(const std::vector<ToolResponse> &responses)
 {

@@ -166,7 +166,7 @@ void tui::PanelText::SetShowReasoning(bool reasoning)
     NotifyParentAboutChanges();
 }
 
-bool tui::PanelText::GetReasoning() const
+bool tui::PanelText::GetShowReasoning() const
 {
     return m_text_content.GetShowReasoning();
 }

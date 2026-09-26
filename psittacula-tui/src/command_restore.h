@@ -21,8 +21,14 @@ class CommandRestore : public ChatCommand
                 return;
             }
 
+            std::string file_name = args[0];
+
+            // Add .txt extension, if the file name does not have it
+            if (file_name.size() < 4 || file_name.compare(file_name.size() - 4, 4, ".txt") != 0)
+                file_name += ".txt";
+
             std::string log_dir = WorkingDir::GetInstance().GetLogsDir();
-            std::string file_path = log_dir + "/" + args[0];
+            std::string file_path = log_dir + "/" + file_name;
 
             // Read file contents
             std::ifstream in(file_path, std::ios::in);

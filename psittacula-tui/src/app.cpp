@@ -63,9 +63,9 @@ void tui::App::SetShowReasoning(bool reasoning)
     m_screen.SetShowReasoning(reasoning);
 }
 
-bool tui::App::GetReasoning() const
+bool tui::App::GetShowReasoning() const
 {
-    return m_screen.GetReasoning();
+    return m_screen.GetShowReasoning();
 }
 
 void tui::App::WriteLine(const std::string &message, TextOrigin origin)

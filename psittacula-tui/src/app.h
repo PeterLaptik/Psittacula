@@ -37,7 +37,7 @@ namespace tui {
 
             void SetShowReasoning(bool reasoning);
 
-            bool GetReasoning() const;
+            bool GetShowReasoning() const;
 
             // Text receiver interface for system output
             void WriteLine(const std::string &message, TextOrigin origin = TextOrigin::normal) override;

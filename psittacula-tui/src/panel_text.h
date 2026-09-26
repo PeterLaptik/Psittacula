@@ -25,7 +25,7 @@ namespace tui {
 
             void SetShowReasoning(bool reasoning);
 
-            bool GetReasoning() const;
+            bool GetShowReasoning() const;
 
             /// Scrolls visible text: up = towards older lines, down = back to the newest
             void ScrollUp(int lines);

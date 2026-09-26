@@ -304,12 +304,12 @@ void AiClientImpl::CompressContext()
         return;
     }
 
-    console::write_line("Compressing context. Please wait...", console::TextOrigin::error);
+    console::write_line(" \n Compressing context. Please wait... \n DO NOT INTERRUPT! \n ", console::TextOrigin::error);
 
     // Send the summarization request using the same streaming flow as a normal reply.
     // Only the response text is needed here; tool calls are intentionally ignored.
     ChunkCompletionProcessor proc; // POST response chunk receiver
-    proc.SetShowReasoning(false);
+    //proc.SetShowReasoning(false);
     proc.SetCancelFlag(&m_cancelled);
     std::string end_point_chat_completions = GetChatCompletionsEndpoint();
     m_http_client.HttpPostStream(end_point_chat_completions, summary_body, &proc);
@@ -333,7 +333,7 @@ void AiClientImpl::CompressContext()
     // summary, and the last kMessagesToKeep messages.
     std::string summarized_msg = proc.GetResponseMessage();
     m_body_obj.Compress(summarized_msg, kMessagesToKeep);
-    proc.SetShowReasoning(m_show_reasoning);
+    //proc.SetShowReasoning(m_show_reasoning);
 }
 
 void AiClientImpl::RestoreDialogueFrom(const std::string &data)
