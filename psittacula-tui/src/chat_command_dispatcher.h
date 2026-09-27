@@ -169,7 +169,7 @@ class ChatCommandDispatcher
         void DrawCommandMenu(const std::vector<std::pair<std::string, std::string>> &commands, int index)
         {
             std::cout << "\x1b[2J\x1b[H";
-            console::write_line("--------------------------------------------------------------", console::TextOrigin::filesystem);
+            console::write_line("--------------------------------------------------------------", console::TextOrigin::tools);
             console::write_line("\033[1mSelect a command to execute\033[0m");
             console::write_line("Use Up/Down to navigate, Enter to select, Escape to quit.\n");
 
@@ -204,7 +204,7 @@ class ChatCommandDispatcher
                 return item_1.first < item_2.first;
                 });
 
-            console::write_line("---------------------------------------------", console::TextOrigin::filesystem);
+            console::write_line("---------------------------------------------", console::TextOrigin::tools);
             console::write_line("\033[1mAvialable commands:\033[0m");
             for (auto &cmd_desc : cmd_list)
             {

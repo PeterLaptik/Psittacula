@@ -178,7 +178,7 @@ void WorkingDir::CreateWorkingDirs()
 
     if (!fs::exists(home_dir))
     {
-        console::write_line(m_fmt.Format("Creating working dir: %?", home_dir.string()), TextOrigin::filesystem);
+        console::write_line(m_fmt.Format("Creating working dir: %?", home_dir.string()), TextOrigin::tools);
         std::error_code ec;
         fs::create_directories(home_dir, ec);
         if (ec) 

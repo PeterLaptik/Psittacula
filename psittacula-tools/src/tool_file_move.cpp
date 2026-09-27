@@ -28,7 +28,7 @@ std::string FileMoveTool::Execute(std::vector<ToolParameter> &params_values)
     Formatter fmt;
     WorkingDir &wdir = WorkingDir::GetInstance();
 
-    console::write_line("File move tool.", console::TextOrigin::filesystem);
+    console::write_line("File move tool.", console::TextOrigin::tools);
 
     std::string rel_from = GetParam(params_values, "from");
     UnescapeSlashesInPath(rel_from);
@@ -66,7 +66,7 @@ std::string FileMoveTool::Execute(std::vector<ToolParameter> &params_values)
         );
     }
 
-    console::write_line(fmt.Format("Moving file: %? -> %?", old_path, new_path), console::TextOrigin::filesystem);
+    console::write_line(fmt.Format("Moving file: %? -> %?", old_path, new_path), console::TextOrigin::tools);
 
     std::error_code ec;
     std::filesystem::rename(old_path, new_path, ec);
@@ -104,7 +104,7 @@ void FileMoveTool::Undo()
     if (!executed)
         return;
 
-    console::write_line("Undo file move: " + new_path + " -> " + old_path, console::TextOrigin::filesystem);
+    console::write_line("Undo file move: " + new_path + " -> " + old_path, console::TextOrigin::tools);
 
     std::error_code ec;
     std::filesystem::rename(new_path, old_path, ec);
@@ -115,7 +115,7 @@ void FileMoveTool::Redo()
     if (!executed)
         return;
 
-    console::write_line("Redo file move: " + old_path + " -> " + new_path, console::TextOrigin::filesystem);
+    console::write_line("Redo file move: " + old_path + " -> " + new_path, console::TextOrigin::tools);
 
     std::error_code ec;
     std::filesystem::rename(old_path, new_path, ec);

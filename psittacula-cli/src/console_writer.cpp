@@ -34,7 +34,7 @@ const char* console::get_origin_colour(TextOrigin origin)
         case TextOrigin::error:
             result = kRed;
             break;
-        case TextOrigin::filesystem:
+        case TextOrigin::tools:
             result = kCyan;
             break;
         case TextOrigin::reasoning:

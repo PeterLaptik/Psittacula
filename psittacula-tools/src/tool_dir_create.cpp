@@ -20,11 +20,11 @@ std::string DirCreateTool::Execute(std::vector<ToolParameter> &params_values)
     Formatter fmt;
     WorkingDir &wdir = WorkingDir::GetInstance();
 
-    console::write_line("Directory create tool.", console::TextOrigin::filesystem);
+    console::write_line("Directory create tool.", console::TextOrigin::tools);
 
     std::string path = GetParam(params_values, "path");
     UnescapeSlashesInPath(path);
-    console::write_line("Path: " + path, console::TextOrigin::filesystem);
+    console::write_line("Path: " + path, console::TextOrigin::tools);
 
     if (path.empty())
     {
@@ -40,7 +40,7 @@ std::string DirCreateTool::Execute(std::vector<ToolParameter> &params_values)
 
     bool existed_before = std::filesystem::exists(path);
 
-    console::write_line(fmt.Format("Creating directory: %?", path), console::TextOrigin::filesystem);
+    console::write_line(fmt.Format("Creating directory: %?", path), console::TextOrigin::tools);
 
     if (!std::filesystem::create_directories(path) && !existed_before) 
     {

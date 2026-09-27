@@ -17,7 +17,7 @@ class CommandCompress : public ChatCommand
 
             client->CompressContext();
 
-            console::write_line(" \n Context compressed. \n ", console::TextOrigin::filesystem);
+            console::write_line(" \n Context compressed. \n ", console::TextOrigin::tools);
 
             m_app->SetShowReasoning(reasoning_show_val);
         }

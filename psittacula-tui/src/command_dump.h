@@ -56,7 +56,7 @@ class CommandDump : public ChatCommand
             out << body;
             out.close();
 
-            console::write_line("Dialogue body saved to: " + file_path, TextOrigin::filesystem);
+            console::write_line("Dialogue body saved to: " + file_path, TextOrigin::tools);
         }
 
         std::string Description() override

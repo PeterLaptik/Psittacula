@@ -178,7 +178,7 @@ void WebFetchTool::GetParameters(std::vector<ToolParameter> &params_acc)
 std::string WebFetchTool::Execute(std::vector<ToolParameter> &params_values)
 {
     Formatter fmt;
-    console::write_line("Web fetch tool.", console::TextOrigin::filesystem);
+    console::write_line("Web fetch tool.", console::TextOrigin::tools);
 
     std::string url = GetParam(params_values, "url");
     if (url.empty())
@@ -227,7 +227,7 @@ std::string WebFetchTool::Execute(std::vector<ToolParameter> &params_values)
 
     std::string user_agent = GetParam(params_values, "user_agent", "Psittacula-Agent/0.8.3");
 
-    console::write_line(fmt.Format("Fetching: %?", url), console::TextOrigin::filesystem);
+    console::write_line(fmt.Format("Fetching: %?", url), console::TextOrigin::tools);
 
     curl_global_init(CURL_GLOBAL_DEFAULT);
 

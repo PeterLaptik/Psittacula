@@ -30,7 +30,7 @@ std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
     Formatter fmt;
     WorkingDir &wdir = WorkingDir::GetInstance();
 
-    console::write_line("Directory delete tool.", console::TextOrigin::filesystem);
+    console::write_line("Directory delete tool.", console::TextOrigin::tools);
 
     std::string path = GetParam(params_values, "path");
     UnescapeSlashesInPath(path);
@@ -79,7 +79,7 @@ std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
     existed_before = true;
     last_path = path;
 
-    console::write_line(fmt.Format("Deleting directory: %?", path), console::TextOrigin::filesystem);
+    console::write_line(fmt.Format("Deleting directory: %?", path), console::TextOrigin::tools);
 
     std::error_code ec;
 
@@ -128,7 +128,7 @@ void DirDeleteTool::Undo()
     if (!executed)
         return;
 
-    console::write_line("Undo directory delete: " + last_path, console::TextOrigin::filesystem);
+    console::write_line("Undo directory delete: " + last_path, console::TextOrigin::tools);
     std::filesystem::create_directories(last_path);
 }
 
@@ -137,7 +137,7 @@ void DirDeleteTool::Redo()
     if (!executed)
         return;
 
-    console::write_line("Redo directory delete: " + last_path, console::TextOrigin::filesystem);
+    console::write_line("Redo directory delete: " + last_path, console::TextOrigin::tools);
 
     std::error_code ec;
 

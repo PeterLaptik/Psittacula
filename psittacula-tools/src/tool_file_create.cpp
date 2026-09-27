@@ -28,11 +28,11 @@ std::string FileCreateTool::Execute(std::vector<ToolParameter> &params_values)
     Formatter fmt;
     WorkingDir &wdir = WorkingDir::GetInstance();
 
-    console::write_line("File create tool.", console::TextOrigin::filesystem);
+    console::write_line("File create tool.", console::TextOrigin::tools);
 
     std::string path = GetParam(params_values, "path");
     UnescapeSlashesInPath(path);
-    console::write_line("Path: " + path, console::TextOrigin::filesystem);
+    console::write_line("Path: " + path, console::TextOrigin::tools);
 
     std::string content = GetParam(params_values, "content");
     // Unescape?
@@ -49,7 +49,7 @@ std::string FileCreateTool::Execute(std::vector<ToolParameter> &params_values)
         return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory (%?)\",\"path\":\"%?\"}}", wdir.GetProjectDir(), path);
     }
 
-    console::write_line("Creating file: " + path, console::TextOrigin::filesystem);
+    console::write_line("Creating file: " + path, console::TextOrigin::tools);
 
     last_path = path;
     last_content = content;
@@ -126,7 +126,7 @@ void FileCreateTool::Undo()
     if (!executed)
         return;
 
-    console::write_line("Removing file: " + last_path, console::TextOrigin::filesystem);
+    console::write_line("Removing file: " + last_path, console::TextOrigin::tools);
 
     if (!existing_file_dump.empty()) 
     {
@@ -149,7 +149,7 @@ void FileCreateTool::Redo()
     if (!executed)
         return;
 
-    console::write_line("Creating file again: " + last_path, console::TextOrigin::filesystem);
+    console::write_line("Creating file again: " + last_path, console::TextOrigin::tools);
 
     std::ofstream out(last_path);
     out << last_content;

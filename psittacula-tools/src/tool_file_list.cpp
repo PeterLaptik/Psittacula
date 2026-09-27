@@ -42,7 +42,7 @@ std::string FileListTool::Execute(std::vector<ToolParameter> &params_values)
     Formatter fmt;
     WorkingDir &wdir = WorkingDir::GetInstance();
 
-    console::write_line("File list tool.", console::TextOrigin::filesystem);
+    console::write_line("File list tool.", console::TextOrigin::tools);
 
     std::string path = GetParam(params_values, "path");
     UnescapeSlashesInPath(path);
@@ -63,7 +63,7 @@ std::string FileListTool::Execute(std::vector<ToolParameter> &params_values)
         return R"({"error":{"type":"invalid_arguments","message":"Listing root or current directory is not allowed"}})";
     }
 
-    console::write_line("Screening: " + path, console::TextOrigin::filesystem);
+    console::write_line("Screening: " + path, console::TextOrigin::tools);
 
     if (!wdir.IsInWorkDir(path))
     {

@@ -16,7 +16,7 @@ namespace console {
     enum class TextOrigin {
         normal,
         machine,
-        filesystem,
+        tools,
         reasoning,
         splitter,
         error

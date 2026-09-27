@@ -197,7 +197,7 @@ void DialogueBody::ClearHistory()
 
 void DialogueBody::SetModel(const std::string &model)
 {
-    std::cout << "Setting up model: " << model << std::endl;
+    console::write("Setting up model: " + model + " \n --- ", console::TextOrigin::tools);
     if (!m_request->body.HasMember("model"))
     {
         std::cout << "\033[31mInternal error: no body field for model!" << std::endl;
@@ -376,14 +376,17 @@ void DialogueBody::FromJsonString(const std::string data)
 
         console::TextOrigin origin = console::TextOrigin::normal;
         if (role == "system")
-            origin = console::TextOrigin::filesystem;
+            origin = console::TextOrigin::tools;
         else if (role == "assistant")
             origin = console::TextOrigin::machine;
         else if(role == "tool")
-            origin = console::TextOrigin::filesystem;
+            origin = console::TextOrigin::tools;
 
-        console::write_line(message, origin);
-        console::write_splitter();
+        if (role != "system")
+        {
+            console::write_line(message, origin);
+            console::write_splitter();
+        }
     }
 }
 

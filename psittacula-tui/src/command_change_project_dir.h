@@ -21,7 +21,7 @@ class CommandChangeProjectDir : public ChatCommand
             namespace fs = std::filesystem;
 
             std::string current_dir = WorkingDir::GetInstance().GetWorkDir();
-            console::write_line("Current project directory:", TextOrigin::filesystem);
+            console::write_line("Current project directory:", TextOrigin::tools);
             console::write_line("  " + current_dir + "\n");
 
             std::string new_path;
@@ -79,7 +79,7 @@ class CommandChangeProjectDir : public ChatCommand
                         RestoreMainScreen();
                         return;
                     }
-                    console::write_line("Directory created.\n", TextOrigin::filesystem);
+                    console::write_line("Directory created.\n", TextOrigin::tools);
                 }
                 else
                 {
@@ -92,7 +92,7 @@ class CommandChangeProjectDir : public ChatCommand
             WorkingDir::GetInstance().SetProjectDir(p.string());
 
             RestoreMainScreen();
-            console::write_line("Project directory changed to:", TextOrigin::filesystem);
+            console::write_line("Project directory changed to:", TextOrigin::tools);
             console::write_line("  " + p.string() + "\n");
         }
 

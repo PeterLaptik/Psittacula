@@ -18,7 +18,7 @@ class CommandTools : public ChatCommand
 
             std::vector<std::pair<std::string, std::string>> tools;
             client.get()->GetToolsInfo(tools);
-            console::write_line("---------------------------------------------", TextOrigin::filesystem);
+            console::write_line("---------------------------------------------", TextOrigin::tools);
             console::write_line("\033[1mAvailable tools:\033[0m");
             for (const auto &tool : tools)
             {

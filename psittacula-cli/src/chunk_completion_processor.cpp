@@ -275,7 +275,7 @@ void ChunkCompletionProcessor::CheckErrors(JsonDocument &doc)
 
 void ChunkCompletionProcessor::OutputSystemMessage(const std::string &msg)
 {
-    console::write(msg, TextOrigin::filesystem);
+    console::write(msg, TextOrigin::tools);
 }
 
 void ChunkCompletionProcessor::OutputReasoning(const std::string &msg) const

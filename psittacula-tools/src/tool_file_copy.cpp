@@ -29,7 +29,7 @@ std::string FileCopyTool::Execute(std::vector<ToolParameter> &params_values)
     Formatter fmt;
     WorkingDir &wdir = WorkingDir::GetInstance();
 
-    console::write_line("File copy tool.", console::TextOrigin::filesystem);
+    console::write_line("File copy tool.", console::TextOrigin::tools);
 
     std::string rel_from = GetParam(params_values, "from");
     UnescapeSlashesInPath(rel_from);
@@ -74,7 +74,7 @@ std::string FileCopyTool::Execute(std::vector<ToolParameter> &params_values)
         );
     }
 
-    console::write_line(fmt.Format("Copying file: %? -> %?", src_path, dst_path), console::TextOrigin::filesystem);
+    console::write_line(fmt.Format("Copying file: %? -> %?", src_path, dst_path), console::TextOrigin::tools);
 
     std::error_code ec;
     std::filesystem::copy_file(src_path, dst_path, std::filesystem::copy_options::overwrite_existing, ec);
@@ -115,7 +115,7 @@ void FileCopyTool::Undo()
     if (!executed)
         return;
 
-    console::write_line("Undo file copy: removing " + dst_path, console::TextOrigin::filesystem);
+    console::write_line("Undo file copy: removing " + dst_path, console::TextOrigin::tools);
 
     if (dst_existed_before)
     {
@@ -135,7 +135,7 @@ void FileCopyTool::Redo()
     if (!executed)
         return;
 
-    console::write_line("Redo file copy: " + src_path + " -> " + dst_path, console::TextOrigin::filesystem);
+    console::write_line("Redo file copy: " + src_path + " -> " + dst_path, console::TextOrigin::tools);
 
     std::error_code ec;
     std::filesystem::copy_file(src_path, dst_path, std::filesystem::copy_options::overwrite_existing, ec);

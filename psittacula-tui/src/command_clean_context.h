@@ -14,7 +14,7 @@ class CommandCleanContext : public ChatCommand
             const std::vector<std::string> &args) override
         {
             client->ClearContext();
-            console::write_line("Context cleared.", TextOrigin::filesystem);
+            console::write_line("Context cleared.", TextOrigin::tools);
             console::write_line("-----", TextOrigin::normal);
             console::write(GetLogo());
         }

@@ -2,10 +2,12 @@
 #define COMMAND_CHANGE_MODEL_INCLUDED_H
 
 #include "chat_command.h"
+#include "command_clean_context.h"
 #include "console_writer.h"
 #include "format_util.h"
 #include "working_dir.h"
 #include "model.h"
+#include "llm_connectivity_checker.h"
 #include <iostream>
 #include <fstream>
 #include <filesystem>
@@ -123,14 +125,41 @@ class CommandChangeModel: public ChatCommand
 
             // Load selected model
             Model model = Model::FromFile(models[index]);
+
+            std::cout << formatter.Format("Checking connectivity with '%?' ...", model.GetName());
+
+            LlmConnectivityChecker checker(model.GetHost(), model.GetApiKey());
+            LlmConnectivityState state = checker.Check();
+
+            RestoreMainScreen();
+
+            console::write_line(state.summary + "\n ", state.reachable ? TextOrigin::tools : TextOrigin::error);
+
+            if (!state.reachable)
+            {
+                for (auto &probe : state.probes)
+                {
+                    std::string info = probe.details.empty() ? probe.error : probe.details;
+                    console::write_line(formatter.Format("  %?: %? (%?ms)", probe.name, info, probe.latency_ms), TextOrigin::error);
+                }
+
+                m_app->RefreshStatus("\033[31mCannot connect to the selected model.\033[31m");
+                return;
+            }
+
             std::unique_ptr<AiClient> created_client = model.GetClient();
 
             if(client.get() != nullptr)
-                created_client->RestoreDialogueFrom(client->GetDialogueBody());
+            { 
+                std::string full_dialogue = client->GetDialogueBody();
+
+                CommandCleanContext cmd_clean{ m_app };
+                cmd_clean.Execute(client, {});
+
+                created_client->RestoreDialogueFrom(full_dialogue);
+            }
 
             client.reset(created_client.release());
-
-            RestoreMainScreen();
         }
 
         void CreateModel(std::unique_ptr<AiClient> &client)
@@ -142,7 +171,7 @@ class CommandChangeModel: public ChatCommand
             if (no_models)
                 console::write_line("No models found. Create at least one connection!\n\n", TextOrigin::error);
 
-            console::write_line("============ Create new model connection ==================", TextOrigin::filesystem);
+            console::write_line("============ Create new model connection ==================", TextOrigin::tools);
 
             std::string file_name;
             std::string model_name;
@@ -218,17 +247,17 @@ class CommandChangeModel: public ChatCommand
 
             RestoreMainScreen();
 
-            console::write_line("Configuration file '" + file_path + "' created successfully.\n", TextOrigin::filesystem);
+            console::write_line("Configuration file '" + file_path + "' created successfully.\n", TextOrigin::tools);
         }
 
         // Main menu to choose a model
         void DrawMenu(const std::vector<std::string> &models, int index)
         {
             std::cout << "\x1b[2J\x1b[H"; // clear + home
-            console::write_line("====================================================", TextOrigin::filesystem);
-            console::write_line("============ Choose model to work ==================", TextOrigin::filesystem);
-            console::write_line("====================================================", TextOrigin::filesystem);
-            console::write_line(formatter.Format("Found models: %?", models.size()), TextOrigin::filesystem);
+            console::write_line("====================================================", TextOrigin::tools);
+            console::write_line("============ Choose model to work ==================", TextOrigin::tools);
+            console::write_line("====================================================", TextOrigin::tools);
+            console::write_line(formatter.Format("Found models: %?", models.size()), TextOrigin::tools);
             console::write_line("Use Up/Down to choose, Enter to select.\n");
 
             for (int i = 0; i < models.size(); ++i)

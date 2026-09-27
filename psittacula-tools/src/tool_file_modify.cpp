@@ -63,10 +63,10 @@ std::string FileModifyTool::Execute(std::vector<ToolParameter> &params_values)
     Formatter fmt;
     WorkingDir &wdir = WorkingDir::GetInstance();
 
-    console::write_line("File modify tool.", console::TextOrigin::filesystem);
+    console::write_line("File modify tool.", console::TextOrigin::tools);
     std::string path = GetParam(params_values, "path");
     UnescapeSlashesInPath(path);
-    console::write_line("Path: " + path, console::TextOrigin::filesystem);
+    console::write_line("Path: " + path, console::TextOrigin::tools);
 
     std::string content = GetParam(params_values, "content");
     mode = GetParam(params_values, "mode");

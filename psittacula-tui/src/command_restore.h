@@ -43,10 +43,13 @@ class CommandRestore : public ChatCommand
                                 std::istreambuf_iterator<char>());
             in.close();
 
+            CommandCleanContext cmd_clean{m_app};
+            cmd_clean.Execute(client, {});
+
             // Restore dialogue from file contents
             client->RestoreDialogueFrom(content);
 
-            console::write_line("Dialogue restored from: " + file_path, TextOrigin::filesystem);
+            console::write_line("Dialogue restored from: " + file_path, TextOrigin::tools);
         }
 
         std::string Description() override

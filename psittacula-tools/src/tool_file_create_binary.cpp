@@ -64,7 +64,7 @@ std::string FileCreateBinaryTool::Execute(std::vector<ToolParameter> &params_val
     Formatter fmt;
     WorkingDir &wdir = WorkingDir::GetInstance();
 
-    console::write_line("Binary file create tool.", console::TextOrigin::filesystem);
+    console::write_line("Binary file create tool.", console::TextOrigin::tools);
 
     std::string path = GetParam(params_values, "path");
     UnescapeSlashesInPath(path);
@@ -89,7 +89,7 @@ std::string FileCreateBinaryTool::Execute(std::vector<ToolParameter> &params_val
         return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory (%?)\",\"path\":\"%?\"}}", wdir.GetProjectDir(), path);
     }
 
-    console::write_line("Creating binary file: " + path, console::TextOrigin::filesystem);
+    console::write_line("Creating binary file: " + path, console::TextOrigin::tools);
 
     last_path = path;
     executed = false;
@@ -150,7 +150,7 @@ void FileCreateBinaryTool::Undo()
     if (!executed)
         return;
 
-    console::write_line("Undo binary file create: " + last_path, console::TextOrigin::filesystem);
+    console::write_line("Undo binary file create: " + last_path, console::TextOrigin::tools);
 
     if (!existing_file_dump.empty())
     {
@@ -169,7 +169,7 @@ void FileCreateBinaryTool::Redo()
     if (!executed)
         return;
 
-    console::write_line("Redo binary file create: " + last_path, console::TextOrigin::filesystem);
+    console::write_line("Redo binary file create: " + last_path, console::TextOrigin::tools);
 
     std::ofstream out(last_path, std::ios::binary);
     out.write(reinterpret_cast<const char *>(last_content.data()), last_content.size());

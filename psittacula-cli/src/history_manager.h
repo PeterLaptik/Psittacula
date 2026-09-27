@@ -31,7 +31,7 @@ class HistoryManager
         {
             if (undo_stack.empty())
             {
-                console::write_line("No operations to undo", console::TextOrigin::filesystem);
+                console::write_line("No operations to undo", console::TextOrigin::tools);
                 return;
             } 
 
@@ -58,7 +58,7 @@ class HistoryManager
         {
             if (redo_stack.empty())
             {
-                console::write_line("No operations to redo.", console::TextOrigin::filesystem);
+                console::write_line("No operations to redo.", console::TextOrigin::tools);
                 return;
             }
 

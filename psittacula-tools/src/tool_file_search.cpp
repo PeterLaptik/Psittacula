@@ -50,10 +50,10 @@ std::string FileSearchTool::Execute(std::vector<ToolParameter> &params_values)
     Formatter fmt;
     WorkingDir &wdir = WorkingDir::GetInstance();
 
-    console::write_line("File search tool.", console::TextOrigin::filesystem);
+    console::write_line("File search tool.", console::TextOrigin::tools);
 
     std::string path = GetParam(params_values, "path");
-    console::write_line("Search path:", console::TextOrigin::filesystem);
+    console::write_line("Search path:", console::TextOrigin::tools);
     UnescapeSlashesInPath(path);
 
     bool case_sensitive = GetParamBool(params_values, "case_sensitive", false);
@@ -61,7 +61,7 @@ std::string FileSearchTool::Execute(std::vector<ToolParameter> &params_values)
 
     std::string query = GetParam(params_values, "query");
     std::string regex_pattern = GetParam(params_values, "regex");
-    console::write_line(query.empty() ? ("Pattern: " + regex_pattern) : ("Query: " + query), console::TextOrigin::filesystem);
+    console::write_line(query.empty() ? ("Pattern: " + regex_pattern) : ("Query: " + query), console::TextOrigin::tools);
 
     if (path.empty())
     {

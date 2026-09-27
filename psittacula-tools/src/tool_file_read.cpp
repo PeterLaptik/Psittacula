@@ -60,13 +60,13 @@ std::string FileReadTool::Execute(std::vector<ToolParameter> &params_values)
     Formatter fmt;
     WorkingDir &wdir = WorkingDir::GetInstance();
 
-    console::write_line("File read tool.", console::TextOrigin::filesystem);
+    console::write_line("File read tool.", console::TextOrigin::tools);
 
     std::string path = GetParam(params_values, "path");
 
     bool binary_mode = GetParamBool(params_values, "binary", false);
 
-    console::write_line(fmt.Format("Path: %?", path), console::TextOrigin::filesystem);
+    console::write_line(fmt.Format("Path: %?", path), console::TextOrigin::tools);
 
     if (path.empty())
     {

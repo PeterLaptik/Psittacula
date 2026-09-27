@@ -61,9 +61,9 @@ class CommandChangeRules : public ChatCommand
             ActivateAlternateScreen();
             
             std::cout << "\x1b[2J\x1b[H";
-            console::write_line("====================================================", TextOrigin::filesystem);
-            console::write_line("================= Current Agent Rules ===============", TextOrigin::filesystem);
-            console::write_line("====================================================", TextOrigin::filesystem);
+            console::write_line("====================================================", TextOrigin::tools);
+            console::write_line("================= Current Agent Rules ===============", TextOrigin::tools);
+            console::write_line("====================================================", TextOrigin::tools);
             
             std::string rules = client->GetAgentRules();
             console::write_line(rules);
@@ -157,16 +157,16 @@ class CommandChangeRules : public ChatCommand
             client->SetAgentRules(agent_prompt);
 
             RestoreMainScreen();
-            console::write_line("Agent rules loaded: " + selected_file, TextOrigin::filesystem);
+            console::write_line("Agent rules loaded: " + selected_file, TextOrigin::tools);
         }
 
         void DrawMenu(const std::vector<std::string> &agents, int index)
         {
             std::cout << "\x1b[2J\x1b[H";
-            console::write_line("====================================================", TextOrigin::filesystem);
-            console::write_line("============ Choose agent rules to load ==============", TextOrigin::filesystem);
-            console::write_line("====================================================", TextOrigin::filesystem);
-            console::write_line(formatter.Format("Found agent rules: %?", agents.size()), TextOrigin::filesystem);
+            console::write_line("====================================================", TextOrigin::tools);
+            console::write_line("============ Choose agent rules to load ==============", TextOrigin::tools);
+            console::write_line("====================================================", TextOrigin::tools);
+            console::write_line(formatter.Format("Found agent rules: %?", agents.size()), TextOrigin::tools);
             console::write_line("Use Up/Down to choose, Enter to select.\n");
 
             for (int i = 0; i < agents.size(); ++i)

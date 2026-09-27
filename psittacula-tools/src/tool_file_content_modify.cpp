@@ -35,11 +35,11 @@ std::string FileContentModifyTool::Execute(std::vector<ToolParameter> &params_va
     Formatter fmt;
     WorkingDir &wdir = WorkingDir::GetInstance();
 
-    console::write_line("File content modify tool.", console::TextOrigin::filesystem);
+    console::write_line("File content modify tool.", console::TextOrigin::tools);
 
     std::string file_path = GetParam(params_values, "file_path");
     UnescapeSlashesInPath(file_path);
-    console::write_line("Path: " + file_path, console::TextOrigin::filesystem);
+    console::write_line("Path: " + file_path, console::TextOrigin::tools);
 
     std::string old_str = GetParam(params_values, "old_str");
     std::string new_str = GetParam(params_values, "new_str");
@@ -161,7 +161,7 @@ void FileContentModifyTool::Undo()
     if (!executed)
         return;
 
-    console::write_line("Restoring file: " + last_path, console::TextOrigin::filesystem);
+    console::write_line("Restoring file: " + last_path, console::TextOrigin::tools);
 
     std::ofstream out(last_path);
     if (out) 
@@ -180,7 +180,7 @@ void FileContentModifyTool::Redo()
     if (!executed)
         return;
 
-    console::write_line("Reapplying modification: " + last_path, console::TextOrigin::filesystem);
+    console::write_line("Reapplying modification: " + last_path, console::TextOrigin::tools);
 
     std::ofstream out(last_path);
     if (out) 
