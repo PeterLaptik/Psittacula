@@ -14,7 +14,12 @@
 
 #ifdef _WIN32
 #include <conio.h>
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
 #else
+#include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
 #endif
@@ -146,6 +151,12 @@ class CommandChangeModel: public ChatCommand
                 m_app->RefreshStatus("\033[31mCannot connect to the selected model.\033[31m");
                 return;
             }
+            else
+            {
+                // TODO
+                // Write a short model info
+                //m_app->RefreshStatus();
+            }
 
             std::unique_ptr<AiClient> created_client = model.GetClient();
 
@@ -250,23 +261,89 @@ class CommandChangeModel: public ChatCommand
             console::write_line("Configuration file '" + file_path + "' created successfully.\n", TextOrigin::tools);
         }
 
+        int TerminalWidth() const
+        {
+#ifdef _WIN32
+            HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
+            CONSOLE_SCREEN_BUFFER_INFO info;
+            if (console != INVALID_HANDLE_VALUE && console != nullptr &&
+                GetConsoleScreenBufferInfo(console, &info))
+            {
+                return info.srWindow.Right - info.srWindow.Left + 1;
+            }
+#else
+            winsize ws = {};
+            if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0 && ws.ws_col > 0)
+                return ws.ws_col;
+#endif
+            return 80;
+        }
+
+        int TextWidth(const std::string &text) const
+        {
+            int width = 0;
+            for (size_t i = 0; i < text.size();)
+            {
+                if (text[i] == '\033')
+                {
+                    size_t end = text.find('m', i + 1);
+                    if (end == std::string::npos)
+                        break;
+                    i = end + 1;
+                    continue;
+                }
+
+                size_t step = 1;
+                unsigned char lead = static_cast<unsigned char>(text[i]);
+                if ((lead & 0xE0) == 0xC0)
+                    step = 2;
+                else if ((lead & 0xF0) == 0xE0)
+                    step = 3;
+                else if ((lead & 0xF8) == 0xF0)
+                    step = 4;
+                if (i + step > text.size())
+                    break;
+
+                i += step;
+                ++width;
+            }
+            return width;
+        }
+
+        void WriteCentered(const std::string &text, TextOrigin origin = TextOrigin::normal)
+        {
+            int pad = (TerminalWidth() - TextWidth(text)) / 2;
+            if (pad < 0)
+                pad = 0;
+            std::cout << std::string(static_cast<size_t>(pad), ' ');
+            console::write_line(text, origin);
+        }
+
         // Main menu to choose a model
         void DrawMenu(const std::vector<std::string> &models, int index)
         {
             std::cout << "\x1b[2J\x1b[H"; // clear + home
-            console::write_line("====================================================", TextOrigin::tools);
-            console::write_line("============ Choose model to work ==================", TextOrigin::tools);
-            console::write_line("====================================================", TextOrigin::tools);
-            console::write_line(formatter.Format("Found models: %?", models.size()), TextOrigin::tools);
-            console::write_line("Use Up/Down to choose, Enter to select.\n");
+            WriteCentered("====================================================", TextOrigin::tools);
+            WriteCentered("============ Choose model to work ==================", TextOrigin::tools);
+            WriteCentered("====================================================", TextOrigin::tools);
+            WriteCentered(formatter.Format("Found models: %?", models.size()), TextOrigin::tools);
+            WriteCentered("Use Up/Down to choose, Enter to select.\n");
 
             for (int i = 0; i < models.size(); ++i)
             {
+                std::string item = std::to_string(i + 1) + " - " + models[i];
+
+                int pad = (TerminalWidth() - TextWidth(item)) / 2;
+                if (pad < 0)
+                    pad = 0;
+
+                std::cout << std::string(static_cast<size_t>(pad), ' ');
                 if (i == index)
                     std::cout << "\x1b[7m"; // highlight
 
-                std::cout << (i + 1) << " - " << models[i] << "\x1b[0m\n";
+                std::cout << item << "\x1b[0m\n";
             }
+            std::cout.flush();
         }
 };
 
