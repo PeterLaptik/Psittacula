@@ -6,6 +6,7 @@
 #include "format_util.h"
 #include "history_manager.h"
 #include "dialogue_body.h"
+#include "json_dialogue.h"
 #include "model.h"
 #include <atomic>
 #include <map>
@@ -74,6 +75,10 @@ class AiClientImpl: public AiClient
         // POST JSON data object
         // Keeps all messages, tool calls, tool calls responses
         DialogueBody m_body_obj;
+
+        // Autosaves the current dialogue JSON body after each iteration
+        // of the exchange with the AI (see SendUserMessage / SendToolsResponses)
+        JsonDialogue m_json_dialogue;
 
         Formatter fmt; // Simple string formatter
 

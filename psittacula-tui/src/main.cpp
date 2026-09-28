@@ -31,7 +31,6 @@ const int kMaxLinesInAQuery = 1000;
 //    |-- settings (txt settings files: rules)
 //    |-- projects (files in the directory can be created / removed / modified by the agent - default sandbox)
 //    |-- logs (log files directory)
-//    |-- saves (dialogues dumps directory)
 // 
 // The workdir can be changed via command line value workdir (workdir=...)
 // The projects directory can be changed via command line value project (project=...) / or command /project

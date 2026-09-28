@@ -68,8 +68,12 @@ void ChunkCompletionProcessor::ProcessChunk(const std::string &chunk)
             CheckReasoning(data);
             CheckMessage(data);
             CheckTools(data);
-            CheckTokens(data);
         }
+
+        // Usage/cost data can arrive in a trailing chunk with an empty
+        // "choices" array (e.g. Kilo Gateway, OpenRouter, OpenAI with
+        // stream_options.include_usage), so check it unconditionally.
+        CheckTokens(data);
     }
     else if(!doc.Parse(chunk.c_str()).HasParseError())
     {
@@ -142,22 +146,23 @@ void ChunkCompletionProcessor::CheckReasoning(JsonDocument &doc)
 
     // ========== Output reasoning data ====================
     // Reasoning text or progress
-    // Ignored after the first non-empty contet (see the code above)
-    // Checking fields: reasoning_content or reasoning
-    // The first condition works for llama.cpp
-    if (delta.HasMember("reasoning_content") && delta["reasoning_content"].IsString()) {
-        std::string reasoning_txt = delta["reasoning_content"].GetString();
-        OutputReasoning(reasoning_txt);
-        m_reasoning += reasoning_txt;
-        m_reasoning_in_process = true;
-    }
-    // The condition works for other servers
-    else if (delta.HasMember("reasoning") && delta["reasoning"].IsString())
+    // Ignored after the first non-empty content (see the code above)
+    // Checking fields, in order: reasoning_content, reasoning, thinking
+    //  - "reasoning_content" works for llama.cpp / DeepSeek-style servers
+    //  - "reasoning" works for OpenRouter and similar normalized servers
+    //  - "thinking" works for some other OpenAI-compatible providers/proxies
+    static const char *reasoning_fields[] = { "reasoning_content", "reasoning", "thinking" };
+
+    for (const char *field : reasoning_fields)
     {
-        std::string reasoning_txt = delta["reasoning"].GetString();
-        OutputReasoning(reasoning_txt);
-        m_reasoning += reasoning_txt;
-        m_reasoning_in_process = true;
+        if (delta.HasMember(field) && delta[field].IsString())
+        {
+            std::string reasoning_txt = delta[field].GetString();
+            OutputReasoning(reasoning_txt);
+            m_reasoning += reasoning_txt;
+            m_reasoning_in_process = true;
+            break;
+        }
     }
 }
 
@@ -201,9 +206,9 @@ void ChunkCompletionProcessor::CheckTokens(JsonDocument &doc)
         {
             m_prompt_tokens = usage["prompt_tokens"].GetInt();
         }
-        if (usage.HasMember("cost") && usage["cost"].IsDouble())
+        if (usage.HasMember("cost") && usage["cost"].IsNumber())
         {
-            m_tokens_cost = usage["cost"].IsDouble();
+            m_tokens_cost = usage["cost"].GetDouble();
         }
     }
 }

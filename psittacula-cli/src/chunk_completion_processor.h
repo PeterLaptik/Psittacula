@@ -74,7 +74,7 @@ class ChunkCompletionProcessor: public ChunkProcessor
         int m_total_tokens = 0;
         int m_completion_tokens = 0;
         int m_prompt_tokens = 0;
-        int m_tokens_cost = 0;
+        double m_tokens_cost = 0;
 
         // Tools
         struct FunctionToEvoke

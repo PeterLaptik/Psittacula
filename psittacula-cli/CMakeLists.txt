@@ -32,6 +32,8 @@ add_library(${PSITTACULA_CLI_NAME} STATIC
 	${SRC_DIR}/context_info.cpp
 	${SRC_DIR}/dialogue_body.cpp
 	${SRC_DIR}/dialogue_body.h
+	${SRC_DIR}/json_dialogue.cpp
+	${SRC_DIR}/json_dialogue.h
 	${SRC_DIR}/history_manager.h
 	${SRC_DIR}/llm_connectivity_checker.cpp
 	${SRC_DIR}/http_client.cpp
