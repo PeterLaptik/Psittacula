@@ -129,6 +129,10 @@ std::vector<FileSearchTool::Match> FileSearchTool::SearchDirectory(
 {
     std::vector<Match> results;
 
+    if (!std::filesystem::is_directory(root)) {
+        return results;
+    }
+
     for (auto &entry : std::filesystem::recursive_directory_iterator(root))
     {
         if (!entry.is_regular_file())
