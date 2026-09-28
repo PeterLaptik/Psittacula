@@ -66,12 +66,24 @@ class CommandChangeModel: public ChatCommand
             tcgetattr(STDIN_FILENO, &oldt);
             newt = oldt;
             newt.c_lflag &= ~(ICANON | ECHO);
+            // Disable CR->NL translation and flow control so a bare Enter
+            // (CR, 13) and escape sequences are delivered byte-for-byte,
+            // matching the raw mode used elsewhere (Screen::EnableRawMode).
+            newt.c_iflag &= ~(ICRNL | INLCR | IXON);
+            newt.c_cc[VMIN] = 1;
+            newt.c_cc[VTIME] = 0;
             tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
-            int ch = getchar();
+            // Use the unbuffered read() syscall instead of getchar()/stdio.
+            // Buffered stdio can read ahead and reorder/mis-split bytes of
+            // an escape sequence relative to what tcsetattr() just changed,
+            // which on some Unix (FreeBSD) ttys made Enter appear to move
+            // the selection instead of confirming it.
+            unsigned char ch = 0;
+            int result = read(STDIN_FILENO, &ch, 1);
 
             tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-            return ch;
+            return result == 1 ? static_cast<int>(ch) : -1;
         }
 #endif
 

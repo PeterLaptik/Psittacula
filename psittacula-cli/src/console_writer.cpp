@@ -100,6 +100,13 @@ console::LineInputScope::LineInputScope()
     }
     struct termios cooked = m_termios;
     cooked.c_lflag |= (ECHO | ICANON | ISIG);
+    // Raw mode (see Screen::EnableRawMode) clears ICRNL/IXON so that a bare
+    // CR (13) reaches read() untranslated for the main UI. In canonical
+    // mode, however, the driver only ends a line on NL (or on CR if ICRNL
+    // translates it), so without restoring ICRNL here Enter never
+    // terminates the line and std::cin.get()/getline() block forever.
+    cooked.c_iflag |= (ICRNL | IXON);
+    cooked.c_iflag &= ~static_cast<tcflag_t>(INLCR);
     tcsetattr(m_fd, TCSANOW, &cooked);
     tcflush(m_fd, TCIFLUSH);
     m_saved = true;

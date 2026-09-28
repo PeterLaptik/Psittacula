@@ -32,14 +32,24 @@ static int GetKey()
     tcgetattr(STDIN_FILENO, &old_tios);
     new_tios = old_tios;
     new_tios.c_lflag &= ~(ICANON | ECHO);
+    // Disable CR->NL translation and flow control, matching the raw mode
+    // used elsewhere (Screen::EnableRawMode), so a bare Enter (CR, 13) and
+    // escape sequences arrive unmodified.
+    new_tios.c_iflag &= ~(ICRNL | INLCR | IXON);
     new_tios.c_cc[VMIN] = 1;
     new_tios.c_cc[VTIME] = 0;
     tcsetattr(STDIN_FILENO, TCSANOW, &new_tios);
 
-    int c = fgetc(stdin);
+    // Read via the unbuffered read() syscall rather than fgetc()/stdio.
+    // Buffered stdio can read ahead of tcsetattr() taking effect and
+    // mis-split/reorder bytes of an escape sequence, which on some Unix
+    // (FreeBSD) ttys made Enter appear to move the selection instead of
+    // confirming it.
+    unsigned char c = 0;
+    int result = read(STDIN_FILENO, &c, 1);
 
     tcsetattr(STDIN_FILENO, TCSANOW, &old_tios);
-    return c;
+    return result == 1 ? static_cast<int>(c) : -1;
 #endif
 }
 
