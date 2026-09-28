@@ -66,10 +66,10 @@ void tui::PanelText::Draw()
     if (m_text_content.GetMaxLineLength() != actual_line_length)
         m_text_content.SetMaxLineLength(actual_line_length);
 
-    for (int row = 0; row <= m_height; ++row)
+    for (int row = 0; row < m_height; ++row)
     {
         bool top = row == 0;
-        bool bottom = row == m_height;
+        bool bottom = row == m_height - 1;
 
         std::string line;
         line.reserve(static_cast<size_t>(m_width));

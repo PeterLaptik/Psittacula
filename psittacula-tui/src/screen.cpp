@@ -169,7 +169,7 @@ void tui::Screen::UpdateSize()
     if (GetConsoleScreenBufferInfo(console, &info))
     {
         m_props.columns = info.srWindow.Right - info.srWindow.Left + 1;
-        m_props.rows = info.srWindow.Bottom - info.srWindow.Top;
+        m_props.rows = info.srWindow.Bottom - info.srWindow.Top + 1;
     }
 #else
     winsize ws;
@@ -239,7 +239,7 @@ void tui::Screen::DrawFrame()
 
     int input_height = input_rows;
     int input_width = m_props.columns;
-    m_panel_input.SetDimensions(0, m_props.rows - input_rows, input_width, input_height);
+    m_panel_input.SetDimensions(0, m_props.rows - input_rows - 1, input_width, input_height);
     m_panel_input.Draw();
     HideCursor(false);
 }
