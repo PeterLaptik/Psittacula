@@ -153,9 +153,16 @@ class CommandChangeModel: public ChatCommand
             }
             else
             {
-                // TODO
-                // Write a short model info
-                //m_app->RefreshStatus();
+                // Write a short model info to the status line
+                std::string context_size_info = model.GetContextSize() > 0
+                    ? std::to_string(model.GetContextSize())
+                    : "n/a";
+
+                std::string model_info = formatter.Format(
+                    "Model: %? | Host: %? | Context: %?",
+                    model.GetName(), model.GetHost(), context_size_info);
+
+                m_app->RefreshStatus(model_info);
             }
 
             std::unique_ptr<AiClient> created_client = model.GetClient();
