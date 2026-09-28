@@ -192,6 +192,12 @@ int tui::Keyboard::ReadKey()
     }
     if (key != 27)
     {
+        // Most POSIX terminals send DEL (0x7F) for the physical Backspace key
+        // rather than BS (0x08); normalize it so callers only need to check
+        // Keys::keyBackSpace.
+        if (key == 0x7F)
+            return Keys::keyBackSpace;
+
         // Determine how many bytes this UTF-8 character occupies from its lead byte.
         int len = utf8_char_len(key);
         if (len == 1)

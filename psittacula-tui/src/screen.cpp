@@ -250,6 +250,9 @@ void tui::Screen::EnableRawMode()
     tcgetattr(STDIN_FILENO, &g_original_termios);
     struct termios raw = g_original_termios;
     raw.c_lflag &= ~(ECHO | ICANON | ISIG);
+    // Without this, the tty driver translates the CR (13) sent by Enter into
+    // NL (10) before read() sees it, so keyEnter (13) never matches downstream.
+    raw.c_iflag &= ~(ICRNL | INLCR | IXON);
     raw.c_cc[VMIN] = 1;
     raw.c_cc[VTIME] = 0;
     tcsetattr(STDIN_FILENO, TCSANOW, &raw);
