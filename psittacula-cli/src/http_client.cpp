@@ -39,6 +39,9 @@ std::string HttpClient::HttpGet(const std::string &end_point)
     std::string url = m_host + end_point;
 
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    // Multi-threaded app: never let libcurl install signal handlers / use alarm()
+    // for timeouts (e.g. synchronous resolver SIGALRM), it can hit the wrong thread.
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
 
     struct curl_slist *headers = nullptr;
     if (!m_api_key.empty()) 
@@ -78,6 +81,9 @@ HttpResult HttpClient::HttpGetFull(const std::string &end_point, long timeout_ms
 
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    // Multi-threaded app: never let libcurl install signal handlers / use alarm()
+    // for timeouts (e.g. synchronous resolver SIGALRM), it can hit the wrong thread.
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
 
     if (timeout_ms > 0)
     {
@@ -124,6 +130,9 @@ void HttpClient::HttpPost(const std::string &end_point, const std::string &data,
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_POST, 1L);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
+    // Multi-threaded app: never let libcurl install signal handlers / use alarm()
+    // for timeouts (e.g. synchronous resolver SIGALRM), it can hit the wrong thread.
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
 
     struct curl_slist *headers = nullptr;
     headers = curl_slist_append(headers, "Content-Type: application/json");
@@ -167,6 +176,12 @@ void HttpClient::HttpPostStream(const std::string &end_point, const std::string 
     curl_easy_setopt(curl, CURLOPT_POST, 1L);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    // Multi-threaded app: never let libcurl install signal handlers / use alarm()
+    // for timeouts (e.g. synchronous resolver SIGALRM). This handle is used from
+    // a worker thread while the main thread blocks in read(); a stray SIGALRM
+    // delivered to the wrong thread can interrupt/abort the stream as if
+    // CancelRequest() had been called, without the user ever pressing ESC.
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
 
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, responses_fn::write_callback_stream);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, receiver);
