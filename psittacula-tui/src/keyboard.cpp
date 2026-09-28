@@ -9,6 +9,60 @@
 extern "C" unsigned int _getwch(void);
 extern "C" int _kbhit(void);
 #endif
+#else
+#include <cerrno>
+#include <csignal>
+#include <string>
+#include <sys/select.h>
+#include <unistd.h>
+
+// Shared with screen.cpp: set by SIGWINCH, polled below to report a resize
+// instead of a spurious key when a blocking read() is interrupted.
+extern volatile sig_atomic_t g_resize_pending;
+
+namespace {
+    // Determines how many bytes a UTF-8 character occupies from its lead byte.
+    int utf8_char_len(unsigned char lead)
+    {
+        if (lead < 0x80)
+            return 1;
+        if ((lead >> 5) == 0x6)
+            return 2;
+        if ((lead >> 4) == 0xE)
+            return 3;
+        if ((lead >> 3) == 0x1E)
+            return 4;
+        return 1;
+    }
+
+    // Decodes `len` raw UTF-8 bytes (as read from stdin) into a Unicode code point.
+    int Utf8Decode(const unsigned char *bytes, int len)
+    {
+        if (len <= 1)
+            return bytes[0];
+        if (len == 2)
+            return ((bytes[0] & 0x1F) << 6) | (bytes[1] & 0x3F);
+        if (len == 3)
+            return ((bytes[0] & 0x0F) << 12) | ((bytes[1] & 0x3F) << 6) | (bytes[2] & 0x3F);
+        return ((bytes[0] & 0x07) << 18) | ((bytes[1] & 0x3F) << 12) |
+               ((bytes[2] & 0x3F) << 6) | (bytes[3] & 0x3F);
+    }
+
+    // Waits up to `timeout_ms` milliseconds for data to become available on stdin.
+    bool InputAvailable(int timeout_ms)
+    {
+        fd_set fds;
+        FD_ZERO(&fds);
+        FD_SET(STDIN_FILENO, &fds);
+
+        struct timeval tv;
+        tv.tv_sec = timeout_ms / 1000;
+        tv.tv_usec = (timeout_ms % 1000) * 1000;
+
+        int result = select(STDIN_FILENO + 1, &fds, nullptr, nullptr, &tv);
+        return result > 0;
+    }
+}
 #endif
 
 int tui::Keyboard::ReadKey()
