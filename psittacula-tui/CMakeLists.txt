@@ -78,3 +78,4 @@ target_include_directories(${PSITTACULA_TUI_NAME} PRIVATE ${TOOLS_INCLUDE})
 
 target_link_libraries(${PSITTACULA_TUI_NAME} PRIVATE ${PSITTACULA_CLI_NAME})
 target_link_libraries(${PSITTACULA_TUI_NAME} PRIVATE ${PSITTACULA_TOOLS_NAME})
+target_link_libraries(${PSITTACULA_TUI_NAME} PRIVATE Threads::Threads)

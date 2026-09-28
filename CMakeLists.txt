@@ -34,6 +34,7 @@ message(STATUS "Searching dependencies in ${CMAKE_PREFIX_PATH}")
 find_package(ZLIB REQUIRED)
 find_package(CURL REQUIRED)
 find_package(RapidJSON REQUIRED)
+find_package(Threads REQUIRED)
 
 # Project contents
 # Sub-projects names

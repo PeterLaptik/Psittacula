@@ -208,7 +208,8 @@ void ChunkCompletionProcessor::CheckTokens(JsonDocument &doc)
         }
         if (usage.HasMember("cost") && usage["cost"].IsNumber())
         {
-            m_tokens_cost = usage["cost"].GetDouble();
+            double read_cost = usage["cost"].GetDouble();
+            m_tokens_cost = read_cost > m_tokens_cost ? read_cost : m_tokens_cost;
         }
     }
 }

@@ -61,4 +61,4 @@ target_include_directories(${PSITTACULA_TOOLS_NAME} PRIVATE ${CURL_INCLUDE_DIRS}
 
 target_link_libraries(${PSITTACULA_TOOLS_NAME} PRIVATE rapidjson)
 target_link_libraries(${PSITTACULA_TOOLS_NAME} PRIVATE CURL::libcurl)
-target_link_libraries(${PSITTACULA_TOOLS_NAME} PRIVATE CURL::libcurl)
+target_link_libraries(${PSITTACULA_TOOLS_NAME} PRIVATE Threads::Threads)
