@@ -166,7 +166,13 @@ void tui::ScreenTextContent::RenderText()
     }
 
     const char *buffer_colour = GetTextColour(m_buffer.origin);
-    splitter.SplitText(std::string(buffer_colour) + m_buffer.txt + std::string(kDefault), split_lines);
+    std::vector<std::string> uncoloured_buffer_lines;
+    splitter.SplitText(m_buffer.txt, uncoloured_buffer_lines);
+
+    for (auto &r_line : uncoloured_buffer_lines)
+    {
+        split_lines.push_back(std::string(buffer_colour) + r_line + std::string(kDefault));
+    }
 
     for (auto &r_line : split_lines)
     {
