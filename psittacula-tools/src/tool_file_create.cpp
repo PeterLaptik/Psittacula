@@ -31,7 +31,7 @@ std::string FileCreateTool::Execute(std::vector<ToolParameter> &params_values)
     console::write_line("File create tool.", console::TextOrigin::tools);
 
     std::string path = GetParam(params_values, "path");
-    UnescapeSlashesInPath(path);
+    UnEscapeSlashesInPath(path);
     console::write_line("Path: " + path, console::TextOrigin::tools);
 
     std::string content = GetParam(params_values, "content");

@@ -63,7 +63,7 @@ class ToolBase
 
         std::string GetEscapedJSONString(const std::string &str) const;
 
-        void UnescapeSlashesInPath(std::string &value) const;
+        void UnEscapeSlashesInPath(std::string &value) const;
 };
 
 #endif // TOOL_BASE_INCLUDED_H

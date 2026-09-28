@@ -33,7 +33,7 @@ std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
     console::write_line("Directory delete tool.", console::TextOrigin::tools);
 
     std::string path = GetParam(params_values, "path");
-    UnescapeSlashesInPath(path);
+    UnEscapeSlashesInPath(path);
 
     //recursive = GetParamBool(params_values, "recursive", false);
 

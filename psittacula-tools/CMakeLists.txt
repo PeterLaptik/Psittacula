@@ -44,6 +44,8 @@ add_library(${PSITTACULA_TOOLS_NAME} STATIC
 	${SRC_DIR}/tool_file_copy.h
 	${SRC_DIR}/tool_web_fetch.cpp
 	${SRC_DIR}/tool_web_fetch.h
+	${SRC_DIR}/tool_run_command.cpp
+	${SRC_DIR}/tool_run_command.h
 )
 
 set_target_properties(${PSITTACULA_TOOLS_NAME} PROPERTIES

@@ -48,7 +48,7 @@ std::string ToolBase::GetEscapedJSONString(const std::string &str) const
     return std::string(buffer.GetString());
 }
 
-void ToolBase::UnescapeSlashesInPath(std::string &value) const
+void ToolBase::UnEscapeSlashesInPath(std::string &value) const
 {
     std::string from = "\\\\";
     std::string to = "\\";

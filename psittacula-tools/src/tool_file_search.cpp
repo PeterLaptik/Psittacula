@@ -54,7 +54,7 @@ std::string FileSearchTool::Execute(std::vector<ToolParameter> &params_values)
 
     std::string path = GetParam(params_values, "path");
     console::write_line("Search path:", console::TextOrigin::tools);
-    UnescapeSlashesInPath(path);
+    UnEscapeSlashesInPath(path);
 
     bool case_sensitive = GetParamBool(params_values, "case_sensitive", false);
     bool regex_mode = GetParamBool(params_values, "regex_mode", false);

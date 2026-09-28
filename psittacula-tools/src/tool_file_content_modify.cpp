@@ -38,7 +38,7 @@ std::string FileContentModifyTool::Execute(std::vector<ToolParameter> &params_va
     console::write_line("File content modify tool.", console::TextOrigin::tools);
 
     std::string file_path = GetParam(params_values, "file_path");
-    UnescapeSlashesInPath(file_path);
+    UnEscapeSlashesInPath(file_path);
     console::write_line("Path: " + file_path, console::TextOrigin::tools);
 
     std::string old_str = GetParam(params_values, "old_str");
