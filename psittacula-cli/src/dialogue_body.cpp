@@ -177,9 +177,6 @@ void DialogueBody::AddToolResponses(const std::vector<ToolResponse> &responses)
             tool_msg.AddMember("role", "tool", alloc);
             tool_msg.AddMember("recipient", rapidjson::Value(rss.name.c_str(), assist_alloc).Move(), assist_alloc);
 
-            rapidjson::Value content_val;
-            content_val.SetString(rss.output_content.c_str(), alloc);
-
             tool_msg.AddMember("content", rapidjson::Value(rss.output_content.c_str(), assist_alloc).Move(), alloc);
             it->value.PushBack(tool_msg, alloc);
         }
@@ -322,12 +319,21 @@ std::string DialogueBody::ToJsonString() const
 std::string DialogueBody::ToPureText() const
 {
     std::string pure_text;
-    const rapidjson::Value &messages = m_request->body["messages"];
-    for (auto &msg : messages.GetArray()) {
-        if (!msg.HasMember("role") || !msg.HasMember("content"))
+    auto it = m_request->body.FindMember("messages");
+    if (it == m_request->body.MemberEnd() || !it->value.IsArray())
+        return pure_text;
+
+    for (auto &msg : it->value.GetArray()) {
+        if (!msg.IsObject() || !msg.HasMember("role") || !msg.HasMember("content"))
+            continue;
+
+        if (!msg["role"].IsString())
             continue;
 
         if (msg["content"].IsNull())
+            continue;
+
+        if (!msg["content"].IsString())
             continue;
 
         std::string role = msg["role"].GetString();
@@ -347,30 +353,50 @@ void DialogueBody::FromJsonString(const std::string data)
     if (m_request->body.HasParseError())
     {
         std::cerr << "JSON parse error: " << rapidjson::GetParseError_En(m_request->body.GetParseError()) << std::endl;
+        return;
     }
 
-    const rapidjson::Value &messages = m_request->body["messages"];
+    // Restoring is only possible from a dialogue body: an arbitrary JSON
+    // (e.g. a server error object) without a 'messages' array is rejected
+    auto msg_it = m_request->body.FindMember("messages");
+    if (msg_it == m_request->body.MemberEnd() || !msg_it->value.IsArray())
+    {
+        std::cerr << "JSON restore error: no 'messages' array" << std::endl;
+        return;
+    }
+
+    const rapidjson::Value &messages = msg_it->value;
     for (auto &msg : messages.GetArray()) {
+        if (!msg.IsObject() || !msg.HasMember("role") || !msg["role"].IsString())
+            continue;
+
+        if (msg.HasMember("content") && !msg["content"].IsString() && !msg["content"].IsNull())
+            continue;
+
         std::string role = msg["role"].GetString();
         if (role == "tool")
             continue;
 
         std::string message = "[Null content]";
-        if (!msg["content"].IsNull())
+        if (msg.HasMember("content") && !msg["content"].IsNull())
         {
             message = msg["content"].GetString();
         }
         else // On tool calls
         {
-            if (msg.HasMember("tool_calls")) {
+            if (msg.HasMember("tool_calls") && msg["tool_calls"].IsArray() && !msg["tool_calls"].Empty())
+            {
                 const auto &toolCalls = msg["tool_calls"];
                 const auto &call = toolCalls[0]; // usually one per message
 
-                std::string toolName = call["function"]["name"].GetString();
-                std::string args = call["function"]["arguments"].GetString();
+                if (call.IsObject() && call.HasMember("function") && call["function"].IsObject() &&
+                    call["function"].HasMember("name") && call["function"]["name"].IsString())
+                {
+                    std::string toolName = call["function"]["name"].GetString();
 
-                role = "tool";
-                message = "Tool call: " + toolName;
+                    role = "tool";
+                    message = "Tool call: " + toolName;
+                }
             }
         }
 
@@ -487,91 +513,98 @@ void DialogueBody::PurgePreviousFileContents(const std::vector<ToolResponse> &re
         return;
 
     auto it = m_request->body.FindMember("messages");
-    if (it != m_request->body.MemberEnd() && it->value.IsArray())
+    if (it == m_request->body.MemberEnd() || !it->value.IsArray())
+        return;
+
+    rapidjson::Value &messages = it->value;
+    rapidjson::SizeType messages_size = messages.Size();
+
+    // Collect file paths from the current read_file call arguments
+    // to purge obsolete file contents later
+    std::vector<std::string> current_file_paths;
+    for (const ToolResponse &rsp : responses)
     {
-        rapidjson::Value &messages = it->value;
-        rapidjson::SizeType messages_size = messages.Size();
+        if (rsp.name != "read_file" || rsp.input_content.empty())
+            continue;
 
-        // Collect file paths from current responses where recipient == 'read_file'
-        // To purge obsolette file contents later
-        std::vector<std::string> current_file_paths;
-        for (const ToolResponse &rsp : responses)
+        rapidjson::Document parsed;
+        parsed.Parse(rsp.input_content.c_str());
+        if (parsed.HasParseError() || !parsed.IsObject())
+            continue;
+
+        if (parsed.HasMember("path") && parsed["path"].IsString())
+            current_file_paths.emplace_back(parsed["path"].GetString());
+    }
+
+    if (current_file_paths.empty())
+        return;
+
+    // Iterate through all previous tool messages (role == "tool")
+    for (rapidjson::SizeType idx = 0; idx < messages_size; idx++)
+    {
+        rapidjson::Value &msg = messages[idx];
+
+        // Skip non-tool messages
+        if (!msg.IsObject() || !msg.HasMember("role") || !msg["role"].IsString() ||
+            std::string(msg["role"].GetString()) != "tool")
         {
-            if (rsp.name == "read_file")
+            continue;
+        }
+
+        // Only process messages with "recipient" == 'read_file'
+        if (!msg.HasMember("recipient") || !msg["recipient"].IsString() ||
+            std::string(msg["recipient"].GetString()) != "read_file")
+        {
+            continue;
+        }
+
+        if (!msg.HasMember("content") || !msg["content"].IsString())
+            continue;
+
+        rapidjson::Document parsed;
+        parsed.Parse(msg["content"].GetString());
+        if (parsed.HasParseError() || !parsed.IsObject())
+            continue;
+
+        if (!parsed.HasMember("file") || !parsed["file"].IsObject())
+            continue;
+
+        const rapidjson::Value &file = parsed["file"];
+
+        // A binary read has 'content_base64' instead of 'content': nothing to purge
+        if (!file.HasMember("path") || !file["path"].IsString() ||
+            !file.HasMember("content") || !file["content"].IsString())
+        {
+            continue;
+        }
+
+        const char *prev_file_path = file["path"].GetString();
+
+        bool is_current = false;
+        for (const auto &current_path : current_file_paths)
+        {
+            if (prev_file_path == current_path)
             {
-                rapidjson::Document parsed;
-                parsed.Parse(rsp.input_content.c_str());
-                if (!parsed.HasParseError())
-                {
-                    if(parsed.HasMember("path") && parsed["path"].IsString())
-                        current_file_paths.emplace_back(parsed["path"].GetString());
-                }
+                is_current = true;
+                break;
             }
         }
 
-        if (current_file_paths.empty())
-            return;
+        if (!is_current)
+            continue;
 
-        // Iterate through all tool messages (role == "tool")
-        for (rapidjson::SizeType idx = 0; idx < messages_size; idx++)
-        {
-            rapidjson::Value &msg = messages[idx];
-            
-            // Skip non-tool messages
-            if (!msg.HasMember("role") || !msg["role"].IsString() ||
-                std::string(msg["role"].GetString()) != "tool")
-            {
-                continue;
-            }
+        // Replace the obsolete file content with a short note
+        parsed["file"]["content"].SetString(
+            "File was successfully read. See updated content in the latest response.",
+            parsed.GetAllocator());
 
-            // Only process messages with "recipient" == 'read_file'
-            if (!msg.HasMember("recipient") || !msg["recipient"].IsString() ||
-                std::string(msg["recipient"].GetString()) != "read_file")
-            {
-                continue;
-            }
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        parsed.Accept(writer);
 
-            // Get the file path from this previous tool message
-            if (!msg.HasMember("content") || !msg["content"].IsString())
-            {
-                continue;
-            }
-
-            // Check if this file path matches any previous file path
-            std::string prev_file_path = "null";
-            for (const auto &current_path : current_file_paths)
-            {
-                std::string escaped_content = escape_slashes_string(msg["content"].GetString());
-
-                rapidjson::Document parsed;
-                parsed.Parse(escaped_content.c_str());
-                if (!parsed.HasParseError())
-                {
-                    if (parsed.HasMember("file") && parsed["file"].IsObject())
-                    {
-                        auto file = parsed["file"].GetObject();
-                        if (file.HasMember("path") && file["path"].IsString())
-                        {
-                            prev_file_path = file["path"].GetString();
-                        }
-                    }
-
-                    if (prev_file_path != current_path)
-                        continue;
-
-                    std::string test = parsed["file"]["content"].GetString();
-                    parsed["file"]["content"].SetString("File was successfully read. See updated content in the latest response.", 
-                        m_request->body.GetAllocator());
-                    rapidjson::StringBuffer buffer;
-                    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                    parsed.Accept(writer);
-
-                    // Replace tool message content
-                    rapidjson::Document::AllocatorType &alloc = m_request->body.GetAllocator();
-                    msg["content"].SetString(buffer.GetString(), alloc);
-                }
-            }
-        }
+        // Replace tool message content
+        rapidjson::Document::AllocatorType &alloc = m_request->body.GetAllocator();
+        msg["content"].SetString(buffer.GetString(), alloc);
     }
 }
 
@@ -672,8 +705,20 @@ void DialogueBody::Compress(std::string summarized_msg, int msg_left)
     summary_msg.AddMember("content", rapidjson::Value(summarized_msg.c_str(), alloc).Move(), alloc);
     new_messages.PushBack(summary_msg, alloc);
     
-    // Add the last msg_left messages
+    // Add the last msg_left messages.
+    // A kept window must not start with a 'tool' message its parent assistant
+    // 'tool_calls' message would be dropped, and a tool result without a
+    // preceding tool_calls message is rejected by strict OpenAI-compatible
+    // servers. Skip such leading tool results.
     rapidjson::SizeType start_idx = total_messages - static_cast<rapidjson::SizeType>(msg_left);
+    while (start_idx < total_messages)
+    {
+        const rapidjson::Value &m = messages[start_idx];
+        if (!(m.IsObject() && m.HasMember("role") && m["role"].IsString() &&
+            std::string(m["role"].GetString()) == "tool"))
+            break;
+        ++start_idx;
+    }
     for (rapidjson::SizeType i = start_idx; i < total_messages; ++i)
     {
         rapidjson::Value msg_copy;

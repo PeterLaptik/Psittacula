@@ -76,23 +76,13 @@ std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
         );
     }
 
-    existed_before = true;
-    last_path = path;
+       last_path = path;
 
     console::write_line(fmt.Format("Deleting directory: %?", path), console::TextOrigin::tools);
 
     std::error_code ec;
 
     //if (recursive) { std::filesystem::remove_all(path, ec); }
-
-    if (!std::filesystem::is_empty(path))
-    {
-        console::write_line("Directory is not empty; recursive=false", console::TextOrigin::error);
-        return fmt.Format(
-            "{\"error\":{\"type\":\"runtime_error\",\"message\":\"Directory is not empty\",\"path\":\"%?\"}}",
-            path
-        );
-    }
 
     std::filesystem::remove(path, ec);
 

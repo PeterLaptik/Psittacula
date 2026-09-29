@@ -14,12 +14,6 @@ struct ChunkCompletionProcessor::JsonDocument
     rapidjson::Document &body;
 };
 
-
-// Resoning progress
-// Shows rotating line in a console
-static size_t progress_cursor = 0;
-static const char progress[4] = { '/', '|', '\\', '-' };
-
 void ChunkCompletionProcessor::Reset()
 {
     m_reasoning_in_process = true;
@@ -50,8 +44,8 @@ void ChunkCompletionProcessor::ProcessChunk(const std::string &chunk)
     json.erase(0, json.find_first_not_of(" \t\n\r\f\v"));
     json.erase(json.find_last_not_of(" \t\n\r\f\v") + 1);
 
-    // Is response finished?
-    if (json == " [DONE]" || json == "[DONE]")
+    // Is response finished? (json is already trimmed)
+    if (json == "[DONE]")
     {
         return;
     }
@@ -113,6 +107,10 @@ void ChunkCompletionProcessor::ShowStat(std::string slots_info_rsp, int context_
 
 void ChunkCompletionProcessor::CheckMessage(JsonDocument &doc)
 {
+    // Final chunks (e.g. finish_reason only) and some providers may omit 'delta'
+    if (!doc.body["choices"][0].IsObject() || !doc.body["choices"][0].HasMember("delta"))
+        return;
+
     // ========== Content output ==========================
     const auto &delta = doc.body["choices"][0]["delta"];
 
@@ -140,6 +138,10 @@ void ChunkCompletionProcessor::CheckMessage(JsonDocument &doc)
 void ChunkCompletionProcessor::CheckReasoning(JsonDocument &doc)
 {
     if (!m_reasoning_in_process)
+        return;
+
+    // Final chunks (e.g. finish_reason only) and some providers may omit 'delta'
+    if (!doc.body["choices"][0].IsObject() || !doc.body["choices"][0].HasMember("delta"))
         return;
 
     const auto &delta = doc.body["choices"][0]["delta"];
@@ -216,6 +218,10 @@ void ChunkCompletionProcessor::CheckTokens(JsonDocument &doc)
 
 void ChunkCompletionProcessor::CheckTools(JsonDocument &doc)
 {
+    // Final chunks (e.g. finish_reason only) and some providers may omit 'delta'
+    if (!doc.body["choices"][0].IsObject() || !doc.body["choices"][0].HasMember("delta"))
+        return;
+
     const auto &delta = doc.body["choices"][0]["delta"];
 
     // ========== Tools calling ===========================
@@ -264,13 +270,20 @@ void ChunkCompletionProcessor::CheckTools(JsonDocument &doc)
 
 void ChunkCompletionProcessor::CheckErrors(JsonDocument &doc)
 {
+    // Some servers return 'error' as a plain string, others as an object
+    if (doc.body.HasMember("error") && doc.body["error"].IsString())
+    {
+        std::string msg = doc.body["error"].GetString();
+        m_error = msg.empty() ? "Server error. Unknown error occurred." : "Server error. " + msg;
+        return;
+    }
+
     if (doc.body.HasMember("error") && doc.body["error"].IsObject())
     {
         const auto &err = doc.body["error"];
         if (err.HasMember("message") && err["message"].IsString())
         {
-            m_error = "Server error. ";
-            m_error = err["message"].GetString();
+            m_error = "Server error. " + std::string(err["message"].GetString());
         }
         else
         {
@@ -334,51 +347,52 @@ void ChunkCompletionProcessor::GetResponseTools(std::vector<ToolCall> &calls_acc
             continue;
         }
 
-        // Assembling the full content like JSON stringified object:
-        // {\"arg1\": 1, \"arg2\": \"2str\", etc.}
-        std::string full_content;
-
-        for (auto it = doc.MemberBegin(); it != doc.MemberEnd(); ++it) 
+        // Iterate members: fill parsed arguments for the tool call.
+        // caller.content is the raw arguments JSON (see below).
+        for (auto it = doc.MemberBegin(); it != doc.MemberEnd(); ++it)
         {
             std::string key = it->name.GetString();
-            full_content += fmt.Format("\"%?\":", key);
-
             const rapidjson::Value &value = it->value;
 
             std::string arg_val;
             if (value.IsString()) {
                 arg_val = value.GetString();
-                full_content += fmt.Format("\"%?\"", arg_val);
             }
             else if (value.IsInt()) {
                 arg_val = std::to_string(value.GetInt());
-                full_content += fmt.Format("%?", arg_val);
+            }
+            else if (value.IsInt64()) {
+                arg_val = std::to_string(value.GetInt64());
+            }
+            else if (value.IsUint()) {
+                arg_val = std::to_string(value.GetUint());
+            }
+            else if (value.IsUint64()) {
+                arg_val = std::to_string(value.GetUint64());
+            }
+            else if (value.IsDouble() || value.IsFloat()) {
+                arg_val = std::to_string(value.GetDouble());
             }
             else if (value.IsBool()) {
-                arg_val = std::to_string(value.GetBool());
-                full_content += fmt.Format("%?", arg_val);
+                arg_val = value.GetBool() ? "true" : "false";
             }
-            else
+            else {
+                // Nested arrays/objects: serialize back to a JSON string
+                rapidjson::StringBuffer buf;
+                rapidjson::Writer<rapidjson::StringBuffer> buf_writer(buf);
+                if (value.Accept(buf_writer))
+                    arg_val = buf.GetString();
+            }
+
+            if (arg_val.empty() && !value.IsNull())
             {
-                std::string msg = fmt.Format("GetTools: Unknown type of argument: %?", key);
+                std::string msg = fmt.Format("GetTools: Unsupported type of argument: %?", key);
                 console::write_line(msg, TextOrigin::error);
             }
 
+            // JSON null is passed as an empty value
             caller.arguments.emplace_back(key, arg_val);
-            full_content += ",";
         }
-
-        if (!full_content.empty())
-        {
-            full_content.pop_back(); // remove last comma
-            full_content += "}";
-        }
-        else
-        {
-            full_content = "{}"; // no args for call
-        }
-
-        full_content = "{" + full_content; // {\"arg1\": 1, \"arg2\": \"2str\", etc.}
 
         // Raw arguments as a content
         rapidjson::StringBuffer buffer;

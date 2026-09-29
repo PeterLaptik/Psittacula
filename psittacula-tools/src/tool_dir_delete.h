@@ -26,8 +26,7 @@ class DirDeleteTool : public ToolFile
     private:
         std::string last_path;
         bool executed = false;
-        //bool recursive = false;
-        bool existed_before = false;
+        //bool recursive = false;;
 };
 
 #endif // TOOL_DIR_DELETE_INCLUDED_H

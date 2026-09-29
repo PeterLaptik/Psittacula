@@ -230,15 +230,17 @@ bool WorkingDir::IsInWorkDir(const std::string &path) const
             return true;
 
         // Walk upward from target until root or sandbox is found
-        int level_counter = 0;
         fs::path cur = target;
-        while (!cur.empty() && level_counter < 32)
+        while (!cur.empty())
         {
             if (cur == sandbox)
                 return true;
 
-            cur = cur.parent_path();
-            level_counter++;
+            fs::path parent = cur.parent_path();
+            if (parent == cur) // reached: no further progress possible
+                break;
+
+            cur = parent;
         }
 
         return false;

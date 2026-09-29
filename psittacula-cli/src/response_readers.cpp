@@ -41,20 +41,12 @@ size_t responses_fn::write_callback_stream(char *ptr, size_t size, size_t nmemb,
         return 0; // abort: signals curl to stop with CURLE_WRITE_ERROR
 
     size_t total = size * nmemb;
-    std::string chunk(ptr, total);
 
-    // Server sends lines like:
-    // data: {"id":"...","choices":[{"delta":{"content":"Text"}}]}
-    // data: [DONE]
-
-    std::istringstream stream(chunk);
-    std::string line;
-
-    while (std::getline(stream, line))
-    {
-        if(processor)
-            processor->ProcessChunk(line);
-    }
+    // A JSON object can be split between two network reads, so raw data
+    // is fed through the processor's line buffer: only complete SSE lines
+    // reach ProcessChunk(), the unfinished tail waits for the next read
+    if (processor)
+        processor->Feed(std::string(ptr, total));
 
     if (processor && processor->IsCancelled())
         return 0; // stop as soon as possible after processing pending chunks

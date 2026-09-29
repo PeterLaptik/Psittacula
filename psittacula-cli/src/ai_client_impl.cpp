@@ -65,17 +65,17 @@ void AiClientImpl::SendUserMessage(const std::string &message)
     std::string slots_rsp = GetSlotstInfo();
     proc.ShowStat(slots_rsp, m_context_size);
 
-    // Add response message to a dialogue body
-    std::string response_msg = proc.GetResponseMessage();
-    m_body_obj.AddResponse(response_msg);
-    m_json_dialogue.Write(m_body_obj.ToJsonString());
-
-    // Check errors
+    // Check errors before adding the response message to the dialogue
     if (proc.HasErrors())
     {
         console::write_line("\nError: " + proc.GetError(), console::TextOrigin::error);
         return;
     }
+
+    // Add response message to a dialogue body
+    std::string response_msg = proc.GetResponseMessage();
+    m_body_obj.AddResponse(response_msg);
+    m_json_dialogue.Write(m_body_obj.ToJsonString());
 
     // Check and process tool calls if exist
     std::vector<ToolCall> tool_calls;
@@ -164,8 +164,10 @@ ToolResponse AiClientImpl::EvokeTool(ToolCall &call)
     auto it = m_tools_dispatcher.find(call.name);
     if (it == m_tools_dispatcher.end())
     {
-        console::write_line("\nNo tool found:" + call.name, console::TextOrigin::error);
-        std::string msg = fmt.Format("{\"error\": \"%?\"}", rsp.name);
+        console::write_line("\nNo tool found: " + call.name, console::TextOrigin::error);
+        // Report the error back to the LLM so it can correct itself
+        // instead of receiving an empty tool result
+        rsp.output_content = fmt.Format("{\"error\": \"Unknown tool: %?\"}", rsp.name);
         return rsp;
     }
 

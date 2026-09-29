@@ -1,5 +1,6 @@
 #include "http_client.h"
 #include "response_readers.h"
+#include "chunk_processor.h"
 #include <chrono>
 #include <iostream>
 #include <curl/curl.h>
@@ -57,7 +58,10 @@ std::string HttpClient::HttpGet(const std::string &end_point)
     CURLcode res = curl_easy_perform(curl);
     if (res != CURLE_OK) 
     {
-        return "CURL error: " + std::string(curl_easy_strerror(res));
+        std::string error = "CURL error: " + std::string(curl_easy_strerror(res));
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+        return error;
     }
 
     curl_slist_free_all(headers);
@@ -123,6 +127,7 @@ void HttpClient::HttpPost(const std::string &end_point, const std::string &data,
     if (!curl)
     {
         std::cout << "Failed to init curl" << std::endl;
+        return;
     }
 
     std::string url = m_host + end_point;
@@ -160,7 +165,10 @@ void HttpClient::HttpPostStream(const std::string &end_point, const std::string 
     CURL *curl = curl_easy_init();
 
     if (!curl)
+    {
         std::cout << "Failed to init curl" << std::endl;
+        return;
+    }
 
     struct curl_slist *headers = nullptr;
     headers = curl_slist_append(headers, "Content-Type: application/json");
@@ -195,6 +203,10 @@ void HttpClient::HttpPostStream(const std::string &end_point, const std::string 
     curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
 
     CURLcode res = curl_easy_perform(curl);
+
+    // Process a possible trailing SSE line that has no final newline
+    if (receiver)
+        static_cast<ChunkProcessor *>(receiver)->Flush();
 
     if (res != CURLE_OK && res != CURLE_ABORTED_BY_CALLBACK && res != CURLE_WRITE_ERROR)
         std::cout << "CURL error: " + std::string(curl_easy_strerror(res)) << std::endl;

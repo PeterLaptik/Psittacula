@@ -68,9 +68,9 @@ LlmConnectivityState LlmConnectivityChecker::Check() const
     std::vector<Target> targets = {
         { "llama.cpp /health",     host + "/health",        false },
         { "llama.cpp /slots",      host + "/slots",         false },
-        { "models /v1/models",     host + "/v1/models",     false },
-        { "models /models",        host + "/models",        false },
-        { "models /api/v1/models", host + "/api/v1/models", false },
+        { "models /v1/models",     host + "/v1/models",     !m_api_key.empty() },
+        { "models /models",        host + "/models",        !m_api_key.empty() },
+        { "models /api/v1/models", host + "/api/v1/models", !m_api_key.empty() },
     };
 
     HttpClient http(host, m_api_key);
