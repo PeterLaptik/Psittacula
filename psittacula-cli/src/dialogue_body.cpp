@@ -1,5 +1,6 @@
 #include "dialogue_body.h"
 #include "console_writer.h"
+#include "utf8_util.h"
 #include <iostream>
 #include <algorithm>
 #include <rapidjson/document.h>
@@ -67,7 +68,8 @@ void DialogueBody::AddUserMessage(const std::string &message)
         rapidjson::Document::AllocatorType &alloc = m_request->body.GetAllocator();
         rapidjson::Value msg_value(rapidjson::kObjectType);
         msg_value.AddMember("role", "user", alloc);
-        msg_value.AddMember("content", rapidjson::Value(message.c_str(), alloc).Move(), alloc);
+        const std::string safe_message = utf8::Sanitize(message);
+        msg_value.AddMember("content", rapidjson::Value(safe_message.c_str(), static_cast<rapidjson::SizeType>(safe_message.size()), alloc).Move(), alloc);
         it->value.PushBack(msg_value, alloc);
     }
 }
@@ -122,7 +124,8 @@ void DialogueBody::AddSystemMessage(const std::string &sys_message)
 
         rapidjson::Value msg_value(rapidjson::kObjectType);
         msg_value.AddMember("role", rapidjson::Value("system", alloc), alloc);
-        msg_value.AddMember("content", rapidjson::Value(sys_message.c_str(), alloc), alloc);
+        const std::string safe_sys_message = utf8::Sanitize(sys_message);
+        msg_value.AddMember("content", rapidjson::Value(safe_sys_message.c_str(), static_cast<rapidjson::SizeType>(safe_sys_message.size()), alloc), alloc);
 
         // Insert at index 0 manually
         messages.PushBack(rapidjson::Value(), alloc);
@@ -177,7 +180,13 @@ void DialogueBody::AddToolResponses(const std::vector<ToolResponse> &responses)
             tool_msg.AddMember("role", "tool", alloc);
             tool_msg.AddMember("recipient", rapidjson::Value(rss.name.c_str(), assist_alloc).Move(), assist_alloc);
 
-            tool_msg.AddMember("content", rapidjson::Value(rss.output_content.c_str(), assist_alloc).Move(), alloc);
+            rapidjson::Value content_val;
+            content_val.SetString(rss.output_content.c_str(), alloc);
+
+            // Tool output can contain arbitrary bytes (console output, file contents):
+            // invalid UTF-8 makes the server reject the whole request body
+            const std::string safe_content = utf8::Sanitize(rss.output_content);
+            tool_msg.AddMember("content", rapidjson::Value(safe_content.c_str(), static_cast<rapidjson::SizeType>(safe_content.size()), alloc).Move(), alloc);
             it->value.PushBack(tool_msg, alloc);
         }
     }
@@ -313,7 +322,10 @@ std::string DialogueBody::ToJsonString() const
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     m_request->body.Accept(writer);
-    return buffer.GetString();
+
+    // Final gate: a single ill-formed UTF-8 byte makes the server reject the whole
+    // request with a JSON parse error, so never emit an invalid sequence
+    return utf8::Sanitize(std::string(buffer.GetString(), buffer.GetSize()));
 }
 
 std::string DialogueBody::ToPureText() const
@@ -670,7 +682,7 @@ std::string DialogueBody::GetBodyForSummarizing(int msg_num) const
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     summary_body.Accept(writer);
     
-    return buffer.GetString();
+    return utf8::Sanitize(std::string(buffer.GetString(), buffer.GetSize()));
 }
 
 void DialogueBody::Compress(std::string summarized_msg, int msg_left)

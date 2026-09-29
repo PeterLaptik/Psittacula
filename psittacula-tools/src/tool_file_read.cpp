@@ -2,6 +2,7 @@
 #include "working_dir.h"
 #include "format_util.h"
 #include "console_writer.h"
+#include "utf8_util.h"
 #include <fstream>
 #include <filesystem>
 #include <sstream>
@@ -152,6 +153,6 @@ std::string FileReadTool::Execute(std::vector<ToolParameter> &params_values)
         "  \"message\": \"File read successfully\""
         "}";
 
-    std::string file_content = GetEscapedJSONString(content);
+    std::string file_content = GetEscapedJSONString(utf8::AnsiToUtf8(content));
     return fmt.Format(result_template, path, size, file_content);
 }

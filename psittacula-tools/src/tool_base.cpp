@@ -1,4 +1,5 @@
 #include "tool_base.h"
+#include "utf8_util.h"
 #include <algorithm>
 #include <fstream>
 #include <sstream>
@@ -42,10 +43,14 @@ bool ToolBase::GetParamBool(const std::vector<ToolParameter> &params_acc, const 
 
 std::string ToolBase::GetEscapedJSONString(const std::string &str) const
 {
+    // Invalid UTF-8 bytes must never reach the request body: the server side
+    // rejects the whole request with a JSON parse error
+    const std::string safe = utf8::Sanitize(str);
+
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    writer.String(str.c_str());
-    return std::string(buffer.GetString());
+    writer.String(safe.c_str(), static_cast<rapidjson::SizeType>(safe.size()));
+    return std::string(buffer.GetString(), buffer.GetSize());
 }
 
 void ToolBase::UnEscapeSlashesInPath(std::string &value) const
