@@ -63,7 +63,7 @@ void ChunkCompletionProcessor::ProcessChunk(const std::string &chunk)
         JsonDocument data{doc};
 
         // Try to process data
-        if (doc.HasMember("choices") && doc["choices"].Size() > 0)
+        if (doc.HasMember("choices") && doc["choices"].Size() > 0 && doc["choices"][0].HasMember("delta"))
         {
             CheckReasoning(data);
             CheckMessage(data);
