@@ -2,6 +2,7 @@
 #include "working_dir.h"
 #include "format_util.h"
 #include "console_writer.h"
+#include "utf8_util.h"
 #include <chrono>
 #include <filesystem>
 #include <algorithm>
@@ -150,6 +151,12 @@ std::string RunCommandTool::Execute(std::vector<ToolParameter> &params_values)
 
     long long duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now() - start_time).count();
+
+    // Child processes write in the console code page (CP866 / CP1251 / ...), which is not
+    // UTF-8. Raw bytes must never reach the request body: the server rejects the whole
+    // request with a JSON parse error on ill-formed UTF-8.
+    result.stdout_data = utf8::ConsoleToUtf8(result.stdout_data);
+    result.stderr_data = utf8::ConsoleToUtf8(result.stderr_data);
 
     if (result.timed_out)
     {
