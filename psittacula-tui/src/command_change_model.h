@@ -160,7 +160,7 @@ class CommandChangeModel: public ChatCommand
                     console::write_line(formatter.Format("  %?: %? (%?ms)", probe.name, info, probe.latency_ms), TextOrigin::error);
                 }
 
-                m_app->RefreshStatus("\033[31mCannot connect to the selected model.\033[31m");
+                m_app->RefreshStatus("\033[31m   Cannot connect to the selected model.\033[31m");
                 return;
             }
             else
@@ -168,10 +168,10 @@ class CommandChangeModel: public ChatCommand
                 // Write a short model info to the status line
                 std::string context_size_info = model.GetContextSize() > 0
                     ? std::to_string(model.GetContextSize())
-                    : "n/a";
+                    : "   n/a";
 
                 std::string model_info = formatter.Format(
-                    "Model: %? | Host: %? | Context: %?",
+                    "   Model: %? | Host: %? | Context: %?",
                     model.GetName(), model.GetHost(), context_size_info);
 
                 m_app->RefreshStatus(model_info);

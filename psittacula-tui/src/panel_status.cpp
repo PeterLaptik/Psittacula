@@ -49,7 +49,7 @@ void tui::PanelStatus::SetStatus(const std::string &status)
 {
     m_status = status;
     Refresh();
-    // No need full redraw
+    // No need full redraw: text only
     //NotifyParentAboutChanges();
 }
 
@@ -57,7 +57,7 @@ void tui::PanelStatus::Clear()
 {
     m_status = "";
     Refresh();
-    // No need full redraw
+    // No need full redraw: text only
     // NotifyParentAboutChanges();
 }
 
@@ -84,6 +84,8 @@ void tui::PanelStatus::Refresh()
         }
         status_text_line = m_status.substr(0, byte_limit);
     }
+
+    status_text_line.resize(char_limit, ' ');
 
     int cx, cy;
     GetCursorPosition(cx, cy);

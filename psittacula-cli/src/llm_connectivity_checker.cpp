@@ -78,7 +78,7 @@ LlmConnectivityState LlmConnectivityChecker::Check() const
     bool auth_probe_ok = false;
     bool auth_probe_failed = false;
 
-    for (auto &target : targets)
+    for (auto const &target : targets)
     {
         LlmEndpointProbe probe = Probe(http, target.name, target.url, target.auth);
 
