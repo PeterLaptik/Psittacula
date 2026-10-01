@@ -19,6 +19,7 @@ add_library(${PSITTACULA_CLI_NAME} STATIC
 	${INCLUDE_DIR}/format_util.h
 	${INCLUDE_DIR}/llm_connectivity_checker.h
 	${INCLUDE_DIR}/model.h
+	${INCLUDE_DIR}/utf8_util.h
 	${INCLUDE_DIR}/working_dir.h
 	${SRC_DIR}/ai_client_impl.cpp
 	${SRC_DIR}/ai_client_impl.h

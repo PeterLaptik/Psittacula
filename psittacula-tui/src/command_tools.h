@@ -17,6 +17,13 @@ class CommandTools : public ChatCommand
             ActivateAlternateScreen();
 
             std::vector<std::pair<std::string, std::string>> tools;
+            if (client.get() == nullptr)
+            {
+                RestoreMainScreen();
+                console::write_line("Error: AI client is not initialized.", TextOrigin::error);
+                return;
+            }
+
             client.get()->GetToolsInfo(tools);
             console::write_line("---------------------------------------------", TextOrigin::tools);
             console::write_line("\033[1mAvailable tools:\033[0m");
