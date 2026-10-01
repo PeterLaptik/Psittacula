@@ -4,6 +4,7 @@
 #include "tool_base.h"
 #include <string>
 #include <vector>
+#include <set>
 
 class RunCommandTool : public ToolBase
 {
@@ -41,6 +42,12 @@ class RunCommandTool : public ToolBase
             size_t max_output_bytes,
             int timeout_seconds,
             ProcessResult &result) const;
+
+        std::set<std::string> m_safe_commands = {
+            "echo", "date", "time", "pwd", "cd",
+            "ls", "dir", "cat", "head", "tail",
+            "cp", "cat"
+        };
 };
 
 #endif // TOOL_RUN_COMMAND_INCLUDED_H

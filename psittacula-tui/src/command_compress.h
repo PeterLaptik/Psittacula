@@ -12,6 +12,12 @@ class CommandCompress : public ChatCommand
         void Execute(std::unique_ptr<AiClient> &client,
             const std::vector<std::string> &args) override
         {
+            if (!client.get())
+            {
+                console::write_line("Error: AI client is not initialized.", console::TextOrigin::error);
+                return;
+            }
+
             bool reasoning_show_val = m_app->GetShowReasoning();
             m_app->SetShowReasoning(false);
 

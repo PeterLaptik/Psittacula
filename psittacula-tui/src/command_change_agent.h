@@ -80,6 +80,12 @@ class CommandChangeRules : public ChatCommand
 
         void ChooseRules(std::unique_ptr<AiClient> &client)
         {
+            if (!client.get())
+            {
+                console::write_line("Error: AiClient is not initialized / no connection to LLM", TextOrigin::error);
+                return;
+            }
+
             ActivateAlternateScreen();
 
             std::string settings_dir = WorkingDir::GetInstance().GetSettingsDir();

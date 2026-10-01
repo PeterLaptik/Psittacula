@@ -13,6 +13,12 @@ class CommandCleanContext : public ChatCommand
         void Execute(std::unique_ptr<AiClient> &client,
             const std::vector<std::string> &args) override
         {
+            if (!client.get())
+            {
+                console::write_line("Error: AI client is not initialized.", console::TextOrigin::error);
+                return;
+            }
+
             client->ClearContext();
             console::write_line("Context cleared.", TextOrigin::tools);
             console::write_line("-----", TextOrigin::normal);

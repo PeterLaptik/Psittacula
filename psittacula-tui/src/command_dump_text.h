@@ -18,6 +18,12 @@ class CommandDumpText : public ChatCommand
 
         void Execute(std::unique_ptr<AiClient> &client, const std::vector<std::string> &args) override
         {
+            if (!client.get())
+            {
+                console::write_line("Error: AI client is not initialized.", console::TextOrigin::error);
+                return;
+            }
+
             std::string dir_to_save = WorkingDir::GetInstance().GetLogsDir();
             std::string body = client->GetDialogueText();
 

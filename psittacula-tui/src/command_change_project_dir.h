@@ -48,8 +48,10 @@ class CommandChangeProjectDir : public ChatCommand
 
             if (new_path.empty())
             {
-                console::write_line("No path entered. Aborting.\n", TextOrigin::error);
                 RestoreMainScreen();
+                console::write_line(" \n No path entered.", TextOrigin::error);
+                console::write("Working path to a project: ", TextOrigin::tools);
+                console::write_line(current_dir + " \n ", TextOrigin::tools);
                 return;
             }
 

@@ -16,6 +16,12 @@ class CommandRestore : public ChatCommand
 
         void Execute(std::unique_ptr<AiClient> &client, const std::vector<std::string> &args) override
         {
+            if (!client.get())
+            {
+                console::write_line("Error: AiClient is not initialized / no connection to LLM", TextOrigin::error);
+                return;
+            }
+
             if (args.empty()) {
                 console::write_line("Error: No file path provided. Usage: restore <filename>", TextOrigin::error);
                 return;

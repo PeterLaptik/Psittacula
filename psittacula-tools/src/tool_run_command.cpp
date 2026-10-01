@@ -113,8 +113,14 @@ std::string RunCommandTool::Execute(std::vector<ToolParameter> &params_values)
         UnEscapeSlashesInPath(cwd);
     }
 
-    console::write_line(fmt.Format("Command: %?", command), console::TextOrigin::tools);
+    console::write_line(fmt.Format("Command: %? %?", command, stdin_data), console::TextOrigin::tools);
     console::write_line(fmt.Format("Working directory: %?", cwd), console::TextOrigin::tools);
+
+    auto it = m_safe_commands.find(command);
+    if (it == m_safe_commands.end())
+    {
+        // Make confirm
+    }
 
     if (!wdir.IsInWorkDir(cwd))
     {
