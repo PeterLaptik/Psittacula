@@ -20,7 +20,7 @@ class CommandDump : public ChatCommand
         {
             if (!client.get())
             {
-                console::write_line("Error: AI client is not initialized.", console::TextOrigin::error);
+                console::write_line("Error: AI client is not initialized / no connection", console::TextOrigin::error);
                 return;
             }
 

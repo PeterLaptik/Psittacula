@@ -20,7 +20,7 @@ class CommandTools : public ChatCommand
             if (client.get() == nullptr)
             {
                 RestoreMainScreen();
-                console::write_line("Error: AI client is not initialized.", TextOrigin::error);
+                console::write_line("Error: AI client is not initialized / no connection", TextOrigin::error);
                 return;
             }
 
