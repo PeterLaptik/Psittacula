@@ -46,7 +46,7 @@ class RunCommandTool : public ToolBase
         std::set<std::string> m_safe_commands = {
             "echo", "date", "time", "pwd", "cd",
             "ls", "dir", "cat", "head", "tail",
-            "cp", "cat"
+            "cp"
         };
 };
 
