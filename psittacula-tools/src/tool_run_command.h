@@ -43,8 +43,6 @@ class RunCommandTool : public ToolBase
             int timeout_seconds,
             ProcessResult &result) const;
 
-        bool ConfirmOperation(const std::string &command) const;
-
         std::set<std::string> m_safe_commands = {
             "echo", "date", "time", "pwd", "cd",
             "ls", "dir", "cat", "head", "tail",

@@ -1,5 +1,7 @@
 #include "tool_base.h"
+#include "console_writer.h"
 #include "utf8_util.h"
+#include <iostream>
 #include <algorithm>
 #include <fstream>
 #include <sstream>
@@ -9,10 +11,6 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/prettywriter.h>
 
-void ToolBase::SetConfirmationWindow(ConfirmationWindow *confirmation_window)
-{
-    m_confirmation_window = confirmation_window;
-}
 
 std::string ToolBase::GetParam(const std::vector<ToolParameter> &params_acc, const std::string &param_name, std::string default_value)
 {

@@ -227,6 +227,35 @@ void console::write_status(const ChunkProcessor *proc, int context_size)
     }
 }
 
+bool console::ask_confirm(const std::string message)
+{
+    bool result = false;
+    if(text_receiver)
+    {
+        result = text_receiver->AskConfirm(message);
+    }
+    else
+    {
+        console::write_line(message, console::TextOrigin::tools);
+        console::write_line("Do you want to proceed? (y/n): ", console::TextOrigin::tools);
+
+        std::string response;
+        std::getline(std::cin, response);
+
+        if (response != "y" && response != "Y")
+        {
+            console::write_line("Operation cancelled by user.", console::TextOrigin::tools);
+            result = false;
+        }
+        else
+        {
+            console::write_line("Operation confirmed by user.", console::TextOrigin::tools);
+            result = true;
+        }
+    }
+    return result;
+}
+
 void console::flush()
 {
     if (text_receiver)

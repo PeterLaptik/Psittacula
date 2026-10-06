@@ -31,6 +31,7 @@ namespace console {
             virtual void Clear() = 0;
             virtual void Flush() = 0;
             virtual void MoveSpinner() = 0;
+            virtual bool AskConfirm(const std::string message) = 0;
     };
 
     void set_up_console(TextReceiver *receiver = nullptr);
@@ -68,6 +69,8 @@ namespace console {
     void write_splitter(TextOrigin origin = TextOrigin::splitter);
 
     void write_status(const ChunkProcessor *proc, int context_size);
+
+    bool ask_confirm(const std::string message);
 
     void flush();
 

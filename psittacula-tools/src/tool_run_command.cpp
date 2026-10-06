@@ -122,13 +122,9 @@ std::string RunCommandTool::Execute(std::vector<ToolParameter> &params_values)
     {
         confirmed_action = true;
     }
-
-    if (!confirmed_action)
+    else
     {
-        if(!m_confirmation_window)
-            confirmed_action = ConfirmOperation(command);
-        else
-            confirmed_action = m_confirmation_window->Confirm(fmt.Format("Confirm executing the command:\n%?\n\nWorking directory:\n%?", command, cwd));
+        confirmed_action = console::ask_confirm(command);
     }
 
     if(!confirmed_action)
@@ -440,32 +436,6 @@ finish:
     }
 
     return success;
-}
-
-bool RunCommandTool::ConfirmOperation(const std::string &command) const
-{
-    Formatter fmt;
-    auto it = m_safe_commands.find(command);
-    if (it == m_safe_commands.end())
-    {
-        console::write_line("Warning: command execution.", console::TextOrigin::tools);
-        console::write_line(fmt.Format("Command: %?", command), console::TextOrigin::tools);
-        console::write_line("Do you want to proceed? (y/n): ", console::TextOrigin::tools);
-
-        std::string response;
-        std::getline(std::cin, response);
-
-        if (response != "y" && response != "Y")
-        {
-            console::write_line("Operation cancelled by user.", console::TextOrigin::tools);
-            return false;
-        }
-        else
-        {
-            console::write_line("Operation confirmed by user.", console::TextOrigin::tools);
-            return true;
-        }
-    }
 }
 
 #else
