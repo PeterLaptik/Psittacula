@@ -56,7 +56,18 @@ class ToolBase
         /// Defines: should be added to undo / redo history
         virtual bool CanBeReverted() { return true; }
 
+        class ConfirmationWindow
+        {
+            public:
+                virtual ~ConfirmationWindow() = default;
+                virtual bool Confirm(const std::string &message) = 0;
+        };
+
+        void SetConfirmationWindow(ConfirmationWindow *confirmation_window);
+
     protected:
+        ConfirmationWindow *m_confirmation_window = nullptr;
+
         std::string GetParam(const std::vector<ToolParameter> &params_acc, const std::string &param_name, std::string default_value = "");
 
         bool GetParamBool(const std::vector<ToolParameter> &params_acc, const std::string &param_name, bool default_value);
