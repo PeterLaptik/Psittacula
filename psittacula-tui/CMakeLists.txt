@@ -35,6 +35,8 @@ add_executable(${PSITTACULA_TUI_NAME}
     ${SRC_DIR}/command_undo.h
     ${SRC_DIR}/exit_dialog.cpp
     ${SRC_DIR}/exit_dialog.h
+    ${SRC_DIR}/confirm_dialogue.cpp
+    ${SRC_DIR}/confirm_dialogue.h
     ${SRC_DIR}/init_commands.cpp
     ${SRC_DIR}/init_commands.h
     ${SRC_DIR}/input_text_content.cpp

@@ -117,17 +117,7 @@ std::string RunCommandTool::Execute(std::vector<ToolParameter> &params_values)
     console::write_line(fmt.Format("Working directory: %?", cwd), console::TextOrigin::tools);
 
     // Make confirm
-    bool confirmed_action = false;
-    if (auto it = m_safe_commands.find(command); it != m_safe_commands.end())
-    {
-        confirmed_action = true;
-    }
-    else
-    {
-        confirmed_action = console::ask_confirm(command);
-    }
-
-    if(!confirmed_action)
+    if(!console::ask_confirm(command))
     {
         console::write_line("Operation cancelled by user.", console::TextOrigin::tools);
         return R"({"error":{"type":"operation_cancelled","message":"Operation cancelled by user"}})";

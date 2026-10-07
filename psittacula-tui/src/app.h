@@ -5,6 +5,7 @@
 #include "keyboard.h"
 #include "ai_client.h"
 #include "exit_dialog.h"
+#include "confirm_dialogue.h"
 #include "console_writer.h"
 #include <atomic>
 #include <condition_variable>
@@ -12,6 +13,7 @@
 #include <string>
 #include <thread>
 
+class ConfirmDialogue;
 class ChatCommandDispatcher;
 
 namespace tui {
@@ -26,9 +28,6 @@ namespace tui {
             App& operator=(const App&) = delete;
 
             void Run();
-
-            /// Callback to send a chunk of LLM text response to output at a screen
-            void SendText(const std::string txt, TextOrigin origin = TextOrigin::normal);
 
             void MoveSpinner() override;
 
@@ -62,14 +61,11 @@ namespace tui {
             /// Shows "working" status; call from UI thread each loop iteration
             void ShowQueryStatus();
 
-            /// Renders a confirm frame in an alternate screen buffer and reads
-            /// a y/n answer; must run on the UI thread only (it owns the keyboard)
-            bool RunConfirmDialog(const std::string &message, int first_key);
-
             Screen m_screen;
             Keyboard m_keyboard;
 
             ExitDialog m_exit_dialog;
+            ConfirmDialogue m_confirm_dialogue;
 
             std::unique_ptr<AiClient> m_client;
             std::unique_ptr<ChatCommandDispatcher> m_cmd_dispatcher;

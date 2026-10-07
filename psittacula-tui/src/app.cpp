@@ -29,7 +29,7 @@ namespace {
 } // namespace
 
 tui::App::App()
-    : m_exit_dialog(m_screen, m_keyboard)
+    : m_exit_dialog(m_screen, m_keyboard), m_confirm_dialogue(m_screen)
 { }
 
 tui::App::~App()
@@ -48,11 +48,6 @@ void tui::App::Run()
 {
     m_screen.Show();
     MainLoop();
-}
-
-void tui::App::SendText(const std::string txt, TextOrigin origin)
-{
-    m_screen.PutText(txt, origin);
 }
 
 void tui::App::MoveSpinner()
@@ -93,96 +88,17 @@ bool tui::App::GetShowReasoning() const
 
 void tui::App::WriteLine(const std::string &message, TextOrigin origin)
 {
-    SendText(message + '\n', origin);
+    m_screen.PutText(message + '\n', origin);
 }
 
 void tui::App::Write(const std::string &message, TextOrigin origin)
 {
-    SendText(message, origin);
+    m_screen.PutText(message, origin);
 }
 
 bool tui::App::AskConfirm(const std::string &message)
 {
-    return RunConfirmDialog(message, Keyboard::Keys::nothing);
-}
-
-bool tui::App::RunConfirmDialog(const std::string &message, int first_key)
-{
-    int scr_width = 0;
-    int scr_height = 0;
-    m_screen.GetSize(scr_width, scr_height);
-
-    // The message can span lines: each line gets its own frame row
-    std::vector<std::string> lines;
-    {
-        std::istringstream iss(message);
-        std::string line;
-        while (std::getline(iss, line))
-            lines.push_back(line);
-        if (lines.empty())
-            lines.emplace_back();
-    }
-
-    const std::string title = "Confirm the action?";
-    const std::string hint = "y - allow,  n/Esc - deny";
-
-    int content_width = static_cast<int>(title.length());
-    for (const std::string &line : lines)
-        content_width = std::max(content_width, static_cast<int>(line.length()));
-
-    content_width = std::min(content_width, std::max(1, scr_width - 6));
-
-    const std::string border = "+" + std::string(static_cast<size_t>(content_width) + 2, '-') + "+";
-    int box_width = content_width + 4;
-    int box_margin = std::max(0, (scr_width - box_width) / 2);
-    int hint_margin = std::max(0, (scr_width - static_cast<int>(hint.length())) / 2);
-
-    int block_height = static_cast<int>(lines.size()) + 6; // borders, title, blank rows, hint
-    int top_margin = std::max(0, (scr_height - block_height) / 2);
-
-    std::cout << "\x1b[?1049h" << std::flush;
-    m_screen.HideCursor(true);
-
-    for (int i = 0; i < top_margin; i++)
-        std::cout << std::endl;
-
-    const std::string blank_content(static_cast<size_t>(content_width), ' ');
-    const std::string blank_row(static_cast<size_t>(box_width) - 2, ' ');
-
-    PrintIndented(box_margin, border);
-    PrintIndented(box_margin, "| " + FitToWidth(title, content_width) + " |");
-    PrintIndented(box_margin, "| " + blank_content + " |");
-    for (const std::string &line : lines)
-        PrintIndented(box_margin, "| " + FitToWidth(line, content_width) + " |");
-    PrintIndented(box_margin, "|" + blank_row + "|");
-    PrintIndented(box_margin, border);
-
-    PrintIndented(hint_margin, hint);
-    std::cout << std::flush;
-
-    bool confirmed = false;
-    int key = first_key;
-    while (true)
-    {
-        if (key == 'y' || key == 'Y')
-        {
-            confirmed = true;
-            break;
-        }
-
-        if (key == 'n' || key == 'N' || key == 27 || key == 3 || key == 4 ||
-            key == Keyboard::Keys::eof)
-        {
-            confirmed = false;
-            break;
-        }
-
-        key = m_keyboard.ReadKey();
-    }
-
-    m_screen.HideCursor(false);
-    std::cout << "\x1b[?1049l" << std::flush;
-    return confirmed;
+    return m_confirm_dialogue.Confirm(message);
 }
 
 void tui::App::RefreshStatus(const std::string &status)
@@ -222,6 +138,12 @@ void tui::App::MainLoop()
 
         if (key == Keyboard::Keys::nothing)
             continue;
+
+        if (m_confirm_dialogue.IsShown())
+        {
+            m_confirm_dialogue.PutCharFromKeyboard(key);
+            continue;
+        }
 
         try
         {
