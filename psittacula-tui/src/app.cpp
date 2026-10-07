@@ -34,19 +34,6 @@ tui::App::App()
 
 tui::App::~App()
 {
-    // Resolve a possibly pending confirmation, so a worker waiting
-    // for the dialog answer cannot block the shutdown
-    {
-        std::lock_guard<std::mutex> lock(m_confirm_mutex);
-        if (m_confirm_active)
-        {
-            m_confirm_active = false;
-            m_confirm_answered = true;
-            m_confirm_result = false;
-        }
-    }
-    m_confirm_cv.notify_all();
-
     // Never detach: if a query is still running at shutdown,
     // cancel it and wait for the worker to finish
     if (m_query_thread.joinable())
@@ -114,64 +101,15 @@ void tui::App::Write(const std::string &message, TextOrigin origin)
     SendText(message, origin);
 }
 
-bool tui::App::AskConfirm(const std::string message)
+bool tui::App::AskConfirm(const std::string &message)
 {
-    // While a query streams, its worker thread is the caller: the UI loop
-    // (which alone reads the keyboard) must render and answer the dialog
-    if (m_query_running.load())
-        return AskConfirmAsync(message);
-
-    // Called on the UI thread: show the dialog directly
     return RunConfirmDialog(message, Keyboard::Keys::nothing);
-}
-
-bool tui::App::AskConfirmAsync(const std::string &message)
-{
-    {
-        std::lock_guard<std::mutex> lock(m_confirm_mutex);
-        if (m_confirm_active)
-            return false; // the previous request has not been answered yet
-
-        m_confirm_message = message;
-        m_confirm_active = true;
-        m_confirm_answered = false;
-        m_confirm_result = false;
-    }
-
-    bool result = false;
-    {
-        std::unique_lock<std::mutex> lock(m_confirm_mutex);
-        m_confirm_cv.wait(lock, [this] { return m_confirm_answered; });
-        result = m_confirm_result;
-    }
-    return result;
-}
-
-bool tui::App::HandleConfirmRequest(int first_key)
-{
-    std::string message;
-    {
-        std::lock_guard<std::mutex> lock(m_confirm_mutex);
-        if (!m_confirm_active)
-            return false;
-        message = m_confirm_message;
-    }
-
-    bool result = RunConfirmDialog(message, first_key);
-
-    {
-        std::lock_guard<std::mutex> lock(m_confirm_mutex);
-        m_confirm_result = result;
-        m_confirm_active = false;
-        m_confirm_answered = true;
-    }
-    m_confirm_cv.notify_one();
-    return true;
 }
 
 bool tui::App::RunConfirmDialog(const std::string &message, int first_key)
 {
-    int scr_width = 0, scr_height = 0;
+    int scr_width = 0;
+    int scr_height = 0;
     m_screen.GetSize(scr_width, scr_height);
 
     // The message can span lines: each line gets its own frame row
@@ -182,7 +120,7 @@ bool tui::App::RunConfirmDialog(const std::string &message, int first_key)
         while (std::getline(iss, line))
             lines.push_back(line);
         if (lines.empty())
-            lines.push_back(std::string());
+            lines.emplace_back();
     }
 
     const std::string title = "Confirm the action?";
@@ -226,13 +164,6 @@ bool tui::App::RunConfirmDialog(const std::string &message, int first_key)
     int key = first_key;
     while (true)
     {
-        if (key == Keyboard::Keys::nothing)
-        {
-            key = m_keyboard.ReadKey();
-            if (key == Keyboard::Keys::nothing)
-                continue;
-        }
-
         if (key == 'y' || key == 'Y')
         {
             confirmed = true;
@@ -246,7 +177,7 @@ bool tui::App::RunConfirmDialog(const std::string &message, int first_key)
             break;
         }
 
-        key = Keyboard::Keys::nothing; // irrelevant keys are ignored
+        key = m_keyboard.ReadKey();
     }
 
     m_screen.HideCursor(false);
@@ -298,11 +229,6 @@ void tui::App::MainLoop()
             // it interrupts the connection / chunk receiving
             if (m_query_running.load())
             {
-                // The worker asks to confirm an action: render the dialog here,
-                // the keyboard belongs to it until the user answers
-                if (HandleConfirmRequest(key))
-                    continue;
-
                 if (key == 27 || key == 3 || key == 4)
                 {
                     if (m_client)
@@ -331,6 +257,10 @@ void tui::App::MainLoop()
                 ProcessCommand(response.data);
             }
 
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << "App error: " << e.what() << std::endl;
         }
         catch (...)
         {

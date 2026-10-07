@@ -43,7 +43,7 @@ namespace tui {
             // Text receiver interface for system output
             void WriteLine(const std::string &message, TextOrigin origin = TextOrigin::normal) override;
             void Write(const std::string &message, TextOrigin origin = TextOrigin::normal) override;
-            bool AskConfirm(const std::string message);
+            bool AskConfirm(const std::string &message) override;
             void RefreshStatus(const std::string &status) override;
             void Clear() override;
             void Flush() override;
@@ -66,15 +66,6 @@ namespace tui {
             /// a y/n answer; must run on the UI thread only (it owns the keyboard)
             bool RunConfirmDialog(const std::string &message, int first_key);
 
-            /// Worker body helper: publishes a confirmation request and waits
-            /// until the UI loop answers it
-            bool AskConfirmAsync(const std::string &message);
-
-            /// Serves a pending worker confirmation request on the UI thread;
-            /// first_key is the key already read this iteration;
-            /// returns true when a request was pending and has been answered
-            bool HandleConfirmRequest(int first_key);
-
             Screen m_screen;
             Keyboard m_keyboard;
 
@@ -89,16 +80,6 @@ namespace tui {
             std::mutex m_query_mutex;
             std::string m_query_result; // "ok", "cancelled", or "error: ..."
             bool m_query_status_shown = false;
-
-            // Modal confirmation: the query worker raises the request,
-            // the UI loop (which alone reads the keyboard) renders the
-            // dialog and delivers the answer
-            std::mutex m_confirm_mutex;
-            std::condition_variable m_confirm_cv;
-            std::string m_confirm_message;
-            bool m_confirm_active = false;   // request waits for the UI thread
-            bool m_confirm_answered = false; // the UI thread has delivered the answer
-            bool m_confirm_result = false;
     };
 }
 

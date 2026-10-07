@@ -31,7 +31,7 @@ namespace console {
             virtual void Clear() = 0;
             virtual void Flush() = 0;
             virtual void MoveSpinner() = 0;
-            virtual bool AskConfirm(const std::string message) = 0;
+            virtual bool AskConfirm(const std::string &message) = 0;
     };
 
     void set_up_console(TextReceiver *receiver = nullptr);
