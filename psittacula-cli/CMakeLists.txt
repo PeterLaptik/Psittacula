@@ -16,6 +16,7 @@ add_library(${PSITTACULA_CLI_NAME} STATIC
 	${INCLUDE_DIR}/chunk_processor.h
 	${INCLUDE_DIR}/clients_factory.h
 	${INCLUDE_DIR}/console_writer.h
+	${INCLUDE_DIR}/curl_global_guard.h
 	${INCLUDE_DIR}/format_util.h
 	${INCLUDE_DIR}/llm_connectivity_checker.h
 	${INCLUDE_DIR}/model.h

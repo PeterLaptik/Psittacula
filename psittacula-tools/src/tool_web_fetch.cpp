@@ -1,6 +1,7 @@
 #include "tool_web_fetch.h"
 #include "format_util.h"
 #include "console_writer.h"
+#include "curl_global_guard.h"
 
 #include <curl/curl.h>
 #include <rapidjson/document.h>
@@ -277,12 +278,11 @@ std::string WebFetchTool::Execute(std::vector<ToolParameter> &params_values)
         }
     }
 
-    curl_global_init(CURL_GLOBAL_DEFAULT);
+    curl_global::Guard curl_guard;
 
     CURL *curl = curl_easy_init();
     if (!curl)
     {
-        curl_global_cleanup();
         return R"({"error":{"type":"runtime_error","message":"Failed to initialize libcurl"}})";
     }
 
@@ -309,7 +309,6 @@ std::string WebFetchTool::Execute(std::vector<ToolParameter> &params_values)
         {
             curl_slist_free_all(headers);
             curl_easy_cleanup(curl);
-            curl_global_cleanup();
             return R"({"error":{"type":"invalid_arguments","message":"headers must be a JSON object"}})";
         }
 
@@ -350,7 +349,6 @@ std::string WebFetchTool::Execute(std::vector<ToolParameter> &params_values)
 
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
-    curl_global_cleanup();
 
     if (res != CURLE_OK && !stopped_by_limit)
     {

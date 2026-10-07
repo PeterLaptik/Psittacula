@@ -20,6 +20,10 @@ class HttpClient
 
         HttpClient(const std::string &host, int port, std::string api_key = "");
 
+        HttpClient(const HttpClient &) = delete;
+
+        HttpClient &operator=(const HttpClient &) = delete;
+
         ~HttpClient();
 
         void SetApiKey(const std::string &key);
@@ -37,6 +41,11 @@ class HttpClient
     private:
         std::string m_host;
         std::string m_api_key; // optional
+
+        // Owned reference to the process-wide curl global state:
+        // set when this object's constructor initialized it successfully
+        // (see curl_global_guard.h), released again in the destructor
+        bool m_curl_initialized = false;
 };
 
 #endif // HTTP_CLIENT_INCLUDED_H

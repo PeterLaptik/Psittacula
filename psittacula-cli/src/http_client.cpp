@@ -1,6 +1,7 @@
 #include "http_client.h"
 #include "response_readers.h"
 #include "chunk_processor.h"
+#include "curl_global_guard.h"
 #include <chrono>
 #include <iostream>
 #include <curl/curl.h>
@@ -8,22 +9,25 @@
 HttpClient::HttpClient(const std::string &host_and_port, std::string api_key)
     : m_host(host_and_port), m_api_key(api_key)
 {
-    CURLcode result = curl_global_init(CURL_GLOBAL_DEFAULT);
-    if (result != CURLE_OK)
+    m_curl_initialized = curl_global::Acquire();
+
+    if (!m_curl_initialized)
         std::cerr << "Curl init error!" << std::endl;
 }
 
 HttpClient::HttpClient(const std::string &host, int port, std::string api_key)
     : m_host(host + '/' + std::to_string(port)), m_api_key(api_key)
 {
-    CURLcode result = curl_global_init(CURL_GLOBAL_DEFAULT);
-    if (result != CURLE_OK)
+    m_curl_initialized = curl_global::Acquire();
+
+    if (!m_curl_initialized)
         std::cerr << "Curl init error!" << std::endl;
 }
 
 HttpClient::~HttpClient()
 {
-    curl_global_cleanup();
+    if (m_curl_initialized)
+        curl_global::Release();
 }
 
 void HttpClient::SetApiKey(const std::string &key)

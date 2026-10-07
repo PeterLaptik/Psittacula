@@ -309,6 +309,10 @@ void AiClientImpl::ClearContext()
 // It can be done smarter
 void AiClientImpl::CompressContext()
 {
+    // The flag may still be set by an earlier CancelRequest (ESC interrupt) -
+    // clear it explicitly, otherwise this action aborts instantly
+    m_cancelled.store(false);
+
     // Build a summarization request: the dialogue without the last messages,
     // plus an instruction for the LLM to summarize the remaining context.
     std::string summary_body = m_body_obj.GetBodyForSummarizing(kMessagesToKeep);
