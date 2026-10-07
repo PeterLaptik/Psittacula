@@ -1,4 +1,4 @@
-#include "exit_dialog.h"
+#include "exit_dialogue.h"
 #include <iostream>
 #include <string>
 #ifdef _WIN32
@@ -11,13 +11,13 @@
 #include <unistd.h>
 #endif
 
-tui::ExitDialog::ExitDialog(Screen &screen, Keyboard &keyboard)
+tui::ExitDialogue::ExitDialogue(Screen &screen, Keyboard &keyboard)
     : m_screen(screen)
     , m_keyboard(keyboard)
 { }
 
 // Handles exit menu
-bool tui::ExitDialog::Confirm()
+bool tui::ExitDialogue::Confirm()
 {
     int scr_width, scr_height;
     m_screen.GetSize(scr_width, scr_height);

@@ -4,7 +4,7 @@
 #include "screen.h"
 #include "keyboard.h"
 #include "ai_client.h"
-#include "exit_dialog.h"
+#include "exit_dialogue.h"
 #include "confirm_dialogue.h"
 #include "console_writer.h"
 #include <atomic>
@@ -64,7 +64,7 @@ namespace tui {
             Screen m_screen;
             Keyboard m_keyboard;
 
-            ExitDialog m_exit_dialog;
+            ExitDialogue m_exit_dialog;
             ConfirmDialogue m_confirm_dialogue;
 
             std::unique_ptr<AiClient> m_client;

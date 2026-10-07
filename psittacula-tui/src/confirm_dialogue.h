@@ -13,7 +13,7 @@ namespace tui {
         public:
             explicit ConfirmDialogue(Screen &screen);
 
-            /// Shows the confirmation menu
+            /// Shows the confirmation menu (y/n key press waiting)
             bool Confirm(const std::string &message);
 
             void PutCharFromKeyboard(int key);

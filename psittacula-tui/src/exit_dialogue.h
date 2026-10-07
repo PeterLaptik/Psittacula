@@ -6,10 +6,10 @@
 
 namespace tui {
     /// Handles exit menu: asks the user to confirm quitting the application
-    class ExitDialog
+    class ExitDialogue
     {
         public:
-            ExitDialog(Screen &screen, Keyboard &keyboard);
+            ExitDialogue(Screen &screen, Keyboard &keyboard);
 
             /// Shows the exit menu in an alternate screen buffer,
             /// returns true when the user confirmed to quit
