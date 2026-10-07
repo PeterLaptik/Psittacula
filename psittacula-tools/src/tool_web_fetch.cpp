@@ -75,6 +75,29 @@ std::string ToLowerCase(const std::string &s)
     return out;
 }
 
+/// Detects URLs pointing at the local machine, so that an accidental
+/// request to an internal service is at least visible in the console.
+/// The URL is expected to be already validated (http:// or https:// prefix).
+bool IsLoopbackUrl(const std::string &url)
+{
+    std::string lower = ToLowerCase(url);
+
+    size_t scheme_end = lower.find("://");
+    if (scheme_end == std::string::npos)
+        return false;
+
+    size_t host_begin = scheme_end + 3;
+    size_t path_start = lower.find('/', host_begin);
+    size_t host_end = (path_start == std::string::npos) ? lower.size() : path_start;
+
+    std::string host = lower.substr(host_begin, host_end - host_begin);
+
+    if (host == "localhost" || host == "0.0.0.0" || host == "[::1]" || host == "[::]")
+        return true;
+
+    return host.find("127.") == 0;
+}
+
 bool LooksLikeText(const std::string &content_type)
 {
     std::string ct = ToLowerCase(content_type);
@@ -226,8 +249,33 @@ std::string WebFetchTool::Execute(std::vector<ToolParameter> &params_values)
     bool follow_redirects = GetParamBool(params_values, "follow_redirects", true);
 
     std::string user_agent = GetParam(params_values, "user_agent", "Psittacula-Agent/0.8.3");
+    std::string headers_json = GetParam(params_values, "headers");
 
     console::write_line(fmt.Format("Fetching: %?", url), console::TextOrigin::tools);
+
+    // Notifications and POST/PUT submissions can leak data or trigger
+    // side effects on a remote service, so they go through the same
+    // confirmation gate as run_command. Plain GET queries stay silent.
+    if (method_lower == "post" || !body.empty() || !headers_json.empty() ||
+        IsLoopbackUrl(url))
+    {
+        std::string summary = method_lower + " " + url;
+
+        if (!body.empty())
+            summary += fmt.Format(" (body: %? bytes)", body.size());
+
+        if (!headers_json.empty())
+            summary += fmt.Format(" (headers: %?)", headers_json);
+
+        std::string confirm_text = fmt.Format(
+            "web_fetch %?", summary);
+
+        if (!console::ask_confirm(confirm_text))
+        {
+            console::write_line("Operation cancelled by user.", console::TextOrigin::tools);
+            return R"({"error":{"type":"operation_cancelled","message":"Operation cancelled by user"}})";
+        }
+    }
 
     curl_global_init(CURL_GLOBAL_DEFAULT);
 
@@ -252,7 +300,6 @@ std::string WebFetchTool::Execute(std::vector<ToolParameter> &params_values)
     struct curl_slist *headers = nullptr;
     headers = curl_slist_append(headers, ("User-Agent: " + user_agent).c_str());
 
-    std::string headers_json = GetParam(params_values, "headers");
     if (!headers_json.empty())
     {
         rapidjson::Document doc;

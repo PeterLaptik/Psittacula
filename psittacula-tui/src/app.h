@@ -7,8 +7,6 @@
 #include "exit_dialogue.h"
 #include "confirm_dialogue.h"
 #include "console_writer.h"
-#include <atomic>
-#include <condition_variable>
 #include <mutex>
 #include <string>
 #include <thread>
