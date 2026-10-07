@@ -8,6 +8,7 @@
 #include "panel_status.h"
 #include "console_writer.h"
 #include <string>
+#include <mutex>
 #ifndef _WIN32
 #include <termios.h>
 #endif
@@ -71,6 +72,8 @@ namespace tui {
             PanelInput m_panel_input;
             PanelText m_panel_text;
             PanelStatus m_panel_status;
+
+            std::mutex m_screen_locker;
     };
 }
 

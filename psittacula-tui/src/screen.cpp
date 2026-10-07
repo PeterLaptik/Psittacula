@@ -53,6 +53,8 @@ void tui::Screen::Show()
 
 tui::Response tui::Screen::PutChar(int key)
 {
+    std::lock_guard guard(m_screen_locker);
+
     if (key == Keyboard::Keys::keyPageUp)
     {
         m_panel_text.ScrollPageUp();
@@ -83,21 +85,25 @@ tui::Response tui::Screen::PutChar(int key)
 
 void tui::Screen::PutText(const std::string &txt, TextOrigin origin)
 {
+    std::lock_guard guard(m_screen_locker);
     m_panel_text.AddText(txt, origin);
 }
 
 void tui::Screen::SetStatusLine(const std::string &status)
 {
+    std::lock_guard guard(m_screen_locker);
     m_panel_status.SetStatus(status);
 }
 
 void tui::Screen::MoveSpinner()
 {
+    std::lock_guard guard(m_screen_locker);
     m_panel_status.MoveSpinner();
 }
 
 void tui::Screen::Clear()
 {
+    std::lock_guard guard(m_screen_locker);
     m_panel_text.Clear();
 }
 
@@ -183,6 +189,8 @@ void tui::Screen::UpdateSize()
 
 bool tui::Screen::HandleResize()
 {
+    std::lock_guard guard(m_screen_locker);
+
     int old_columns = m_props.columns;
     int old_rows = m_props.rows;
 
