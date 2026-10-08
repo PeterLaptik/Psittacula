@@ -210,6 +210,8 @@ void DialogueBody::SetModel(const std::string &model)
         return;
     }
     m_request->body["model"].SetString(model.c_str(), m_request->body.GetAllocator());
+
+    m_model = model;
 }
 
 void DialogueBody::RegisterTool(ToolBase *tool)
@@ -376,6 +378,11 @@ void DialogueBody::FromJsonString(const std::string data)
         std::cerr << "JSON restore error: no 'messages' array" << std::endl;
         return;
     }
+
+    // Keep the cached model name in sync with the restored body
+    auto model_it = m_request->body.FindMember("model");
+    if (model_it != m_request->body.MemberEnd() && model_it->value.IsString())
+        m_model = model_it->value.GetString();
 
     const rapidjson::Value &messages = msg_it->value;
     for (auto &msg : messages.GetArray()) {
@@ -640,8 +647,14 @@ std::string DialogueBody::GetBodyForSummarizing(int msg_num) const
     summary_body.SetObject();
     rapidjson::Document::AllocatorType &alloc = summary_body.GetAllocator();
     
-    // Copy the model
-    summary_body.AddMember("model", rapidjson::Value(m_model.c_str(), alloc).Move(), alloc);
+    std::string model_name = m_model;
+    auto model_it = m_request->body.FindMember("model");
+    if (model_it != m_request->body.MemberEnd() && model_it->value.IsString())
+        model_name = model_it->value.GetString();
+
+    summary_body.AddMember("model",
+        rapidjson::Value(model_name.c_str(), static_cast<rapidjson::SizeType>(model_name.size()), alloc).Move(),
+        alloc);
     
     // Copy all messages except the last msg_num messages
     rapidjson::Value summary_messages(rapidjson::kArrayType);
