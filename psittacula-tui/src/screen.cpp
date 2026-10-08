@@ -22,12 +22,89 @@ extern "C" void handle_winch(int sig)
     (void)sig;
     g_resize_pending = 1;
 }
+
+namespace {
+    // Cooked-mode terminal saved by EnableRawMode. A copy is kept at file
+    // scope because the fatal-signal handler cannot reach class members.
+    struct termios g_signal_saved_termios {};
+    bool g_signal_saved_valid = false;
+
+    struct sigaction g_saved_sigint {}, g_saved_sigterm {}, g_saved_sighup {};
+    bool g_fatal_handlers_installed = false;
+}
+
+// SIGINT / SIGTERM / SIGHUP: restore the terminal before dying, then let the
+// default disposition kill the process with the status the shell expects.
+// Only async-signal-safe calls: tcsetattr, write, sigaction, raise.
+extern "C" void RestoreConsoleOnFatalSignal(int sig)
+{
+    if (g_signal_saved_valid)
+    {
+        tcsetattr(STDIN_FILENO, TCSANOW, &g_signal_saved_termios);
+        g_signal_saved_valid = false;
+    }
+
+    // Make the cursor visible and leave the alternate screen, if still shown
+    const char reset[] = "\x1b[?25h\x1b[?1049l";
+    if (write(STDOUT_FILENO, reset, sizeof(reset) - 1) == -1)
+    {
+        // The console may already be gone: nothing to report here
+    }
+
+    struct sigaction dfl {};
+    dfl.sa_handler = SIG_DFL;
+    sigemptyset(&dfl.sa_mask);
+    sigaction(sig, &dfl, nullptr);
+
+    raise(sig); // default action terminates the process
+}
+
+void InstallFatalSignalHandlers()
+{
+    struct sigaction sa {};
+    sa.sa_handler = RestoreConsoleOnFatalSignal;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+
+    sigaction(SIGINT, &sa, &g_saved_sigint);
+    sigaction(SIGTERM, &sa, &g_saved_sigterm);
+    sigaction(SIGHUP, &sa, &g_saved_sighup);
+
+    g_fatal_handlers_installed = true;
+}
+
+void UninstallFatalSignalHandlers()
+{
+    if (!g_fatal_handlers_installed)
+        return;
+
+    sigaction(SIGINT, &g_saved_sigint, nullptr);
+    sigaction(SIGTERM, &g_saved_sigterm, nullptr);
+    sigaction(SIGHUP, &g_saved_sighup, nullptr);
+
+    g_fatal_handlers_installed = false;
+    g_signal_saved_valid = false;
+}
 #endif
 
 tui::Screen::Screen()
     : m_panel_input(static_cast<Panel*>(this)), 
     m_panel_text(static_cast<Panel *>(this))
 { }
+
+tui::Screen::~Screen()
+{
+#ifndef _WIN32
+    // Restore the original fatal dispositions first (no handler of ours can
+    // run after that), then the terminal itself. No-ops when Show() never
+    // got to enable anything.
+    UninstallFatalSignalHandlers();
+    DisableRawMode();
+#else
+    RestoreInputMode();
+#endif
+    std::cout << "\x1b[?25h" << std::flush; // cursor visible for whoever comes next
+}
 
 void tui::Screen::Show()
 {
@@ -42,6 +119,7 @@ void tui::Screen::Show()
 
 #ifndef _WIN32
     EnableRawMode();
+    InstallFatalSignalHandlers();
 
     struct sigaction sa {};
     sa.sa_handler = handle_winch;
@@ -130,28 +208,61 @@ void tui::Screen::OnUpdatedChild(Panel *updated_panel)
 void tui::Screen::SetUpScreen()
 {
 #ifdef _WIN32
-    SetConsoleCP(CP_UTF8);
-    SetConsoleOutputCP(CP_UTF8);
+    // Save everything about to be changed: the destructor restores it later
+    m_saved_cp_input = GetConsoleCP();
+    m_saved_cp_output = GetConsoleOutputCP();
 
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     DWORD dwMode = 0;
-    if (GetConsoleMode(hOut, &dwMode))
+    if (hOut != INVALID_HANDLE_VALUE && hOut != nullptr &&
+        GetConsoleMode(hOut, &dwMode))
+    {
+        m_saved_output_mode = dwMode;
+        m_output_saved = true;
         SetConsoleMode(hOut, dwMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+    }
 
     HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
     DWORD inMode = 0;
     if (hIn != INVALID_HANDLE_VALUE && hIn != nullptr &&
         GetConsoleMode(hIn, &inMode))
     {
+        m_saved_input_mode = inMode;
+        m_input_saved = true;
+
         inMode &= ~(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_PROCESSED_INPUT);
         inMode |= ENABLE_WINDOW_INPUT;
         SetConsoleMode(hIn, inMode);
     }
+
+    SetConsoleCP(CP_UTF8);
+    SetConsoleOutputCP(CP_UTF8);
 #else
-    // POSIX terminals: UTF-8
+    // POSIX terminals: UTF-8 locale for input decoding / formatting
     setlocale(LC_ALL, "");
 #endif
 }
+
+#ifdef _WIN32
+void tui::Screen::RestoreInputMode()
+{
+    HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
+    if (hIn != INVALID_HANDLE_VALUE && hIn != nullptr && m_input_saved)
+        SetConsoleMode(hIn, m_saved_input_mode);
+
+    // VT processing is sticky per-process in some hosts: restore the whole
+    // saved output mode, not just the VT bit
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hOut != INVALID_HANDLE_VALUE && hOut != nullptr && m_output_saved)
+        SetConsoleMode(hOut, m_saved_output_mode);
+
+    // console code pages: 0 means there was no console to query at startup
+    if (m_saved_cp_input != 0)
+        SetConsoleCP(m_saved_cp_input);
+    if (m_saved_cp_output != 0)
+        SetConsoleOutputCP(m_saved_cp_output);
+}
+#endif
 
 bool tui::Screen::CheckScreen()
 {
@@ -255,7 +366,9 @@ void tui::Screen::DrawFrame()
 #ifndef _WIN32
 void tui::Screen::EnableRawMode()
 {
-    tcgetattr(STDIN_FILENO, &g_original_termios);
+    if (tcgetattr(STDIN_FILENO, &g_original_termios) != 0)
+        return; // not a tty: nothing we could restore later either
+
     struct termios raw = g_original_termios;
     raw.c_lflag &= ~(ECHO | ICANON | ISIG);
     // Without this, the tty driver translates the CR (13) sent by Enter into
@@ -263,11 +376,25 @@ void tui::Screen::EnableRawMode()
     raw.c_iflag &= ~(ICRNL | INLCR | IXON);
     raw.c_cc[VMIN] = 1;
     raw.c_cc[VTIME] = 0;
-    tcsetattr(STDIN_FILENO, TCSANOW, &raw);
+
+    if (tcsetattr(STDIN_FILENO, TCSANOW, &raw) != 0)
+        return; // failed to switch: do not claim raw mode
+
+    m_raw_mode_active = true;
+
+    // A second copy for the fatal-signal handler, which cannot reach
+    // class members
+    g_signal_saved_termios = g_original_termios;
+    g_signal_saved_valid = true;
 }
 
 void tui::Screen::DisableRawMode()
 {
+    if (!m_raw_mode_active)
+        return;
+
     tcsetattr(STDIN_FILENO, TCSANOW, &g_original_termios);
+    m_raw_mode_active = false;
+    g_signal_saved_valid = false;
 }
 #endif

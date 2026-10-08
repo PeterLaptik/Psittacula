@@ -20,7 +20,7 @@ namespace tui {
     {
         public:
             Screen();
-            ~Screen() override = default;
+            ~Screen() override; // restores the console modes / raw mode
 
             virtual void Show();
 
@@ -55,8 +55,22 @@ namespace tui {
             void SetUpScreen();
 #ifndef _WIN32
             struct termios g_original_termios;
+            bool m_raw_mode_active = false; // raw mode enabled: the destructor restores it
+
             void EnableRawMode();
             void DisableRawMode();
+#else
+            // Console modes / code pages saved by SetUpScreen, restored by the
+            // destructor. Plain ints instead of DWORD/UINT: that would drag
+            // <windows.h> into this header
+            unsigned long m_saved_input_mode = 0;
+            unsigned long m_saved_output_mode = 0;
+            unsigned int m_saved_cp_input = 0;
+            unsigned int m_saved_cp_output = 0;
+            bool m_input_saved = false;
+            bool m_output_saved = false;
+
+            void RestoreInputMode();
 #endif
             bool CheckScreen();
             void UpdateSize();
