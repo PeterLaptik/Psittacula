@@ -34,8 +34,11 @@ tui::App::App()
 
 tui::App::~App()
 {
-    // Never detach: if a query is still running at shutdown,
-    // cancel it and wait for the worker to finish
+    if(m_client)
+        m_client->CancelRequest();
+
+    m_confirm_dialogue.Cancel();
+
     if (m_query_thread.joinable())
     {
         if (m_client)

@@ -91,7 +91,7 @@ class ChatCommandDispatcher
             }
             else
             {
-                console::write_line("\rUnknown command: " + command_name, console::TextOrigin::error);
+                console::write_line("Unknown command: " + command_name, console::TextOrigin::error);
             }
         }
 

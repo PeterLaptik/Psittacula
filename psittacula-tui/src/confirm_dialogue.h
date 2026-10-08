@@ -2,7 +2,10 @@
 #define CONFIRM_DIALOGUE_INCLUDED_H
 
 #include "screen.h"
+#include <atomic>
 #include <string>
+#include <mutex>
+#include <condition_variable>
 
 class Screen;
 
@@ -20,10 +23,15 @@ namespace tui {
 
             bool IsShown() const;
 
+            void Cancel();
+
         private:
             Screen &m_screen;
-            bool m_is_shown = false;
+            std::atomic<bool> m_is_shown = false;
             int m_pressed_key = 0;
+
+            std::mutex m_key_guard;
+            std::condition_variable m_cv;
     };
 }
 

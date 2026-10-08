@@ -1,11 +1,18 @@
 #include "confirm_dialogue.h"
 #include "keyboard.h"
+#include <algorithm>
+#include <chrono>
 #include <iostream>
 #include <sstream>
+#include <vector>
 
 namespace tui {
 
     namespace {
+        // Upper bound for the dialog: after this it denies itself,
+        // so a stuck UI can never park the engine thread forever
+        constexpr std::chrono::minutes kConfirmTimeout{5};
+
         // Trims the line so it fits into the confirm frame
         std::string FitToWidth(const std::string &line, int width)
         {
@@ -35,7 +42,6 @@ namespace tui {
         int scr_height = 0;
         m_screen.GetSize(scr_width, scr_height);
 
-        m_pressed_key = 0;
         m_is_shown = true;
 
         // The message can span lines: each line gets its own frame row
@@ -86,36 +92,48 @@ namespace tui {
         PrintIndented(hint_margin, hint);
         std::cout << std::flush;
 
-        bool confirmed = false;
-        while (true)
-        {
-            if (m_pressed_key == 'y' || m_pressed_key == 'Y')
-            {
-                confirmed = true;
-                break;
-            }
+        bool confirmed_result = false;
+        std::unique_lock<std::mutex> lock(m_key_guard);
 
-            if (m_pressed_key == 'n' || m_pressed_key == 'N' || 
-                m_pressed_key == 27 || m_pressed_key == 3 || m_pressed_key == 4 ||
-                m_pressed_key == Keyboard::Keys::eof)
-            {
-                confirmed = false;
-                break;
+        m_pressed_key = 0;
+
+        // wait_for: spurious wakeups handled by the predicate; on timeout the
+        // dialog denies itself instead of parking the worker forever
+        m_cv.wait_for(lock, kConfirmTimeout, [this] {
+                return m_pressed_key == 'y' || m_pressed_key == 'Y' ||
+                    m_pressed_key == 'n' || m_pressed_key == 'N' ||
+                    m_pressed_key == 27 || m_pressed_key == Keyboard::Keys::eof;
             }
+        );
+
+        if (m_pressed_key == 'y' || m_pressed_key == 'Y')
+        {
+            confirmed_result = true;
         }
+
+        lock.unlock();
 
         m_screen.HideCursor(false);
         std::cout << "\x1b[?1049l" << std::flush;
         m_is_shown = false;
-        return confirmed;
+        return confirmed_result;
     }
 
     void ConfirmDialogue::PutCharFromKeyboard(int key)
     {
-        m_pressed_key = key;
+        {
+            std::lock_guard<std::mutex> lock(m_key_guard);
+            m_pressed_key = key;
+        }
+        m_cv.notify_one();
     }
     bool ConfirmDialogue::IsShown() const
     {
         return m_is_shown;
+    }
+
+    void ConfirmDialogue::Cancel()
+    {
+        PutCharFromKeyboard(Keyboard::Keys::eof);
     }
 }
