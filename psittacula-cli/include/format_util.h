@@ -24,21 +24,19 @@ class Formatter
 {
     public:
         Formatter()
-           : m_ptr_locale(std::make_unique<std::locale>()),
-             m_flags(std::ios_base::skipws | std::ios_base::dec),
+           : m_flags(std::ios_base::skipws | std::ios_base::dec),
              m_precision(6)
         { }
 
         Formatter(const std::locale& loc,
                   std::ios_base::fmtflags flags = std::ios_base::skipws | std::ios_base::dec,
                   std::streamsize precision = 6)
-           : m_ptr_locale(new std::locale(loc)),
+           : m_ptr_locale(loc),
              m_flags(flags),
              m_precision(precision)
         { }
 
-        ~Formatter()
-        { }
+        ~Formatter() = default;
 
         ///\brief Generates string from char sequence and fills it with parameters.
         ///\param seq - pointer to sequence (for example, char*)
@@ -151,8 +149,8 @@ class Formatter
         ///\see the method is analogue of std::ios_base::imbue
         std::locale Imbue(const std::locale& loc)
         {
-            const std::locale old_locale = *m_ptr_locale;
-            *m_ptr_locale = loc;
+            const std::locale old_locale = m_ptr_locale;
+            m_ptr_locale = loc;
             return old_locale;
         }
 
@@ -161,7 +159,7 @@ class Formatter
         ///\see the method is analogue of std::ios_base::getloc
         std::locale Getloc() const
         {
-            return *m_ptr_locale;
+            return m_ptr_locale;
         }
 
         /// Returns the current precision of formatter
@@ -215,7 +213,7 @@ class Formatter
         const char *SUBSTITUTE_MASK = "%?";
 
         // Current locale for formatting
-        std::unique_ptr<std::locale> m_ptr_locale;
+        std::locale m_ptr_locale;
         // Current set of flags for formatting
         std::ios_base::fmtflags m_flags;
         // Current precision for formatting of numeric values
@@ -226,7 +224,7 @@ class Formatter
         void AssignStreamSettings(Stream &stream)
         {
             stream.precision(m_precision);
-            stream.imbue(*m_ptr_locale);
+            stream.imbue(m_ptr_locale);
             stream.flags(m_flags);
         }
 
