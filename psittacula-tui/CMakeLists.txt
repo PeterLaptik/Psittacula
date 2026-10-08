@@ -28,6 +28,7 @@ add_executable(${PSITTACULA_TUI_NAME}
     ${SRC_DIR}/command_compress.h
     ${SRC_DIR}/command_dump.h
     ${SRC_DIR}/command_dump_text.h
+    ${SRC_DIR}/command_purge.h
     ${SRC_DIR}/command_reasoning.h
     ${SRC_DIR}/command_redo.h
     ${SRC_DIR}/command_restore.h

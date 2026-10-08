@@ -11,6 +11,7 @@
 #include "command_clean_context.h"
 #include "command_restore.h"
 #include "command_compress.h"
+#include "command_purge.h"
 
 #include <memory>
 
@@ -28,4 +29,5 @@ void init_commands(ChatCommandDispatcher *dsp, tui::App *app)
     dsp->RegisterCommand("clear", std::make_unique<CommandCleanContext>(app));
     dsp->RegisterCommand("restore", std::make_unique<CommandRestore>(app));
     dsp->RegisterCommand("compress", std::make_unique<CommandCompress>(app));
+    dsp->RegisterCommand("purge", std::make_unique<CommandPurge>(app));
 }

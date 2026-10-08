@@ -8,8 +8,9 @@
 #include <vector>
 #include <fstream>
 #include <chrono>
+#include <filesystem>
 
-/// Saves dialogue full JSON text as a text file (to a project directory)
+/// Saves dialogue full JSON text as a markdown text file (to a project directory)
 /// Can be useful for debug
 class CommandDumpText : public ChatCommand
 {
@@ -29,8 +30,28 @@ class CommandDumpText : public ChatCommand
 
             std::string file_path;
             if (!args.empty()) {
-                // Use provided filename
-                file_path = dir_to_save + "/" + args[0] + ".md";
+                namespace fs = std::filesystem;
+
+                fs::path arg_path(args[0]);
+
+                if (arg_path.has_parent_path())
+                {
+                    // Argument contains a path: save into the full path provided
+                    file_path = arg_path.string();
+                    if (!arg_path.has_extension())
+                        file_path += ".md";
+
+                    // Make sure the target directory exists
+                    std::error_code ec;
+                    fs::create_directories(fs::path(file_path).parent_path(), ec);
+                }
+                else
+                {
+                    // Argument is a bare filename: save into the logs directory
+                    file_path = dir_to_save + "/" + arg_path.string();
+                    if (!arg_path.has_extension())
+                        file_path += ".md";
+                }
             } else {
                 // Generate timestamp
                 auto now = std::chrono::system_clock::now();
@@ -67,7 +88,7 @@ class CommandDumpText : public ChatCommand
 
         std::string Description() override
         {
-            return "Saves dialogue full JSON text as a text file (to a project directory). \n\t[ARG] filename.";
+            return "Saves dialogue full JSON text as a text file. \n\t[ARG] filename (saved to logs dir) or full path (saved as-is).";
         }
 };
 
