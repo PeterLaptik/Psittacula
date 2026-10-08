@@ -73,7 +73,12 @@ namespace tui {
             std::atomic<bool> m_query_running{false};
             std::mutex m_query_mutex;
             std::string m_query_result; // "ok", "cancelled", or "error: ..."
+
             bool m_query_status_shown = false;
+
+            // Guard to exclude spin the loop at 100% of a core
+            // See the code in the main loop
+            int m_eof_streak = 0;
     };
 }
 

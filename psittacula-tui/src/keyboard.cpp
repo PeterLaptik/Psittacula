@@ -100,7 +100,13 @@ int tui::Keyboard::ReadKey()
             return Keys::nothing;
         }
         if (fallback < 0 || fallback == 0xFFFF)
+        {
+            // Redirected stdin with nothing to read: without the throttle
+            // this return feeds the main loop at full speed (spin) - match
+            // the 50 ms poll used for the console path
+            Sleep(50);
             return Keys::nothing;
+        }
         if (fallback >= 0xD800 && fallback <= 0xDFFF)
             return Keys::nothing;
         return fallback;

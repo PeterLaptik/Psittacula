@@ -130,6 +130,21 @@ void tui::App::MainLoop()
 
         key = m_keyboard.ReadKey();
 
+        // stdin exhausted (closed / pipe ended / detached launch): 
+        // ReadKey returns eof instantly forever, turning this loop into a full-core spin. 
+        // A human never produces 50 consecutive eofs - treat the streak as "nobody can ever type again" 
+        // and leave the UI cleanly.
+        if (key == Keyboard::Keys::eof)
+        {
+            if (++m_eof_streak >= 50)
+            {
+                std::cerr << "stdin closed, exiting." << std::endl;
+                break;
+            }
+            continue;
+        }
+        m_eof_streak = 0;
+
 #ifdef _WIN32
         m_screen.HandleResize();
 #else
