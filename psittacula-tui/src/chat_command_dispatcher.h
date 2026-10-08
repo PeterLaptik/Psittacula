@@ -15,6 +15,7 @@
 #ifdef _WIN32
 #include <conio.h>
 #else
+#include <sys/select.h>
 #include <termios.h>
 #include <unistd.h>
 #endif
@@ -52,6 +53,23 @@ static int GetKey()
     return result == 1 ? static_cast<int>(c) : -1;
 #endif
 }
+
+#ifndef _WIN32
+// Waits up to timeout_ms for the next byte on stdin (raw-mode menus).
+// Used to tell a bare Escape (quit) from the first byte of an escape sequence such as ESC [ A (navigation).
+inline bool MenuInputReady(int timeout_ms)
+{
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(STDIN_FILENO, &fds);
+
+    struct timeval tv;
+    tv.tv_sec = timeout_ms / 1000;
+    tv.tv_usec = (timeout_ms % 1000) * 1000;
+
+    return select(STDIN_FILENO + 1, &fds, nullptr, nullptr, &tv) > 0;
+}
+#endif
 
 /// Keeps and dispatches chat commands
 class ChatCommandDispatcher
@@ -143,8 +161,24 @@ class ChatCommandDispatcher
                 }
 #else
                 int c = GetKey();
+
+                if (c == -1)
+                {
+                    // stdin failure / EOF: staying here is useless
+                    RestoreMainScreen();
+                    return "";
+                }
+
                 if (c == '\x1b')
                 {
+                    // Bare ESC (no byte follows within 50 ms) quits the menu;
+                    // ESC [ ... is a navigation sequence
+                    if (!MenuInputReady(50))
+                    {
+                        RestoreMainScreen();
+                        return "";
+                    }
+
                     int c1 = GetKey();
                     if (c1 == '[')
                     {
@@ -153,12 +187,7 @@ class ChatCommandDispatcher
                         else if (c2 == 'B' && index < cmd_list.size() - 1) index++;
                         DrawCommandMenu(cmd_list, index);
                     }
-                }
-                else if (c == '\x1b' || c == 27)
-                {
-                    // Escape to quit without selecting
-                    RestoreMainScreen();
-                    return "";
+                    // any other sequence: swallowed, menu stays
                 }
                 else if (c == '\n' || c == '\r')
                 {

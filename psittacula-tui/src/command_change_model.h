@@ -20,8 +20,26 @@
 #include <windows.h>
 #else
 #include <sys/ioctl.h>
+#include <sys/select.h>
 #include <termios.h>
 #include <unistd.h>
+#endif
+
+#ifndef _WIN32
+// Waits up to timeout_ms for the next byte on stdin (raw-mode menus).
+// Used to tell a bare Escape (quit) from the first byte of an escape sequence such as ESC [ A (navigation).
+inline bool MenuInputReady(int timeout_ms)
+{
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(STDIN_FILENO, &fds);
+
+    struct timeval tv;
+    tv.tv_sec = timeout_ms / 1000;
+    tv.tv_usec = (timeout_ms % 1000) * 1000;
+
+    return select(STDIN_FILENO + 1, &fds, nullptr, nullptr, &tv) > 0;
+}
 #endif
 
 /// Changes or creates model to connect
@@ -104,6 +122,10 @@ class CommandChangeModel: public ChatCommand
 
             DrawMenu(models, index);
 
+            // ESC pressed bare: no selection was made. The nonzero index
+            // below tells 'nothing was chosen', and the menu just quits.
+            bool escaped = false;
+
             // Read raw key input
             while (true)
             {
@@ -116,14 +138,35 @@ class CommandChangeModel: public ChatCommand
                     else if (arrow == 80 && index < models.size() - 1) index++; // Down
                     DrawMenu(models, index);
                 }
+                else if (c == 27) // Escape quits without selecting
+                {
+                    escaped = true;
+                    break;
+                }
                 else if (c == 13) // Enter
                 {
                     break;
                 }
 #else
                 int c = getch();
+
+                if (c == -1)
+                {
+                    // stdin failure / EOF: staying here is useless
+                    escaped = true;
+                    break;
+                }
+
                 if (c == '\x1b') // ESC
                 {
+                    // Bare ESC (no byte follows within 50 ms) quits the menu;
+                    // ESC [ ... is a navigation sequence
+                    if (!MenuInputReady(50))
+                    {
+                        escaped = true;
+                        break;
+                    }
+
                     int c1 = getch();
                     if (c1 == '[')
                     {
@@ -132,12 +175,20 @@ class CommandChangeModel: public ChatCommand
                         else if (c2 == 'B' && index < models.size() - 1) index++;   // Down
                         DrawMenu(models, index);
                     }
+                    // any other sequence: swallowed, menu stays
                 }
                 else if (c == '\n' || c == '\r')
                 {
                     break;
                 }
 #endif
+            }
+
+            if (escaped)
+            {
+                RestoreMainScreen();
+                m_app->RefreshStatus("   Model selection cancelled.");
+                return; // nothing loaded, current model unchanged
             }
 
             // Load selected model
@@ -346,7 +397,7 @@ class CommandChangeModel: public ChatCommand
             WriteCentered("============ Choose model to work ==================", TextOrigin::tools);
             WriteCentered("====================================================", TextOrigin::tools);
             WriteCentered(formatter.Format("Found models: %?", models.size()), TextOrigin::tools);
-            WriteCentered("Use Up/Down to choose, Enter to select.\n");
+            WriteCentered("Use Up/Down to choose, Enter to select, Escape to quit.\n");
 
             for (int i = 0; i < models.size(); ++i)
             {
