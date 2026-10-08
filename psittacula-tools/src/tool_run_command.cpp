@@ -119,7 +119,7 @@ std::string RunCommandTool::Execute(std::vector<ToolParameter> &params_values)
     // Make confirm
     if(!console::ask_confirm(command))
     {
-        console::write_line("Operation cancelled by user.", console::TextOrigin::tools);
+        console::write_line("Operation cancelled by user.", console::TextOrigin::system);
         return R"({"error":{"type":"operation_cancelled","message":"Operation cancelled by user"}})";
     }
 
@@ -175,7 +175,7 @@ std::string RunCommandTool::Execute(std::vector<ToolParameter> &params_values)
     }
     else
     {
-        console::write_line(fmt.Format("Command finished successfully in %? ms.", duration_ms), console::TextOrigin::tools);
+        console::write_line(fmt.Format("Command finished successfully in %? ms.", duration_ms), console::TextOrigin::system);
     }
 
     std::ostringstream json;

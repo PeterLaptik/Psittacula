@@ -30,7 +30,7 @@ const int kMaxLinesInAQuery = 1000;
 //    |-- models (txt files with models credentials)
 //    |-- settings (txt settings files: rules)
 //    |-- projects (files in the directory can be created / removed / modified by the agent - default sandbox)
-//    |-- logs (log files directory)
+//    |-- logs (log files directory, dialogue history)
 // 
 // The workdir can be changed via command line value workdir (workdir=...)
 // The projects directory can be changed via command line value project (project=...) / or command /project
@@ -71,8 +71,8 @@ int main(int argc, char **argv)
     }
     
     console::write(get_logo_raw());
-    console::write(formatter.Format("Actual workdir: %?\n", WorkingDir::GetInstance().GetWorkDir()));
-    console::write(formatter.Format("Actual project: %?\n--------------\n", WorkingDir::GetInstance().GetProjectDir()));
+    console::write(formatter.Format("Actual workdir: %?\n", WorkingDir::GetInstance().GetWorkDir()), TextOrigin::system);
+    console::write(formatter.Format("Actual project: %?\n--------------\n", WorkingDir::GetInstance().GetProjectDir()), TextOrigin::system);
     console::write(" ");
 
     // Init chat commands: /help or /h for info about commands

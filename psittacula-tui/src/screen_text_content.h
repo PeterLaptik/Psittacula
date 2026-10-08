@@ -38,11 +38,9 @@ namespace tui {
             void Split(const std::string &s, std::vector<std::string> &vec);
 
             void RenderText();
-            const char* GetTextColour(TextOrigin origin);
-            void PostProcess();
 
-            int utf8_char_len(unsigned char lead);
-            int Utf8Count(const std::string &text);
+            int utf8_char_len(unsigned char lead) const;
+            int Utf8Count(const std::string &text) const;
 
             struct TextLine {
                 std::string txt;

@@ -2,12 +2,6 @@
 #include "text_splitter.h"
 #include <algorithm>
 
-const char *const kDefault = "\033[0m";
-const char *const kGreen = "\033[32m";
-const char *const kRed = "\033[31m";
-const char *const kCyan = "\033[36m";
-const char *const kGrey = "\033[90m";
-
 void tui::ScreenTextContent::AddText(const std::string &txt, TextOrigin origin)
 {
     if (origin != m_buffer.origin)
@@ -143,11 +137,13 @@ void tui::ScreenTextContent::RenderText()
 
     m_text_rendered.clear();
 
+    const char *kDefault = console::get_origin_colour(TextOrigin::normal);
+
     // Saved text
     std::vector<std::string> split_lines;
-    for (auto &line : m_text)
+    for (const auto &line : m_text)
     {
-        const char *colour = GetTextColour(line.origin);
+        const char *colour = console::get_origin_colour(line.origin);
 
         if (line.origin == TextOrigin::reasoning && !m_show_reasoning)
         {
@@ -159,58 +155,30 @@ void tui::ScreenTextContent::RenderText()
         splitter.SplitText(line.txt, uncoloured_lines);
 
         
-        for (auto &r_line : uncoloured_lines)
+        for (const auto &r_line : uncoloured_lines)
         {
             split_lines.push_back(std::string(colour) + r_line + std::string(colour));
         }
     }
 
-    const char *buffer_colour = GetTextColour(m_buffer.origin);
+    const char *buffer_colour = console::get_origin_colour(m_buffer.origin);
     std::vector<std::string> uncoloured_buffer_lines;
-    splitter.SplitText(m_buffer.txt, uncoloured_buffer_lines);
 
-    for (auto &r_line : uncoloured_buffer_lines)
+    const std::string &visible_buffer = !m_show_reasoning && m_buffer.origin == TextOrigin::reasoning ? "[Reasoning]" : m_buffer.txt;
+    splitter.SplitText(visible_buffer, uncoloured_buffer_lines);
+
+    for (const auto &r_line : uncoloured_buffer_lines)
     {
         split_lines.push_back(std::string(buffer_colour) + r_line + std::string(kDefault));
     }
 
-    for (auto &r_line : split_lines)
+    for (const auto &r_line : split_lines)
     {
         m_text_rendered.push_back(r_line);
     }
 }
 
-const char* tui::ScreenTextContent::GetTextColour(TextOrigin origin)
-{
-    const char *result = kDefault;
-    switch (origin)
-    {
-        case TextOrigin::machine:
-            result = kGreen;
-            break;
-        case TextOrigin::error:
-            result = kRed;
-            break;
-        case TextOrigin::tools:
-            result = kCyan;
-            break;
-        case TextOrigin::reasoning:
-            result = kGrey;
-            break;
-        case TextOrigin::splitter:
-            result = kGrey;
-            break;
-        default:
-            result = kDefault;
-    }
-    return result;
-}
-
-void tui::ScreenTextContent::PostProcess()
-{
-}
-
-int tui::ScreenTextContent::utf8_char_len(unsigned char lead)
+int tui::ScreenTextContent::utf8_char_len(unsigned char lead) const
 {
     if (lead < 0x80)
         return 1;
@@ -223,7 +191,7 @@ int tui::ScreenTextContent::utf8_char_len(unsigned char lead)
     return 1;
 }
 
-int tui::ScreenTextContent::Utf8Count(const std::string &text)
+int tui::ScreenTextContent::Utf8Count(const std::string &text) const
 {
     int count = 0;
     size_t i = 0;

@@ -8,9 +8,10 @@
 
 class ChunkProcessor;
 
-// A legacy common output functions.
-// The functions are adopted to work with TextReceiver object
-// Use non-empty set_up_console call to work via TextReceiver
+// A legacy functions for common output.
+// The functions are adopted to work with TextReceiver object.
+// Use non-empty set_up_console init call to work via TextReceiver.
+// Empty set_up_console call will use legacy console output functions (std::cout / std::cerr).
 namespace console {
 
     enum class TextOrigin {
@@ -19,7 +20,8 @@ namespace console {
         tools,
         reasoning,
         splitter,
-        error
+        error,
+        system
     };
 
     class TextReceiver
@@ -32,6 +34,8 @@ namespace console {
             virtual void Flush() = 0;
             virtual void MoveSpinner() = 0;
             virtual bool AskConfirm(const std::string &message) = 0;
+
+            virtual ~TextReceiver() = default;
     };
 
     void set_up_console(TextReceiver *receiver = nullptr);

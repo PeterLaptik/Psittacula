@@ -19,6 +19,7 @@ const char *const kGreen = "\033[32m";
 const char *const kRed = "\033[31m";
 const char *const kCyan = "\033[36m";
 const char *const kGrey = "\033[90m";
+const char *const kSystem = "\033[95m";
 
 static console::TextReceiver *text_receiver = nullptr;
 static ConsoleHistory history;
@@ -42,6 +43,9 @@ const char* console::get_origin_colour(TextOrigin origin)
             break;
         case TextOrigin::splitter:
             result = kGrey;
+            break;
+        case TextOrigin::system:
+            result = kSystem;
             break;
         default:
             result = kDefault;
@@ -260,6 +264,7 @@ void console::flush()
 {
     if (text_receiver)
     {
+        text_receiver->Flush();
         return;
     }
 

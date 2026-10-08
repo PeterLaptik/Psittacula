@@ -114,6 +114,7 @@ void tui::App::Clear()
 void tui::App::Flush()
 {
     // do nothing
+    // backward compatibility with legacy output API
 }
 
 void tui::App::MainLoop()
@@ -170,6 +171,7 @@ void tui::App::MainLoop()
 
             if (response.result == ResponseResult::enter)
             {
+                m_screen.PutText("---------------------------------------------------\n", TextOrigin::normal);
                 m_screen.PutText(response.data + " \n ", TextOrigin::normal);
                 ProcessQuery(response.data);
             }

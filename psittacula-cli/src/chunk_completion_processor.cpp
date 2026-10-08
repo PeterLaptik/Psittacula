@@ -229,7 +229,8 @@ void ChunkCompletionProcessor::CheckTools(JsonDocument &doc)
     {
         for (auto &t : delta["tool_calls"].GetArray())
         {
-            // ---- Function object ----
+            // 
+            // - Function object ----
             if (t.HasMember("function") && t["function"].IsObject())
             {
                 const auto &fn = t["function"];

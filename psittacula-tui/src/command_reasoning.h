@@ -17,7 +17,7 @@ class CommandReasoning : public ChatCommand
         {
             if (args.size() != 1)
             {
-                console::write_line("Usage: reasoning <true|false>", TextOrigin::reasoning);
+                console::write_line("Usage: reasoning <true|false>", TextOrigin::tools);
                 return;
             }
 
@@ -32,12 +32,12 @@ class CommandReasoning : public ChatCommand
             if (value == "true" || value == "1" || value == "on")
             {
                 m_app->SetShowReasoning(true);
-                console::write_line("Reasoning mode is enabled.", TextOrigin::reasoning);
+                console::write_line("Reasoning mode is enabled.", TextOrigin::tools);
             }
             else if (value == "false" || value == "0" || value == "off")
             {
                 m_app->SetShowReasoning(false);
-                console::write_line("Reasoning mode is disabled.", TextOrigin::reasoning);
+                console::write_line("Reasoning mode is disabled.", TextOrigin::tools);
             }
             else
             {
