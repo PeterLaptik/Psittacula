@@ -85,7 +85,8 @@ void tui::PanelStatus::Refresh()
         status_text_line = m_status.substr(0, byte_limit);
     }
 
-    status_text_line.resize(char_limit, ' ');
+    int length_diff = char_limit - utf8_count(status_text_line);
+    status_text_line.append(length_diff, ' ');
 
     int cx, cy;
     GetCursorPosition(cx, cy);
