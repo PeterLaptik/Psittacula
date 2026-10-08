@@ -9,9 +9,9 @@ class FileMoveTool : public ToolFile
 {
     public:
         FileMoveTool() = default;
-        virtual ~FileMoveTool() = default;
+        ~FileMoveTool() override = default;
 
-        ToolBase *Clone() override { return new FileMoveTool(*this); }
+        ToolBase* Clone() override { return new FileMoveTool(*this); }
 
         std::string Execute(std::vector<ToolParameter> &params_values) override;
 
@@ -19,7 +19,7 @@ class FileMoveTool : public ToolFile
         void Redo() override;
 
         std::string GetToolName() const override { return "move_file"; }
-        std::string GetToolDescription() const override { return "Moves or renames a file."; }
+        std::string GetToolDescription() const override { return "Moves or renames a file. Paths: absolute, or relative to the project directory."; }
 
         void GetParameters(std::vector<ToolParameter> &params_acc) override;
 

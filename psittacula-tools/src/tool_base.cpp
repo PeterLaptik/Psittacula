@@ -1,8 +1,10 @@
 #include "tool_base.h"
 #include "console_writer.h"
 #include "utf8_util.h"
+#include "working_dir.h"
 #include <iostream>
 #include <algorithm>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <iomanip>
@@ -11,8 +13,20 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/prettywriter.h>
 
+std::string ToolBase::ResolveProjectPath(const std::string &input)
+{
+    namespace fs = std::filesystem;
 
-std::string ToolBase::GetParam(const std::vector<ToolParameter> &params_acc, const std::string &param_name, std::string default_value)
+    const fs::path requested = input;
+
+    if (requested.is_absolute())
+        return requested.string();
+
+    return (fs::path(WorkingDir::GetInstance().GetProjectDir()) / requested).string();
+}
+
+
+std::string ToolBase::GetParam(const std::vector<ToolParameter> &params_acc, const std::string &param_name, std::string default_value) const
 {
     auto it = std::find_if(params_acc.begin(), params_acc.end(),
         [&param_name](const ToolParameter &tp) {

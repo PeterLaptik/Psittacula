@@ -43,13 +43,19 @@ std::string FileCopyTool::Execute(std::vector<ToolParameter> &params_values)
         return R"({"error":{"type":"invalid_arguments","message":"Missing required parameters: from, to"}})";
     }
 
-    src_path = std::filesystem::path(rel_from).string();
-    dst_path = std::filesystem::path(rel_to).string();
+    src_path = ResolveProjectPath(rel_from);
+    dst_path = ResolveProjectPath(rel_to);
 
     if (!wdir.IsInWorkDir(src_path))
     {
         console::write_line(fmt.Format("Permission_denied: path is outside working directory:\n path: %?\n working directory: %?", src_path, wdir.GetProjectDir()), console::TextOrigin::error);
         return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory (%?)\",\"path\":\"%?\"}}", wdir.GetProjectDir(), src_path);
+    }
+
+    if (!wdir.IsInWorkDir(dst_path))
+    {
+        console::write_line(fmt.Format("Permission_denied: path is outside working directory:\n path: %?\n working directory: %?", dst_path, wdir.GetProjectDir()), console::TextOrigin::error);
+        return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory (%?)\",\"path\":\"%?\"}}", wdir.GetProjectDir(), dst_path);
     }
 
     if (!std::filesystem::exists(src_path))

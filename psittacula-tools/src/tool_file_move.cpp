@@ -42,8 +42,8 @@ std::string FileMoveTool::Execute(std::vector<ToolParameter> &params_values)
         return R"({"error":{"type":"invalid_arguments","message":"Missing required parameters: from, to"}})";
     }
 
-    old_path = std::filesystem::path(wdir.GetProjectDir() + rel_from).string();
-    new_path = std::filesystem::path(wdir.GetProjectDir() + rel_to).string();
+    old_path = ResolveProjectPath(rel_from);
+    new_path = ResolveProjectPath(rel_to);
 
     if (!wdir.IsInWorkDir(old_path))
     {

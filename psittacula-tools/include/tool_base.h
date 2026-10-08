@@ -57,7 +57,9 @@ class ToolBase
         virtual bool CanBeReverted() { return true; }
 
     protected:
-        std::string GetParam(const std::vector<ToolParameter> &params_acc, const std::string &param_name, std::string default_value = "");
+        std::string GetParam(const std::vector<ToolParameter> &params_acc, const std::string &param_name, std::string default_value = "") const;
+
+        static std::string ResolveProjectPath(const std::string &input);
 
         bool GetParamBool(const std::vector<ToolParameter> &params_acc, const std::string &param_name, bool default_value);
 
