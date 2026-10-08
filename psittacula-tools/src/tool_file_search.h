@@ -2,6 +2,7 @@
 #define TOOL_FILE_SEARCH_INCLUDED_H
 
 #include "tool_file.h"
+#include <regex>
 #include <string>
 #include <vector>
 
@@ -36,13 +37,16 @@ class FileSearchTool : public ToolFile
             const std::string &root,
             const std::string &query,
             bool case_sensitive,
-            bool use_regex);
+            bool use_regex,
+            const std::regex *re,
+            bool &truncated);
 
         std::vector<Match> SearchFile(
             const std::string &path,
             const std::string &query,
             bool case_sensitive,
-            bool use_regex);
+            bool use_regex,
+            const std::regex *re);
 };
 
 #endif // TOOL_FILE_SEARCH_INCLUDED_H
