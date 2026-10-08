@@ -7,6 +7,8 @@
 #include <istream>
 #include <iostream>
 #include <memory>
+#include <type_traits>
+#include <string_view>
 
 ///\brief Class for filling strings with formatted arguments.
 /// The format specifier is '%?'.
@@ -22,7 +24,7 @@ class Formatter
 {
     public:
         Formatter()
-           : m_ptr_locale(new std::locale()),
+           : m_ptr_locale(std::make_unique<std::locale>()),
              m_flags(std::ios_base::skipws | std::ios_base::dec),
              m_precision(6)
         { }
@@ -264,15 +266,6 @@ class Formatter
             stream << t;
         }
 
-        template<typename T>
-        struct is_string : std::false_type {};
-
-        template<>
-        struct is_string<std::string> : std::true_type {};
-
-        template<>
-        struct is_string<std::string_view> : std::true_type {};
-
         // Outputs type which can be iterated, to a string stream
         // stream - stream to get a string value
         // t - type value
@@ -281,7 +274,11 @@ class Formatter
                 typename Type = typename T::value_type,
                 typename Begin = decltype(std::declval<T>().begin()),
                 typename End = decltype(std::declval<T>().end()),
-                std::enable_if_t<!is_string<T>::value>>
+                std::enable_if_t<
+                    !std::is_same_v<T, std::string>
+                    && !std::is_same_v<T, std::string_view>
+                >
+        >
         void OutputValue(Stream &stream, const T &t)
         {
             stream << "[";
