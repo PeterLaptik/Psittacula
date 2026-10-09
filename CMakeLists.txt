@@ -59,3 +59,9 @@ add_subdirectory(${PSITTACULA_TUI})
 add_subdirectory(${PSITTACULA_CLI})
 add_subdirectory(${PSITTACULA_TOOLS})
 
+# Engine unit tests (optional: add with -DPSITTACULA_BUILD_TESTS=ON)
+option(PSITTACULA_BUILD_TESTS "Build the engine unit tests" OFF)
+if(PSITTACULA_BUILD_TESTS)
+    add_subdirectory(tests)
+endif()
+
