@@ -231,7 +231,7 @@ void console::write_status(const ChunkProcessor *proc, int context_size)
     }
 }
 
-bool console::ask_confirm(const std::string message)
+bool console::ask_confirm(const std::string &message)
 {
     bool result = false;
     if(text_receiver)

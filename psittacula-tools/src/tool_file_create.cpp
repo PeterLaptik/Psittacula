@@ -56,7 +56,7 @@ std::string FileCreateTool::Execute(std::vector<ToolParameter> &params_values)
     executed = false;
     existing_file_dump.clear();
 
-    // Create parent dird if do not exist
+    // Create parent dirs if they do not exist
     std::filesystem::create_directories(std::filesystem::path(path).parent_path());
 
     bool file_exists = std::filesystem::exists(path);

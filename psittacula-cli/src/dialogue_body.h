@@ -40,7 +40,7 @@ class DialogueBody
         std::string ToPureText() const;
 
         /// Restore body from JSON string
-        void FromJsonString(const std::string data);
+        void FromJsonString(const std::string &data);
 
         std::string GetSystemMessage() const;
 

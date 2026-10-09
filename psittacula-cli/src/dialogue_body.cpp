@@ -335,7 +335,7 @@ std::string DialogueBody::ToPureText() const
     return pure_text;
 }
 
-void DialogueBody::FromJsonString(const std::string data)
+void DialogueBody::FromJsonString(const std::string &data)
 {
     // Clears the document and parses the new JSON
     m_request->body.Parse(data.c_str());

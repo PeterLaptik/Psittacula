@@ -66,7 +66,7 @@ class AiClientImpl: public AiClient
         void SendToolsResponses(const std::vector<ToolResponse> &tools_responses, const std::string &response = "");
 
         // Gets actual context size via /slots endpoint
-        std::string GetSlotstInfo();
+        std::string GetSlotsInfo();
 
         // Returns the chat completions endpoint:
         // m_chat_endpoint if set, otherwise chosen by context size (llama.cpp / non-llama)
@@ -87,7 +87,7 @@ class AiClientImpl: public AiClient
 
         Formatter fmt; // Simple string formatter
 
-        std::string m_api_key;          // Optional: API bearing key
+        std::string m_api_key;          // Optional: Bearer API key
         int m_context_size = -1;        // Can be set directly, if not set (for llama.cpp) then /slots endpoint is used to get the actual size
         int m_tool_loop_counter = 0;    // Counts tool calls loop iterations to avoid infinite loops
         std::string m_chat_endpoint;

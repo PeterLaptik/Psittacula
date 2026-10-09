@@ -25,7 +25,7 @@ class AiClient
 
         /// Enables / disables the dialogue autosave
         virtual void SetLog(bool enabled) = 0;
-        /// Sets API bearing key, if necessary
+        /// Sets Bearer API key, if necessary
         virtual void SetApiKey(const std::string &key) = 0;
 
         /// Sets model name for all POST data bodies

@@ -21,7 +21,7 @@ using console::TextOrigin;
 const int kMaxLinesInAQuery = 1000;
 
 // A simple console LLM chat program.
-// Suports tools (see psittacula-tools sub-project).
+// Supports tools (see psittacula-tools sub-project).
 // File manipulation tools are allowed to work with a sandbox only.
 // To choose a sandbox use /project command.
 // 

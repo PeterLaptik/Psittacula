@@ -72,7 +72,7 @@ void AiClientImpl::SendUserMessage(const std::string &message)
         return;
     }
 
-    std::string slots_rsp = GetSlotstInfo();
+    std::string slots_rsp = GetSlotsInfo();
     proc.ShowStat(slots_rsp, m_context_size);
 
     // Check errors before adding the response message to the dialogue
@@ -134,7 +134,7 @@ void AiClientImpl::RegisterTool(std::unique_ptr<ToolBase> tool)
     auto it = m_tools_dispatcher.find(tool->GetToolName());
     if (it != m_tools_dispatcher.end())
     {
-        console::write_line("\nRegister tool error: tool exists" + tool->GetToolName(), console::TextOrigin::error);
+        console::write_line("\nRegister tool error: tool exists: " + tool->GetToolName(), console::TextOrigin::error);
         return;
     }
 
@@ -232,7 +232,7 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
         return;
     }
 
-    std::string slots_rsp = GetSlotstInfo();
+    std::string slots_rsp = GetSlotsInfo();
     proc.ShowStat(slots_rsp, m_context_size);
 
     if (proc.HasErrors())
@@ -293,7 +293,7 @@ void AiClientImpl::SetAgentRules(const std::string &rules)
     m_body_obj.AddSystemMessage(rules);
 }
 
-std::string AiClientImpl::GetSlotstInfo()
+std::string AiClientImpl::GetSlotsInfo()
 {
     const HttpResult rsp = m_http_client.HttpGetFull(kEndPointSlots, kSlotsTimeoutMs);
 
@@ -355,7 +355,7 @@ void AiClientImpl::CompressContext()
         return;
     }
 
-    std::string slots_rsp = GetSlotstInfo();
+    std::string slots_rsp = GetSlotsInfo();
     proc.ShowStat(slots_rsp, m_context_size);
 
     if (proc.HasErrors())

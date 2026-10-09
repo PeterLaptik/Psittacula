@@ -244,14 +244,14 @@ class ChatCommandDispatcher
                 });
 
             console::write_line("---------------------------------------------", console::TextOrigin::tools);
-            console::write_line("\033[1mAvialable commands:\033[0m");
+            console::write_line("\033[1mAvailable commands:\033[0m");
             for (auto &cmd_desc : cmd_list)
             {
                 console::write_line("\033[1m" + cmd_desc.first + " -\033[0m " + cmd_desc.second);
             }
 
             console::write_line("\033[1mq -\033[0m Clear active query.");
-            console::write_line("\033[1mexit -\033[0m Exit form the program.");
+            console::write_line("\033[1mexit -\033[0m Exit from the program.");
 
             console::write_line("\n\nPress Enter to continue...");
             {

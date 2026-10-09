@@ -316,7 +316,7 @@ class CommandChangeModel: public ChatCommand
             else
                 file << "# context_size=\n";
 
-            file << "# Bearing key: add if necessary\n";
+            file << "# Bearer key: add if necessary\n";
             if (!api_key.empty())
                 file << "api_key=" << api_key << "\n";
             else
