@@ -14,24 +14,6 @@ struct ChunkCompletionProcessor::JsonDocument
     rapidjson::Document &body;
 };
 
-void ChunkCompletionProcessor::Reset()
-{
-    m_reasoning_in_process = true;
-    m_show_reasoning = true;
-
-    m_message.clear();
-    m_reasoning.clear();
-
-    m_total_tokens = 0;
-    m_completion_tokens = 0;
-    m_prompt_tokens = 0;
-    m_tokens_cost = 0;
-
-    m_current_tool.name.clear();
-    m_current_tool.arguments.clear();
-    m_tools.clear();
-}
-
 void ChunkCompletionProcessor::ProcessChunk(const std::string &chunk)
 {
     if (chunk.size() < 5)

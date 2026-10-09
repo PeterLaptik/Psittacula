@@ -51,7 +51,7 @@ void AiClientImpl::SendUserMessage(const std::string &message)
     std::string body = m_body_obj.ToJsonString();
 
     ChunkCompletionProcessor proc; // POST response chunk receiver
-    proc.SetShowReasoning(m_show_reasoning);
+    proc.SetShowReasoning(true); // legacy
     proc.SetCancelFlag(&m_cancelled);
     std::string end_point_chat_completions = GetChatCompletionsEndpoint();
     m_http_client.HttpPostStream(end_point_chat_completions, body, &proc);
@@ -211,7 +211,7 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
     std::string body = m_body_obj.ToJsonString();
 
     ChunkCompletionProcessor proc; // POST response chunks receiver
-    proc.SetShowReasoning(m_show_reasoning);
+    proc.SetShowReasoning(true); // legacy
     proc.SetCancelFlag(&m_cancelled);
     std::string end_point_chat_completions = GetChatCompletionsEndpoint();
     m_http_client.HttpPostStream(end_point_chat_completions, body, &proc);
@@ -263,12 +263,6 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
 
     // Recursive call to send secondary tool responses
     SendToolsResponses(secondary_responses);
-}
-
-void AiClientImpl::SetShowReasoning(bool is_shown)
-{
-    // Mocked. Always true here
-    // Screen view controls reasoning output
 }
 
 void AiClientImpl::SetApiKey(const std::string &key)
@@ -338,7 +332,6 @@ void AiClientImpl::CompressContext()
     // Send the summarization request using the same streaming flow as a normal reply.
     // Only the response text is needed here; tool calls are intentionally ignored.
     ChunkCompletionProcessor proc; // POST response chunk receiver
-    //proc.SetShowReasoning(false);
     proc.SetCancelFlag(&m_cancelled);
     std::string end_point_chat_completions = GetChatCompletionsEndpoint();
     m_http_client.HttpPostStream(end_point_chat_completions, summary_body, &proc);
@@ -363,7 +356,6 @@ void AiClientImpl::CompressContext()
     std::string summarized_msg = proc.GetResponseMessage();
     m_body_obj.Compress(summarized_msg, kMessagesToKeep);
     m_json_dialogue.Write(m_body_obj.ToJsonString());
-    //proc.SetShowReasoning(m_show_reasoning);
 }
 
 void AiClientImpl::RestoreDialogueFrom(const std::string &data)

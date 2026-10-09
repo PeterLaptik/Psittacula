@@ -17,10 +17,7 @@ class ChunkCompletionProcessor: public ChunkProcessor
 
         virtual ~ChunkCompletionProcessor() = default;
 
-        /// Clears all data from the last response
-        void Reset();
-
-        /// Process a chenk data: extract message, reasoning, tools, errors, etc
+        /// Process a chunk of SSE data: extract message, reasoning, tools, errors, etc
         void ProcessChunk(const std::string &chunk) override;
 
         /// ChunkProcessor: true when CancelRequest was called from the UI thread

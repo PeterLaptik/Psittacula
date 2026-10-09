@@ -29,8 +29,6 @@ class AiClientImpl: public AiClient
 
         void CancelRequest() override;
 
-        void SetShowReasoning(bool is_shown = true) override;
-
         void SetApiKey(const std::string &key) override;
 
         void SetModel(const std::string &model) override;
@@ -84,7 +82,6 @@ class AiClientImpl: public AiClient
 
         std::string m_api_key;          // Optional: API bearing key
         int m_context_size = -1;        // Can be set directly, if not set (for llama.cpp) then /slots endpoint is used to get the actual size
-        bool m_show_reasoning = true;   // Always true in this implementation. Logic has been moved to a view. See SetShowReasoning method
         int m_tool_loop_counter = 0;    // Counts tool calls loop iterations to avoid infinite loops
         std::string m_chat_endpoint;
 

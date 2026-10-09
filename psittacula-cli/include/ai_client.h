@@ -23,8 +23,10 @@ class AiClient
         /// Interrupts an in-progress SendUserMessage streaming / tool loop
         virtual void CancelRequest() = 0;
 
-        /// Sets whether a reasoning text is shown
-        virtual void SetShowReasoning(bool is_shown = true) = 0;
+        // NOTE: there is deliberately no SetShowReasoning() on the client:
+        // reasoning visibility is a VIEW concern (ScreenTextContent filters
+        // reasoning lines after they arrive). The client implementation
+        // always streams reasoning to its TextReceiver.
 
         /// Sets API bearing key, if necessary
         virtual void SetApiKey(const std::string &key) = 0;

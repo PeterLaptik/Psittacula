@@ -8,29 +8,6 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/error/en.h>
 
-// Double escaping backslashes
-auto escape_slashes_string = [](const std::string &s) {
-    std::string out;
-    out.reserve(s.size());
-    for (char c : s)
-    {
-        if (c == '\\') out += "\\\\";
-        else out += c;
-    }
-    return out;
-};
-
-auto unescape_slashes_string = [](const std::string &s) {
-    std::string out = s;
-    size_t pos = 0;
-    while ((pos = out.find("\\\\", pos)) != std::string::npos)
-    {
-        out.replace(pos, 2, "\\");
-        pos += 1;
-    }
-    return out;
-};
-
 struct DialogueBody::RequestJson
 {
     rapidjson::Document body;

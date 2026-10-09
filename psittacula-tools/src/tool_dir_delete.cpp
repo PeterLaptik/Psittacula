@@ -14,15 +14,6 @@ void DirDeleteTool::GetParameters(std::vector<ToolParameter> &params_acc)
         "Full path of the directory to delete.",
         true
         });
-
-    /*
-    params_acc.push_back({
-        "recursive",
-        "boolean",
-        "If true, delete directory recursively.",
-        false
-        });
-    */
 }
 
 std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
@@ -34,8 +25,6 @@ std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
 
     std::string path = GetParam(params_values, "path");
     UnEscapeSlashesInPath(path);
-
-    //recursive = GetParamBool(params_values, "recursive", false);
 
     if (path.empty())
     {
@@ -76,14 +65,11 @@ std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
         );
     }
 
-       last_path = path;
+    last_path = path;
 
     console::write_line(fmt.Format("Deleting directory: %?", path), console::TextOrigin::tools);
 
     std::error_code ec;
-
-    //if (recursive) { std::filesystem::remove_all(path, ec); }
-
     std::filesystem::remove(path, ec);
 
     if (ec)
@@ -97,19 +83,19 @@ std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
 
     executed = true;
 
+    // No 'recursive' field: the tool is non-recursive by design (an empty
+    // directory is required), and a stale %? placeholder with no argument
+    // used to render as "recursive":? - invalid JSON in a success response
     return fmt.Format(
         "{"
         "\"status\":\"success\","
         "\"directory\":{"
         "\"path\":\"%?\","
-        "\"deleted\":true,"
-        "\"recursive\":%?"
+        "\"deleted\":true"
         "},"
         "\"message\":\"Directory deleted\""
         "}",
         path
-        //recursive ? "true" : "false",
-        //recursive ? " recursively" : ""
     );
 }
 
@@ -130,7 +116,5 @@ void DirDeleteTool::Redo()
     console::write_line("Redo directory delete: " + last_path, console::TextOrigin::tools);
 
     std::error_code ec;
-
-    // if (recursive) std::filesystem::remove_all(last_path, ec);
     std::filesystem::remove(last_path, ec);
 }

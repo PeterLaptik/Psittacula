@@ -350,8 +350,14 @@ bool RunCommandTool::ExecuteProcess(const std::string &command,
 
     if (stdin_write != nullptr)
     {
-        HANDLE stdin_write_local = stdin_write;
-        stdin_thread = std::thread([&stdin_data, stdin_write_local]()
+        // The writer thread takes ownership of the handle: it closes it to
+        // deliver EOF to the child (the parent closing it later would stall
+        // a child that waits for stdin EOF), then nulls the shared variable
+        // so the finish: cleanup skips it. finish: always joins this thread
+        // before closing anything, so the ordering is guaranteed - the old
+        // double CloseHandle (thread's copy + finish:) could hit a re-used
+        // handle value and close an unrelated object
+        stdin_thread = std::thread([&stdin_data, &stdin_write]()
         {
             const char *data = stdin_data.data();
             size_t remaining = stdin_data.size();
@@ -361,14 +367,15 @@ bool RunCommandTool::ExecuteProcess(const std::string &command,
             {
                 DWORD chunk = static_cast<DWORD>(std::min<size_t>(remaining, 65536));
 
-                if (!WriteFile(stdin_write_local, data, chunk, &written, nullptr) || written == 0)
+                if (!WriteFile(stdin_write, data, chunk, &written, nullptr) || written == 0)
                     break;
 
                 data += written;
                 remaining -= written;
             }
 
-            CloseHandle(stdin_write_local);
+            CloseHandle(stdin_write);
+            stdin_write = nullptr;
         });
     }
 
