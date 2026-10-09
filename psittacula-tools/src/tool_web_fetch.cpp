@@ -3,6 +3,16 @@
 #include "console_writer.h"
 #include "curl_global_guard.h"
 
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
+#include <netdb.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#endif
+
 #include <curl/curl.h>
 #include <rapidjson/document.h>
 #include <sstream>
@@ -76,27 +86,279 @@ std::string ToLowerCase(const std::string &s)
     return out;
 }
 
-/// Detects URLs pointing at the local machine, so that an accidental
-/// request to an internal service is at least visible in the console.
-/// The URL is expected to be already validated (http:// or https:// prefix).
-bool IsLoopbackUrl(const std::string &url)
+bool IsDecimalsOnly(const std::string &s)
 {
-    std::string lower = ToLowerCase(url);
-
-    size_t scheme_end = lower.find("://");
-    if (scheme_end == std::string::npos)
+    if (s.empty())
         return false;
 
-    size_t host_begin = scheme_end + 3;
-    size_t path_start = lower.find('/', host_begin);
-    size_t host_end = (path_start == std::string::npos) ? lower.size() : path_start;
+    for (const char c : s)
+    {
+        if (c < '0' || c > '9')
+            return false;
+    }
 
-    std::string host = lower.substr(host_begin, host_end - host_begin);
+    return true;
+}
 
-    if (host == "localhost" || host == "0.0.0.0" || host == "[::1]" || host == "[::]")
+/// Host part of a URL, already lowercased, without user info.
+/// The URL is expected to be already validated (http:// or https:// prefix).
+std::string UrlHostPart(const std::string &lower_url)
+{
+    const size_t scheme_end = lower_url.find("://");
+    if (scheme_end == std::string::npos)
+        return "";
+
+    const size_t host_begin = scheme_end + 3;
+
+    // The authority ends at the first '/', '?' or '#'
+    size_t host_end = lower_url.size();
+    for (size_t i = host_begin; i < lower_url.size(); ++i)
+    {
+        const char c = lower_url[i];
+        if (c == '/' || c == '?' || c == '#')
+        {
+            host_end = i;
+            break;
+        }
+    }
+
+    std::string host = lower_url.substr(host_begin, host_end - host_begin);
+
+    // Strip userinfo ("user:pass@host"): the check must see the real host
+    const size_t at = host.rfind('@');
+    if (at != std::string::npos)
+        host = host.substr(at + 1);
+
+    return host;
+}
+
+/// IPv4 in strict dotted-decimal form (4 groups, 0..255 each).
+/// Rejects "127.1" and leading-zero group tricks like "0177.0.0.1".
+bool IsIpv4Literal(const std::string &host)
+{
+    size_t pos = 0;
+
+    for (int group = 0; group < 4; ++group)
+    {
+        size_t len = 0;
+        while (pos + len < host.size() && host[pos + len] >= '0' && host[pos + len] <= '9')
+            ++len;
+
+        // Leading zeros are how 0-prefixed octal literals masquerade
+        if (len == 0 || len > 3 || (len > 1 && host[pos] == '0'))
+            return false;
+
+        int value = 0;
+        for (size_t i = 0; i < len; ++i)
+            value = value * 10 + (host[pos + i] - '0');
+
+        if (value > 255)
+            return false;
+
+        pos += len;
+
+        if (group < 3)
+        {
+            if (pos >= host.size() || host[pos] != '.')
+                return false;
+            ++pos;
+        }
+    }
+
+    return pos == host.size();
+}
+
+// First octet value of a strict dotted-quad address, -1 if not one
+int Ipv4FirstOctet(const std::string &host)
+{
+    const size_t dot = host.find('.');
+    if (dot == std::string::npos || !IsDecimalsOnly(host.substr(0, dot)) || !IsIpv4Literal(host))
+        return -1;
+
+    return std::atoi(host.c_str());
+}
+
+// Second octet of a strict dotted-quad address, -1 if not one
+int Ipv4SecondOctet(const std::string &host)
+{
+    const size_t d1 = host.find('.');
+    if (d1 == std::string::npos)
+        return -1;
+
+    const size_t d2 = host.find('.', d1 + 1);
+    if (d2 == std::string::npos)
+        return -1;
+
+    const std::string o2 = host.substr(d1 + 1, d2 - d1 - 1);
+    return IsDecimalsOnly(o2) ? std::atoi(o2.c_str()) : -1;
+}
+
+/// True for loopback / private (RFC 1918) / link-local / default-range IPv4
+/// addresses, given the first two octets
+bool IsPrivateIpv4Bytes(int o1, int o2)
+{
+    if (o1 == 127 || o1 == 10 || o1 == 0)
         return true;
 
-    return host.find("127.") == 0;
+    if (o1 == 172 && o2 >= 16 && o2 <= 31)  // 172.16.0.0/12
+        return true;
+
+    if (o1 == 192 && o2 == 168)             // 192.168.0.0/16
+        return true;
+
+    if (o1 == 169 && o2 == 254)             // 169.254.0.0/16 link-local
+        return true;
+
+    return false;
+}
+
+bool IsPrivateIpv4String(const std::string &host)
+{
+    if (!IsIpv4Literal(host))
+        return false;
+
+    return IsPrivateIpv4Bytes(std::atoi(host.c_str()), Ipv4SecondOctet(host));
+}
+
+/// True when the URL host points at the local machine / private network
+/// segment. The URL is expected to be already validated (http:// or https://
+/// prefix). Covers hosts the old check missed: ports ("localhost:8080"),
+/// userinfo ("user@localhost"), IPv4-mapped and scoped IPv6 forms, the
+/// private / link-local / 0.x segments, and localhost-substring hostnames.
+bool IsLoopbackUrl(const std::string &url)
+{
+    const std::string host = UrlHostPart(ToLowerCase(url));
+
+    if (host.empty())
+        return true; // no host parsed: treat as suspicious
+
+    if (host == "localhost" || host == "0.0.0.0")
+        return true;
+
+    // Bracketed IPv6 forms: [::1], [::], v4-mapped, link-local, ULA
+    if (host.size() >= 2 && host.front() == '[' && host.back() == ']')
+    {
+        const std::string inner = host.substr(1, host.size() - 2);
+
+        if (inner == "::1" || inner == "::")
+            return true;
+
+        // v4-mapped / translated forms: ::ffff:a.b.c.d and ::ffff:0:a.b.c.d
+        std::string mapped = inner;
+        if (mapped.rfind("::ffff:0:", 0) == 0)
+            mapped = "::ffff:" + mapped.substr(9);
+
+        if (mapped.rfind("::ffff:", 0) == 0)
+        {
+            const std::string v4 = mapped.substr(7);
+            const int o1 = Ipv4FirstOctet(v4);
+            if (o1 < 0)
+                return true; // unparsable mapped literal: suspicious
+            return IsPrivateIpv4Bytes(o1, Ipv4SecondOctet(v4));
+        }
+
+        // Link-local fe80::/10 and unique-local fc00::/7 (fc|fd prefix)
+        return inner.rfind("fe80", 0) == 0 ||
+               inner.rfind("fc", 0) == 0 || inner.rfind("fd", 0) == 0;
+    }
+
+    // Dotted-quad literals
+    if (IsPrivateIpv4String(host))
+        return true;
+
+    // Hostname fallbacks (also covers the "127.0.0.1.nip.io" family and
+    // names like myserver.localhost.internal)
+    if (host.find("localhost") != std::string::npos)
+        return true;
+
+    return host.rfind("127.", 0) == 0;
+}
+
+/// Resolves the URL host and reports whether ANY resolved address lies in a
+/// private segment. Only meaningful for hostnames (IP literals were already
+/// classified by IsLoopbackUrl, but running them through is harmless and
+/// covers the rare exotic-literal forms the string parser rejects).
+/// Resolver failure = treated as not private (curl will report its own
+/// connection error anyway). Requires an initialized Winsock on Windows -
+/// callers keep it behind curl_global::Guard.
+bool HostResolvesToPrivateAddress(const std::string &url)
+{
+    const std::string host = UrlHostPart(ToLowerCase(url));
+    if (host.empty() || host.front() == '[')
+        return IsLoopbackUrl(url); // bracketed v6: reuse the literal classifier
+
+    struct addrinfo hints {};
+    hints.ai_family = AF_UNSPEC;     // both A and AAAA records
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_NUMERICHOST; // never recurse into another resolver
+
+    struct addrinfo *result = nullptr;
+
+    // Non-literal hostname: drop the numeric-only flag for the real lookup
+    if (IsIpv4Literal(host) || host.rfind("fe80", 0) == 0 ||
+        host.find(':') != std::string::npos)
+    {
+        // literal-shaped: numeric parse only
+        if (getaddrinfo(host.c_str(), nullptr, &hints, &result) != 0)
+            return false;
+    }
+    else
+    {
+        hints.ai_flags = 0;
+        if (getaddrinfo(host.c_str(), nullptr, &hints, &result) != 0)
+            return false; // resolver failure / unknown name: not classified
+    }
+
+    bool is_private = false;
+
+    for (struct addrinfo *ai = result; ai != nullptr; ai = ai->ai_next)
+    {
+        char addr_text[INET6_ADDRSTRLEN] = {};
+
+        if (ai->ai_family == AF_INET)
+        {
+            auto *sa = reinterpret_cast<struct sockaddr_in *>(ai->ai_addr);
+            inet_ntop(AF_INET, &sa->sin_addr, addr_text, sizeof(addr_text));
+        }
+        else if (ai->ai_family == AF_INET6)
+        {
+            auto *sa = reinterpret_cast<struct sockaddr_in6 *>(ai->ai_addr);
+            inet_ntop(AF_INET6, &sa->sin6_addr, addr_text, sizeof(addr_text));
+        }
+        else
+        {
+            continue;
+        }
+
+        const std::string resolved = ToLowerCase(addr_text);
+
+        if (resolved.find(':') != std::string::npos)
+        {
+            // IPv6 result: link-local / ULA / loopback / v4-mapped
+            const bool v4mapped = resolved.rfind("::ffff:", 0) == 0;
+            if (v4mapped)
+            {
+                const std::string v4 = resolved.substr(7);
+                if (IsPrivateIpv4String(v4))
+                    is_private = true;
+            }
+            else if (resolved.rfind("fe80", 0) == 0 ||
+                     resolved.rfind("fc", 0) == 0 || resolved.rfind("fd", 0) == 0 ||
+                     resolved == "::1" || resolved == "::")
+            {
+                is_private = true;
+            }
+        }
+        else if (IsPrivateIpv4String(resolved))
+        {
+            is_private = true;
+        }
+    }
+
+    if (result)
+        freeaddrinfo(result);
+
+    return is_private;
 }
 
 bool LooksLikeText(const std::string &content_type)
@@ -249,18 +511,36 @@ std::string WebFetchTool::Execute(std::vector<ToolParameter> &params_values)
     bool binary_mode = GetParamBool(params_values, "binary", false);
     bool follow_redirects = GetParamBool(params_values, "follow_redirects", true);
 
-    std::string user_agent = GetParam(params_values, "user_agent", "Psittacula-Agent/0.8.3");
+    std::string user_agent = GetParam(params_values, "user_agent", "Psittacula-Agent/0.9.7");
     std::string headers_json = GetParam(params_values, "headers");
 
     console::write_line(fmt.Format("Fetching: %?", url), console::TextOrigin::tools);
 
+    // The guard moved above the confirmation gate: the private-target check
+    // resolves DNS through getaddrinfo, which needs the Winsock state that
+    // curl_global::Acquire initializes on Windows
+    curl_global::Guard curl_guard;
+
+    // Anything pointing at the local machine or a private segment goes
+    // through confirmation even for a plain GET: an internal admin panel,
+    // metadata endpoint or CI runner must not be probed silently.
+    // Literal forms are classified by strings; hostnames by DNS resolution.
+    const bool private_target = IsLoopbackUrl(url) || HostResolvesToPrivateAddress(url);
+
     // Notifications and POST/PUT submissions can leak data or trigger
     // side effects on a remote service, so they go through the same
-    // confirmation gate as run_command. Plain GET queries stay silent.
+    // confirmation gate as run_command. Plain GET queries to public
+    // hosts stay silent.
     if (method_lower == "post" || !body.empty() || !headers_json.empty() ||
-        IsLoopbackUrl(url))
+        private_target)
     {
         std::string summary = method_lower + " " + url;
+
+        if (private_target && IsLoopbackUrl(url))
+            summary += " [LOCAL/PRIVATE ADDRESS]";
+
+        if (private_target && !IsLoopbackUrl(url))
+            summary += " [resolves to a private address]";
 
         if (!body.empty())
             summary += fmt.Format(" (body: %? bytes)", body.size());
@@ -277,8 +557,6 @@ std::string WebFetchTool::Execute(std::vector<ToolParameter> &params_values)
             return R"({"error":{"type":"operation_cancelled","message":"Operation cancelled by user"}})";
         }
     }
-
-    curl_global::Guard curl_guard;
 
     CURL *curl = curl_easy_init();
     if (!curl)
