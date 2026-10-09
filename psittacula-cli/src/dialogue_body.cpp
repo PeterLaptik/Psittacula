@@ -251,7 +251,9 @@ void DialogueBody::RegisterTool(ToolBase *tool)
             }
             else if (prop.type == "boolean")
             {
-                bool value = prop.type == "true" ? true : false;
+                const std::string v = prop.default_value;
+                bool value =
+                    v == "true" || v == "1" || v == "yes" || v == "on";
                 prop_schema.AddMember("default", rapidjson::Value(value), alloc);
             }
             else if (prop.type == "number")
