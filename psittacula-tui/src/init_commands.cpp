@@ -2,6 +2,7 @@
 #include "command_change_model.h"
 #include "command_tools.h"
 #include "command_reasoning.h"
+#include "command_logging.h"
 #include "command_undo.h"
 #include "command_redo.h"
 #include "command_dump.h"
@@ -20,6 +21,7 @@ void init_commands(ChatCommandDispatcher *dsp, tui::App *app)
     dsp->RegisterCommand("model", std::make_unique<CommandChangeModel>(app));
     dsp->RegisterCommand("tools", std::make_unique<CommandTools>(app));
     dsp->RegisterCommand("reasoning", std::make_unique<CommandReasoning>(app));
+    dsp->RegisterCommand("log", std::make_unique<CommandLogging>(app));
     dsp->RegisterCommand("undo", std::make_unique<CommandUndo>(app));
     dsp->RegisterCommand("redo", std::make_unique<CommandRedo>(app));
     dsp->RegisterCommand("dump", std::make_unique<CommandDump>(app));

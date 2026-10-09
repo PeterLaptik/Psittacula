@@ -33,6 +33,8 @@ class AiClientImpl: public AiClient
 
         void SetModel(const std::string &model) override;
 
+        void SetLog(bool enabled) override;
+
         void RegisterTool(std::unique_ptr<ToolBase> tool) override;
 
         void GetToolsInfo(std::vector<std::pair<std::string, std::string>> &tools_acc) override;
@@ -70,6 +72,11 @@ class AiClientImpl: public AiClient
         // m_chat_endpoint if set, otherwise chosen by context size (llama.cpp / non-llama)
         std::string GetChatCompletionsEndpoint() const;
 
+        // Autosave through the gate: writes the dialogue body to the log
+        // file only when AiClient::m_log is enabled (one check instead of
+        // one per call site)
+        void WriteLog();
+
         // POST JSON data object
         // Keeps all messages, tool calls, tool calls responses
         DialogueBody m_body_obj;
@@ -91,6 +98,9 @@ class AiClientImpl: public AiClient
         // Interrupt flag: set by CancelRequest from the UI thread
         std::atomic<bool> m_cancelled{false};
         std::map<std::string, std::unique_ptr<ToolBase>> m_tools_dispatcher; // tool name -> tool prototype object
+
+        // Dialogue autosave flag
+        bool m_log = false;
 };
 
 #endif // AI_CLIENT_IMPL_INCLUDED_H

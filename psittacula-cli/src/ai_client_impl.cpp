@@ -39,6 +39,14 @@ AiClientImpl::AiClientImpl(const Model &model)
 AiClientImpl::~AiClientImpl()
 { }
 
+// Autosave through the flag: the dialogue body is written to the log file
+// only when AiClient::SetLog(true) was called; the default is disabled
+void AiClientImpl::WriteLog()
+{
+    if (m_log)
+        m_json_dialogue.Write(m_body_obj.ToJsonString());
+}
+
 void AiClientImpl::SendUserMessage(const std::string &message)
 {
     m_cancelled.store(false);
@@ -46,7 +54,7 @@ void AiClientImpl::SendUserMessage(const std::string &message)
 
     // Add message to a dialogue body and send to a server
     m_body_obj.AddUserMessage(message);
-    m_json_dialogue.Write(m_body_obj.ToJsonString());
+    WriteLog();
 
     std::string body = m_body_obj.ToJsonString();
 
@@ -59,7 +67,7 @@ void AiClientImpl::SendUserMessage(const std::string &message)
     if (m_cancelled.load())
     {
         m_body_obj.RemoveLastExchange();
-        m_json_dialogue.Write(m_body_obj.ToJsonString());
+        WriteLog();
         console::write_line("\nInterrupted by user.", console::TextOrigin::reasoning);
         return;
     }
@@ -77,7 +85,7 @@ void AiClientImpl::SendUserMessage(const std::string &message)
     // Add response message to a dialogue body
     std::string response_msg = proc.GetResponseMessage();
     m_body_obj.AddResponse(response_msg);
-    m_json_dialogue.Write(m_body_obj.ToJsonString());
+    WriteLog();
 
     // Check and process tool calls if exist
     std::vector<ToolCall> tool_calls;
@@ -86,7 +94,7 @@ void AiClientImpl::SendUserMessage(const std::string &message)
     if (m_cancelled.load())
     {
         m_body_obj.RemoveLastExchange();
-        m_json_dialogue.Write(m_body_obj.ToJsonString());
+        WriteLog();
         console::write_line("\nInterrupted by user.", console::TextOrigin::reasoning);
         return;
     }
@@ -97,7 +105,7 @@ void AiClientImpl::SendUserMessage(const std::string &message)
         if (m_cancelled.load())
         {
             m_body_obj.RemoveLastExchange();
-            m_json_dialogue.Write(m_body_obj.ToJsonString());
+            WriteLog();
             console::write_line("\nInterrupted by user.", console::TextOrigin::reasoning);
             return;
         }
@@ -108,7 +116,7 @@ void AiClientImpl::SendUserMessage(const std::string &message)
     if (m_cancelled.load())
     {
         m_body_obj.RemoveLastExchange();
-        m_json_dialogue.Write(m_body_obj.ToJsonString());
+        WriteLog();
         console::write_line("\nInterrupted by user.", console::TextOrigin::reasoning);
         return;
     }
@@ -206,7 +214,7 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
 
     // Send tool responses and get result message from LLM
     m_body_obj.AddToolResponses(tools_responses);
-    m_json_dialogue.Write(m_body_obj.ToJsonString());
+    WriteLog();
 
     std::string body = m_body_obj.ToJsonString();
 
@@ -219,7 +227,7 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
     if (m_cancelled.load())
     {
         m_body_obj.RemoveLastExchange();
-        m_json_dialogue.Write(m_body_obj.ToJsonString());
+        WriteLog();
         console::write_line("\nInterrupted by user.", console::TextOrigin::reasoning);
         return;
     }
@@ -236,7 +244,7 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
     // Response message after tools execution
     std::string response_msg = proc.GetResponseMessage();
     bool is_not_empty_message = m_body_obj.AddResponse(response_msg);
-    m_json_dialogue.Write(m_body_obj.ToJsonString());
+    WriteLog();
 
     if(is_not_empty_message)
         m_tool_loop_counter = 0; // Reset tool loop counter for a non-empty message
@@ -253,7 +261,7 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
         if (m_cancelled.load())
         {
             m_body_obj.RemoveLastExchange();
-            m_json_dialogue.Write(m_body_obj.ToJsonString());
+            WriteLog();
             console::write_line("\nInterrupted by user.", console::TextOrigin::reasoning);
             return;
         }
@@ -273,6 +281,11 @@ void AiClientImpl::SetApiKey(const std::string &key)
 void AiClientImpl::SetModel(const std::string &model)
 {
     m_body_obj.SetModel(model);
+}
+
+void AiClientImpl::SetLog(bool enabled)
+{
+    m_log = enabled;
 }
 
 void AiClientImpl::SetAgentRules(const std::string &rules)
@@ -307,7 +320,7 @@ void AiClientImpl::ClearContext()
     console::clear();
     m_body_obj.ClearContext();
     m_json_dialogue.Reset();
-    m_json_dialogue.Write(m_body_obj.ToJsonString());
+    WriteLog();
 }
 
 // A simple way compressing: summarizing + last two messages (kMessagesToKeep)
@@ -355,13 +368,13 @@ void AiClientImpl::CompressContext()
     // summary, and the last kMessagesToKeep messages.
     std::string summarized_msg = proc.GetResponseMessage();
     m_body_obj.Compress(summarized_msg, kMessagesToKeep);
-    m_json_dialogue.Write(m_body_obj.ToJsonString());
+    WriteLog();
 }
 
 void AiClientImpl::RestoreDialogueFrom(const std::string &data)
 {
     m_body_obj.FromJsonString(data);
-    m_json_dialogue.Write(m_body_obj.ToJsonString());
+    WriteLog();
 }
 
 void AiClientImpl::ToolUndo()
