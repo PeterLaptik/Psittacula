@@ -130,7 +130,9 @@ bool DialogueBody::AddResponse(const std::string &response)
         rapidjson::Document::AllocatorType &alloc = m_request->body.GetAllocator();
         rapidjson::Value msg_value(rapidjson::kObjectType);
         msg_value.AddMember("role", "assistant", alloc);
-        msg_value.AddMember("content", rapidjson::Value(response.c_str(), alloc).Move(), alloc);
+
+        const std::string safe_response = utf8::Sanitize(response);
+        msg_value.AddMember("content", rapidjson::Value(safe_response.c_str(), static_cast<rapidjson::SizeType>(safe_response.size()), alloc).Move(), alloc);
         it->value.PushBack(msg_value, alloc);
     }
 
@@ -156,9 +158,6 @@ void DialogueBody::AddToolResponses(const std::vector<ToolResponse> &responses)
             tool_msg.AddMember("tool_call_id", rapidjson::Value(rss.id.c_str(), assist_alloc).Move(), assist_alloc);
             tool_msg.AddMember("role", "tool", alloc);
             tool_msg.AddMember("recipient", rapidjson::Value(rss.name.c_str(), assist_alloc).Move(), assist_alloc);
-
-            rapidjson::Value content_val;
-            content_val.SetString(rss.output_content.c_str(), alloc);
 
             // Tool output can contain arbitrary bytes (console output, file contents):
             // invalid UTF-8 makes the server reject the whole request body
@@ -701,10 +700,11 @@ void DialogueBody::Compress(std::string summarized_msg, int msg_left)
     first_msg.CopyFrom(messages[0], alloc);
     new_messages.PushBack(first_msg, alloc);
     
-    // Add the summarized message after the system message
+
+    const std::string safe_summary = utf8::Sanitize(summarized_msg);
     rapidjson::Value summary_msg(rapidjson::kObjectType);
     summary_msg.AddMember("role", rapidjson::Value("assistant", alloc), alloc);
-    summary_msg.AddMember("content", rapidjson::Value(summarized_msg.c_str(), alloc).Move(), alloc);
+    summary_msg.AddMember("content", rapidjson::Value(safe_summary.c_str(), static_cast<rapidjson::SizeType>(safe_summary.size()), alloc).Move(), alloc);
     new_messages.PushBack(summary_msg, alloc);
     
     // Add the last msg_left messages.
