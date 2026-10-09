@@ -10,6 +10,21 @@ namespace fs = std::filesystem;
 
 const char * const kDefaultDir = "Psittacula";
 const char * const kModelsSubDir = "models";
+const char * const kSettingsSubDir = "settings";
+const char * const kProjectsSubDir = "projects";
+const char * const kLogsSubDir = "logs";
+
+namespace {
+    void CreateDirsNoThrow(const fs::path &dir, Formatter &fmt)
+    {
+        std::error_code ec;
+        fs::create_directories(dir, ec);
+        if (ec)
+            console::write_line(
+                fmt.Format("Failed to create directory '%?': %?", dir.string(), ec.message()),
+                TextOrigin::error);
+    }
+}
 
 WorkingDir& WorkingDir::GetInstance()
 {
@@ -27,20 +42,33 @@ WorkingDir& WorkingDir::GetInstance()
 void WorkingDir::SetWorkDir(const std::string &path)
 {
     WorkingDir &instance = WorkingDir::GetInstance();
+
+    {
+        std::error_code ec;
+        fs::create_directories(path, ec);
+        if (ec)
+        {
+            console::write_line(
+                instance.m_fmt.Format("Failed to set workdir '%?': %?", path, ec.message()),
+                TextOrigin::error);
+            return; // the rest would fail identically: do not spam
+        }
+    }
+
     instance.m_workdir = path;
 
-    // Create subdirectories if they don't exist
+    // Create subdirectories if they don't exist (failures are logged, not thrown)
     fs::path base = instance.m_workdir;
-    fs::path models = base / "models";
-    fs::path settings = base / "settings";
-    fs::path projects = base / "projects";
-    fs::path logs = base / "logs";
-    fs::create_directories(models);
-    fs::create_directories(settings);
-    fs::create_directories(projects);
-    fs::create_directories(logs);
+    fs::path models = base / kModelsSubDir;
+    fs::path settings = base / kSettingsSubDir;
+    fs::path projects = base / kProjectsSubDir;
+    fs::path logs = base / kLogsSubDir;
+    CreateDirsNoThrow(models, instance.m_fmt);
+    CreateDirsNoThrow(settings, instance.m_fmt);
+    CreateDirsNoThrow(projects, instance.m_fmt);
+    CreateDirsNoThrow(logs, instance.m_fmt);
 
-    m_project_dir = projects.string();
+    instance.m_project_dir = projects.string();
 
     instance.UpdateModels();
 }
@@ -191,14 +219,14 @@ void WorkingDir::CreateWorkingDirs()
     m_workdir = home_dir.string();
 
     fs::path base = m_workdir;
-    fs::path models = base / "models";
-    fs::path settings = base / "settings";
-    fs::path projects = base / "projects";
-    fs::path logs = base / "logs";
-    fs::create_directories(models);
-    fs::create_directories(settings);
-    fs::create_directories(projects);
-    fs::create_directories(logs);
+    fs::path models = base / kModelsSubDir;
+    fs::path settings = base / kSettingsSubDir;
+    fs::path projects = base / kProjectsSubDir;
+    fs::path logs = base / kLogsSubDir;
+    CreateDirsNoThrow(models, m_fmt);
+    CreateDirsNoThrow(settings, m_fmt);
+    CreateDirsNoThrow(projects, m_fmt);
+    CreateDirsNoThrow(logs, m_fmt);
 
     m_project_dir = projects.string();
 }
