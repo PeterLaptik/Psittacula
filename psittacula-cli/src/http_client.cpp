@@ -2,17 +2,21 @@
 #include "response_readers.h"
 #include "chunk_processor.h"
 #include "curl_global_guard.h"
+#include "console_writer.h"
 #include <chrono>
 #include <iostream>
 #include <curl/curl.h>
 
+// Console note: this module runs on the worker thread in the TUI build -
+// everything user-visible must go through console:: (the TextReceiver),
+// a raw std::cout/std::cerr here corrupts the screen layout
 HttpClient::HttpClient(const std::string &host_and_port, std::string api_key)
     : m_host(host_and_port), m_api_key(api_key)
 {
     m_curl_initialized = curl_global::Acquire();
 
     if (!m_curl_initialized)
-        std::cerr << "Curl init error!" << std::endl;
+        console::write_line("Curl init error!", console::TextOrigin::error);
 }
 
 HttpClient::HttpClient(const std::string &host, int port, std::string api_key)
@@ -21,7 +25,7 @@ HttpClient::HttpClient(const std::string &host, int port, std::string api_key)
     m_curl_initialized = curl_global::Acquire();
 
     if (!m_curl_initialized)
-        std::cerr << "Curl init error!" << std::endl;
+        console::write_line("Curl init error!", console::TextOrigin::error);
 }
 
 HttpClient::~HttpClient()
@@ -130,7 +134,7 @@ void HttpClient::HttpPost(const std::string &end_point, const std::string &data,
     CURL *curl = curl_easy_init();
     if (!curl)
     {
-        std::cout << "Failed to init curl" << std::endl;
+        console::write_line("Failed to init curl", console::TextOrigin::error);
         return;
     }
 
@@ -155,9 +159,9 @@ void HttpClient::HttpPost(const std::string &end_point, const std::string &data,
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, receiver);
 
     CURLcode res = curl_easy_perform(curl);
-    if (res != CURLE_OK) 
+    if (res != CURLE_OK)
     {
-        std::cout << "CURL error: " + std::string(curl_easy_strerror(res)) << std::endl;
+        console::write_line("CURL error: " + std::string(curl_easy_strerror(res)), console::TextOrigin::error);
     }
 
     curl_slist_free_all(headers);
@@ -170,7 +174,7 @@ void HttpClient::HttpPostStream(const std::string &end_point, const std::string 
 
     if (!curl)
     {
-        std::cout << "Failed to init curl" << std::endl;
+        console::write_line("Failed to init curl", console::TextOrigin::error);
         return;
     }
 
@@ -213,7 +217,7 @@ void HttpClient::HttpPostStream(const std::string &end_point, const std::string 
         static_cast<ChunkProcessor *>(receiver)->Flush();
 
     if (res != CURLE_OK && res != CURLE_ABORTED_BY_CALLBACK && res != CURLE_WRITE_ERROR)
-        std::cout << "CURL error: " + std::string(curl_easy_strerror(res)) << std::endl;
+        console::write_line("CURL error: " + std::string(curl_easy_strerror(res)), console::TextOrigin::error);
 
 
     curl_slist_free_all(headers);

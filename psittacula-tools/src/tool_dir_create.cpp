@@ -75,7 +75,7 @@ void DirCreateTool::Undo()
     if (dir_existed_before)
         return;
 
-    std::cout << "Removing directory: " << last_path << std::endl;
+    console::write_line("Removing directory: " + last_path, console::TextOrigin::tools);
 
     // Check if directory is empty
     bool is_empty = std::filesystem::is_empty(last_path);
@@ -107,7 +107,7 @@ void DirCreateTool::Redo()
         return;
     }
 
-    std::cout << "Recreating sirectory: " << last_path << std::endl;
+    console::write_line("Recreating directory: " + last_path, console::TextOrigin::tools);
 
     std::filesystem::create_directories(last_path);
 }

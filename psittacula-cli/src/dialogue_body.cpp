@@ -183,7 +183,7 @@ void DialogueBody::SetModel(const std::string &model)
     console::write("Setting up model: " + model + " \n --- \n ", console::TextOrigin::tools);
     if (!m_request->body.HasMember("model"))
     {
-        std::cout << "\033[31mInternal error: no body field for model!" << std::endl;
+        console::write_line("Internal error: no body field for model!", console::TextOrigin::error);
         return;
     }
     m_request->body["model"].SetString(model.c_str(), m_request->body.GetAllocator());
@@ -198,7 +198,7 @@ void DialogueBody::RegisterTool(ToolBase *tool)
     auto it = m_request->body.FindMember("tools");
     if (it == m_request->body.MemberEnd())
     {
-        std::cout << "tools_error" << std::endl;
+        console::write_line("Register tool error: no 'tools' field in the request body", console::TextOrigin::error);
         return;
     }
 
@@ -267,7 +267,7 @@ void DialogueBody::RegisterTool(ToolBase *tool)
             }
             else
             {
-                std::cerr << "Tool registring: bad parameter type for " << prop.name << std::endl;
+                console::write_line("Tool registering: bad parameter type for " + prop.name, console::TextOrigin::error);
             }
         }
 
@@ -343,7 +343,7 @@ void DialogueBody::FromJsonString(const std::string data)
     // Check for parse errors
     if (m_request->body.HasParseError())
     {
-        std::cerr << "JSON parse error: " << rapidjson::GetParseError_En(m_request->body.GetParseError()) << std::endl;
+        console::write_line(std::string("JSON parse error: ") + rapidjson::GetParseError_En(m_request->body.GetParseError()), console::TextOrigin::error);
         return;
     }
 
@@ -352,7 +352,7 @@ void DialogueBody::FromJsonString(const std::string data)
     auto msg_it = m_request->body.FindMember("messages");
     if (msg_it == m_request->body.MemberEnd() || !msg_it->value.IsArray())
     {
-        std::cerr << "JSON restore error: no 'messages' array" << std::endl;
+        console::write_line("JSON restore error: no 'messages' array", console::TextOrigin::error);
         return;
     }
 
