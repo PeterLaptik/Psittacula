@@ -187,11 +187,14 @@ void tui::Screen::Clear()
 
 void tui::Screen::SetShowReasoning(bool reasoning)
 {
+
+    std::lock_guard<std::mutex> guard(m_screen_locker);
     m_panel_text.SetShowReasoning(reasoning);
 }
 
 bool tui::Screen::GetShowReasoning() const
 {
+    std::lock_guard<std::mutex> guard(m_screen_locker);
     return m_panel_text.GetShowReasoning();
 }
 

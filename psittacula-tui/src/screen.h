@@ -87,7 +87,7 @@ namespace tui {
             PanelText m_panel_text;
             PanelStatus m_panel_status;
 
-            std::mutex m_screen_locker;
+            mutable std::mutex m_screen_locker;
     };
 }
 
