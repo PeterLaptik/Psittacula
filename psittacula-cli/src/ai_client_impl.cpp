@@ -20,6 +20,8 @@ const std::string kEndPointCompletionsLlama = "/v1/chat/completions";
 const std::string kEndPointCompletionsNonLlama = "/chat/completions";
 const std::string kEndPointSlots = "/slots";
 
+const long kSlotsTimeoutMs = 2000;
+
 AiClientImpl::AiClientImpl(const Model &model)
     : m_http_client(model.GetHost(), 
         model.GetApiKey()), 
@@ -286,7 +288,16 @@ void AiClientImpl::SetAgentRules(const std::string &rules)
 
 std::string AiClientImpl::GetSlotstInfo()
 {
-    return m_http_client.HttpGet(kEndPointSlots);
+    const HttpResult rsp = m_http_client.HttpGetFull(kEndPointSlots, kSlotsTimeoutMs);
+
+    if (!rsp.error.empty() && rsp.status == 0)
+    {
+        console::write_line(
+            fmt.Format("/slots unreachable: %?", rsp.error),
+            console::TextOrigin::reasoning);
+    }
+
+    return rsp.body;
 }
 
 std::string AiClientImpl::GetChatCompletionsEndpoint() const
