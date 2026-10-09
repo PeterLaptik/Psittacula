@@ -62,3 +62,8 @@ target_include_directories(${PSITTACULA_TOOLS_NAME} PRIVATE ${CURL_INCLUDE_DIRS}
 target_link_libraries(${PSITTACULA_TOOLS_NAME} PRIVATE rapidjson)
 target_link_libraries(${PSITTACULA_TOOLS_NAME} PRIVATE CURL::libcurl)
 target_link_libraries(${PSITTACULA_TOOLS_NAME} PRIVATE Threads::Threads)
+
+# Dependency for tor tool_web_fetch
+if(WIN32)
+    target_link_libraries(${PSITTACULA_TOOLS_NAME} PRIVATE ws2_32)
+endif()
