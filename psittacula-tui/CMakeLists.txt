@@ -17,6 +17,8 @@ set(TOOLS_INCLUDE ../${PSITTACULA_TOOLS}/include)
 
 add_executable(${PSITTACULA_TUI_NAME}
     ${SRC_DIR}/main.cpp
+    ${SRC_DIR}/animation.h
+    ${SRC_DIR}/animation.cpp
     ${SRC_DIR}/app.cpp
     ${SRC_DIR}/app.h
     ${SRC_DIR}/chat_command.h

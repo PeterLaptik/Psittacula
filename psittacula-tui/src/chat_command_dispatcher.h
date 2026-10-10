@@ -250,9 +250,6 @@ class ChatCommandDispatcher
                 console::write_line("\033[1m" + cmd_desc.first + " -\033[0m " + cmd_desc.second);
             }
 
-            console::write_line("\033[1mq -\033[0m Clear active query.");
-            console::write_line("\033[1mexit -\033[0m Exit from the program.");
-
             console::write_line("\n\nPress Enter to continue...");
             {
                 console::LineInputScope line_input;

@@ -7,10 +7,12 @@
 #include "format_util.h"
 #include "working_dir.h"
 #include "model.h"
+#include "animation.h"
 #include "llm_connectivity_checker.h"
 #include <iostream>
 #include <fstream>
 #include <filesystem>
+#include <thread>
 
 #ifdef _WIN32
 #include <conio.h>
@@ -194,10 +196,15 @@ class CommandChangeModel: public ChatCommand
             // Load selected model
             Model model = Model::FromFile(models[index]);
 
-            std::cout << formatter.Format("Checking connectivity with '%?' ...", model.GetName());
+            //std::cout << formatter.Format("Checking connectivity with '%?' ...", model.GetName());
+
+            std::thread t(start_animation);
 
             LlmConnectivityChecker checker(model.GetHost(), model.GetApiKey());
             LlmConnectivityState state = checker.Check();
+
+            stop_animation();
+            t.join();
 
             RestoreMainScreen();
 
