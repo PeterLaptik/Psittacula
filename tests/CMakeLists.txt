@@ -16,6 +16,7 @@ set(TEST_SOURCES
     test_dialogue_body_compress.cpp
     test_working_dir_sandbox.cpp
     test_text_splitter.cpp
+    test_model_env_key.cpp
 )
 
 # Engine sources under test (psittacula-cli; http_client.cpp is excluded:
@@ -26,6 +27,7 @@ set(CLI_ENGINE_SOURCES
     ../psittacula-cli/src/console_history.cpp
     ../psittacula-cli/src/working_dir.cpp
     ../psittacula-cli/src/context_info.cpp
+    ../psittacula-cli/src/model.cpp
 )
 
 # Engine sources under test (psittacula-tui)

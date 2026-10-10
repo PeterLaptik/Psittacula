@@ -36,7 +36,14 @@ Model Model::FromFile(const std::string &file_path)
 
     std::string model_name = params.count("name") ? params["name"] : "UnnamedModel";
     std::string host = params.count("host") ? params["host"] : "";
-    std::string api_key = params.count("api_key") ? params["api_key"] : "";
+
+    std::string api_key;
+    if (params.count("api_key_env"))
+    {
+        const std::string &env_name = params["api_key_env"];
+        if (const char *env_value = std::getenv(env_name.c_str()))
+            api_key = env_value;
+    }
     std::string context_size_str = params.count("context_size") ? params["context_size"] : "-1";
     std::string chat_endpoint = params.count("chat_endpoint") ? params["chat_endpoint"] : "/v1/chat/completions";
 

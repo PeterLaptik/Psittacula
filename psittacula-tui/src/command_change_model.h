@@ -257,7 +257,7 @@ class CommandChangeModel: public ChatCommand
             std::string file_name;
             std::string model_name;
             std::string host;
-            std::string api_key;
+            std::string api_key_env_name;
             std::string context_size_str;
             std::string chat_endpoint;
 
@@ -279,8 +279,8 @@ class CommandChangeModel: public ChatCommand
                 std::cout << "\nEnter context size (leave empty for llama.cpp): ";
                 std::getline(std::cin, context_size_str);
 
-                std::cout << "\nEnter API key (leave empty if not required): ";
-                std::getline(std::cin, api_key);
+                std::cout << "\nEnter name of the environment variable holding the API key (leave empty for keyless local servers): ";
+                std::getline(std::cin, api_key_env_name);
             }
 
             std::string models_dir = WorkingDir::GetInstance().GetModelsDir();
@@ -316,11 +316,11 @@ class CommandChangeModel: public ChatCommand
             else
                 file << "# context_size=\n";
 
-            file << "# Bearer key: add if necessary\n";
-            if (!api_key.empty())
-                file << "api_key=" << api_key << "\n";
+            file << "# Bearer key comes from the environment only; it is never stored in this file.\n";
+            if (!api_key_env_name.empty())
+                file << "api_key_env=" << api_key_env_name << "\n";
             else
-                file << "# api_key=\n";
+                file << "# api_key_env=MY_API_KEY\n";
 
             file.close();
 
