@@ -57,7 +57,7 @@ static int GetKey()
 #ifndef _WIN32
 // Waits up to timeout_ms for the next byte on stdin (raw-mode menus).
 // Used to tell a bare Escape (quit) from the first byte of an escape sequence such as ESC [ A (navigation).
-inline bool MenuInputReady(int timeout_ms)
+inline bool MenuInputCommandReady(int timeout_ms)
 {
     fd_set fds;
     FD_ZERO(&fds);
@@ -173,7 +173,7 @@ class ChatCommandDispatcher
                 {
                     // Bare ESC (no byte follows within 50 ms) quits the menu;
                     // ESC [ ... is a navigation sequence
-                    if (!MenuInputReady(50))
+                    if (!MenuInputCommandReady(50))
                     {
                         RestoreMainScreen();
                         return "";
