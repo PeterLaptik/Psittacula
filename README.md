@@ -1,7 +1,7 @@
 
 # Psittacula
 
-A terminal-based AI coding agent that was written to run with local **llama.cpp**. It can also work with 
+A terminal-based AI coding agent that was written to run with local **llama.cpp**, but it can also work with 
 OpenAI-compatible gateways.
 
 Psittacula streams answers in real time, shows model reasoning, and gives the model a multi-tool
@@ -22,8 +22,8 @@ _______________________________________________________
 
 - **Local-first**: designed against the llama.cpp server (`/v1/chat/completions`, `/health`,
   `/slots`, reasoning chunks, per-token timings), tolerant of other OpenAI-compatible gateways.
-- **Streaming SSE output** with a live spinner, token/context usage bar and optional cost display.
-- **Reasoning display**: `reasoning_content` / `reasoning` / `thinking` chunks are rendered dimmed
+- **Streaming SSE output** with a live spinner, token/context usage bar.
+- **Reasoning display**: `reasoning_content` / `reasoning` / `thinking` chunks are rendered
   and can be hidden (`/reasoning false`).
 - **Agent tools** (14): file create/read/modify/search/list/remove/copy/move, directory
   create/delete, binary files via base64, web fetch, shell commands.
@@ -33,29 +33,18 @@ _______________________________________________________
 - **Undo / redo** for file and directory tools (`/undo`, `/redo`).
 - **Context management**: autosaved dialogue (`logs/dialogue_*.txt`), dump / restore, context
   clearing and **LLM summarization compression** (`/compress`) with tool-result purging.
-- **UTF-8 hygiene**: console code pages, ANSI output and child-process output are converted so that
+- **UTF-8 support**: console code pages, ANSI output and child-process output are converted so that
   a request body is always well-formed JSON (Cyrillic consoles, CP866 tool output, etc.).
 - **Cross-platform TUI**: raw-mode terminal UI for Windows and POSIX (arrows, PageUp/PageDown,
   resize handling, `/`-command and `@`-file autocomplete).
 
 ---
 
-## Architecture
+## Installing
 
-Three C++17 static-library/executable modules, built by one CMake superproject:
+### Windows
 
-| Directory          | What it is |
-|--------------------|------------|
-| `psittacula-tui/`  | The terminal application: screen/panels/input, keyboard decoding, chat commands, model & rules pickers. |
-| `psittacula-cli/`  | The engine: `AiClient`, libcurl HTTP/SSE client, dialogue body (RapidJSON), connectivity checker, working-dir/sandbox singleton, undo/redo manager. |
-| `psittacula-tools/`| The agent tool implementations (one class per tool, registered into a dispatcher). |
-
-```
-version.txt                 single source of the version (A_VERSION_MAJOR/MINOR/PATCH)
-cmake/modules/FsUtils.cmake reads version.txt into CMake variables
-Build/<cfg>/bin             executables
-Build/<cfg>/lib             built static libraries
-```
+### FreeBSD
 
 ---
 
@@ -65,7 +54,7 @@ Requirements:
 
 - CMake **≥ 3.25**
 - C++17 compiler (MSVC 2022, MinGW-w64, GCC, Clang)
-- Development packages: **libcurl**, **zlib**, **RapidJSON** (+ threads)
+- Dependencies: **libcurl**, **zlib**, **RapidJSON** + threads
 
 With [vcpkg](https://vcpkg.io) as an example:
 
@@ -80,9 +69,9 @@ cmake -S . -B Build -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=<vcpkg>/sc
 cmake --build Build --config Release
 ```
 
-Resulting binary: `Build/Release/bin/psittacula-0.9.7` (name carries the version from `version.txt`).
+Resulting binary: `Build/Release/bin/psittacula-X.X.X` (name carries the version from `version.txt`).
 On Windows the runtime needs `libcurl.dll` / `zlib1.dll` next to the executable or in `PATH`
-(the Debug output directory already bundles the `-d` variants).
+(`-d` variants for the Debug).
 
 ---
 
@@ -104,9 +93,9 @@ On first start the workdir structure is created and, if no model connections exi
 %USERPROFILE%/Documents/Psittacula      (Windows default workdir)
 $HOME/Psittacula                        (POSIX default workdir)
 ├── models/      *.txt model connection files
-├── settings/    agent rules (system prompts); default.txt is created on first run
+├── settings/    agent rules (system prompts); defaults are created on first run
 ├── projects/    default sandbox for the agent's file tools
-└── logs/        dialogue autosave (dialogue_*.txt) and dumps
+└── logs/        dialogue log files (dialogue_*.txt) and dumps
 ```
 
 ---
@@ -159,12 +148,12 @@ visible immediately. Switching models keeps the current dialogue.
 | `/help`, `/h` | List all commands. |
 | `/model [create]` | Choose a model connection (interactive), or create a new one. Does not clear context. |
 | `/tools` | List the tools available to the agent. |
-| `/reasoning true\|false` | Show/hide the model's reasoning text. |
+| `/reasoning true|false` | Show/hide the model's reasoning text. |
 | `/undo`, `/redo` | Undo/redo the last file/directory tool action. |
 | `/clear` | Clear the dialogue (keeps the system prompt). |
 | `/compress` | Summarize the older context into a compact summary (keeps the system prompt, the summary and the last messages). |
 | `/dump [name]` | Save the full dialogue JSON to `logs/`. |
-| `/dump_text [name\|path]` | Save the dialogue as readable text (`.md`). |
+| `/dump_text [name|path]` | Save the dialogue as readable text (`.md`). |
 | `/restore <name>` | Restore a dialogue from `logs/`. |
 | `/rules [show]` | Load agent rules (system prompt) from `settings/*.txt`, or show the current one. |
 | `/project <path>` | Change the sandbox (project) directory used by file tools. |
@@ -209,10 +198,6 @@ All path arguments accept an **absolute path or a path relative to the project (
 - `run_command` **always** asks for confirmation; the command, its working directory and its
   output are shown in the console.
 - Destructive file actions are undoable via `/undo` until the session ends.
-- The API key is **never** stored in the model file: the file only references an environment
-  variable (`api_key_env=VAR_NAME`) and the key itself lives in the environment
-  (Windows: `setx VAR_NAME sk-...`, POSIX: `export VAR_NAME=sk-...`). A legacy plaintext
-  `api_key=` line in a model file is silently ignored (never sent anywhere).
 
 ---
 
@@ -247,7 +232,26 @@ All path arguments accept an **absolute path or a path relative to the project (
 
 ---
 
-## Source layout (engine internals, for contributors)
+## Architecture
+
+Three C++17 static-library/executable modules, built by one CMake root project:
+
+| Directory          | What it is |
+|--------------------|------------|
+| `psittacula-tui/`  | The terminal application: screen/panels/input, keyboard decoding, chat commands, model & rules pickers. |
+| `psittacula-cli/`  | The engine: `AiClient`, libcurl HTTP/SSE client, dialogue body (RapidJSON), connectivity checker, working-dir/sandbox singleton, undo/redo manager. |
+| `psittacula-tools/`| The agent tool implementations (one class per tool, registered into a dispatcher). |
+
+```
+version.txt                 single source of the version (A_VERSION_MAJOR/MINOR/PATCH)
+cmake/modules/FsUtils.cmake reads version.txt into CMake variables
+Build/<cfg>/bin             executables
+Build/<cfg>/lib             built static libraries
+```
+
+---
+
+## Source layout
 
 ```
 psittacula-cli/include/   public engine headers (AiClient, Model, console_writer, utf8_util, ...)
@@ -256,7 +260,7 @@ psittacula-tui/src/       App main loop, Screen/Panels, Keyboard, chat commands
 psittacula-tools/src/     one Tool class per agent tool
 ```
 
-Key internal contracts worth knowing before hacking:
+Key internal contracts:
 
 - Everything that enters a request body passes a UTF-8 sanitize gate (`utf8::Sanitize`) — a single
   ill-formed byte otherwise makes servers reject the whole request.
