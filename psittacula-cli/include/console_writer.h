@@ -74,6 +74,8 @@ namespace console {
 
     void write_status(const ChunkProcessor *proc, int context_size);
 
+    void write_status_per_chunk(const ChunkProcessor *proc, int context_size);
+
     bool ask_confirm(const std::string &message);
 
     void flush();

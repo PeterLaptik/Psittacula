@@ -196,8 +196,6 @@ class CommandChangeModel: public ChatCommand
             // Load selected model
             Model model = Model::FromFile(models[index]);
 
-            //std::cout << formatter.Format("Checking connectivity with '%?' ...", model.GetName());
-
             std::thread t(start_animation);
 
             LlmConnectivityChecker checker(model.GetHost(), model.GetApiKey());
@@ -208,6 +206,22 @@ class CommandChangeModel: public ChatCommand
 
             RestoreMainScreen();
 
+            std::unique_ptr<AiClient> created_client = model.GetClient();
+
+            if(client.get() != nullptr)
+            { 
+                std::string full_dialogue = client->GetDialogueBody();
+
+                CommandCleanContext cmd_clean{ m_app };
+                cmd_clean.Execute(client, {});
+
+                created_client->RestoreDialogueFrom(full_dialogue);
+            }
+
+            client.reset(created_client.release());
+
+            bool has_api_key = !model.GetApiKey().empty();
+            console::write_line(std::string("Found API key: ") + (has_api_key ? "yes" : "no"), TextOrigin::tools);
             console::write_line(state.summary + "\n ", state.reachable ? TextOrigin::tools : TextOrigin::error);
 
             if (!state.reachable)
@@ -234,20 +248,6 @@ class CommandChangeModel: public ChatCommand
 
                 m_app->RefreshStatus(model_info);
             }
-
-            std::unique_ptr<AiClient> created_client = model.GetClient();
-
-            if(client.get() != nullptr)
-            { 
-                std::string full_dialogue = client->GetDialogueBody();
-
-                CommandCleanContext cmd_clean{ m_app };
-                cmd_clean.Execute(client, {});
-
-                created_client->RestoreDialogueFrom(full_dialogue);
-            }
-
-            client.reset(created_client.release());
         }
 
         void CreateModel(std::unique_ptr<AiClient> &client)

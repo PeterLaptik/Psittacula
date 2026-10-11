@@ -179,7 +179,7 @@ void DialogueBody::ClearHistory()
 
 void DialogueBody::SetModel(const std::string &model)
 {
-    console::write("Setting up model: " + model + " \n --- \n ", console::TextOrigin::tools);
+    console::write_line("Setting up model: " + model, console::TextOrigin::tools);
     if (!m_request->body.HasMember("model"))
     {
         console::write_line("Internal error: no body field for model!", console::TextOrigin::error);

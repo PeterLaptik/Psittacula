@@ -26,14 +26,20 @@ class ChunkCompletionProcessor: public ChunkProcessor
         /// Shows/ hides reasoning text
         void SetShowReasoning(bool is_shown);
 
+        /// Sets context size value. It is used to compute stat
+        void SetContextSize(int ctx_size);
+
         /// Returns full response message
         std::string GetResponseMessage() const;
 
         /// Returns full response reasoning text
         std::string GetResponseReasoning() const;
 
-        /// Outputs statistic to a console (tokens used, context)
-        void ShowStat(std::string slots_info_rsp, int context_size = -1) const;
+        /// Outputs statistics to a console (tokens used, context)
+        void ShowStat() const;
+
+        /// Sets slots info response to extract context size
+        void SetSlotsInfo(const std::string &slots);
 
         /// Sets external interrupt flag checked by CURL progress for ESC cancel
         void SetCancelFlag(std::atomic<bool> *flag);
@@ -58,9 +64,12 @@ class ChunkCompletionProcessor: public ChunkProcessor
 
         void CheckMessage(JsonDocument &doc);
         void CheckReasoning(JsonDocument &doc);
-        void CheckTokens(JsonDocument &doc);
+        bool CheckTokens(JsonDocument &doc);
         void CheckTools(JsonDocument &doc);
         void CheckErrors(JsonDocument &doc);
+
+        /// Outputs statistics to a console (tokens used, context) per each chunk
+        void ShowStatPerChunk() const;
 
         bool m_reasoning_in_process = true;
         bool m_show_reasoning = false;
@@ -72,6 +81,8 @@ class ChunkCompletionProcessor: public ChunkProcessor
         int m_completion_tokens = 0;
         int m_prompt_tokens = 0;
         double m_tokens_cost = 0;
+
+        int m_context_size = 0;
 
         // Tools
         struct FunctionToEvoke

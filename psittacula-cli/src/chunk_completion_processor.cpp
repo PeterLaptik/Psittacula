@@ -9,10 +9,38 @@
 
 using console::TextOrigin;
 
+
+// Context size data to compute
+static struct SlotsInfo
+{
+    int context_size = 0;
+
+    void Set(const std::string slots_info)
+    {
+        rapidjson::Document doc;
+        doc.Parse(slots_info.c_str());
+        // Trying to get context from /slots endpoint response
+        // If it is not well formed / does not exist, use 'context_size' value
+        if (!doc.HasParseError() && doc.IsArray() && !doc.Empty())
+        {
+            const auto &firstSlot = doc[0];
+
+            if (firstSlot.IsObject() &&
+                firstSlot.HasMember("n_ctx") &&
+                firstSlot["n_ctx"].IsInt())
+            {
+                context_size = firstSlot["n_ctx"].GetInt();
+            }
+        }
+    }
+} slots_info;
+
+
 struct ChunkCompletionProcessor::JsonDocument
 {
     rapidjson::Document &body;
 };
+
 
 void ChunkCompletionProcessor::ProcessChunk(const std::string &chunk)
 {
@@ -49,7 +77,10 @@ void ChunkCompletionProcessor::ProcessChunk(const std::string &chunk)
         // Usage/cost data can arrive in a trailing chunk with an empty
         // "choices" array (e.g. Kilo Gateway, OpenRouter, OpenAI with
         // stream_options.include_usage), so check it unconditionally.
-        CheckTokens(data);
+        bool has_tokens_info = CheckTokens(data);
+
+        if(has_tokens_info)
+            ShowStatPerChunk();
     }
     else if(!doc.Parse(chunk.c_str()).HasParseError())
     {
@@ -65,26 +96,15 @@ void ChunkCompletionProcessor::ProcessChunk(const std::string &chunk)
     console::move_spinner();
 }
 
-void ChunkCompletionProcessor::ShowStat(std::string slots_info_rsp, int context_size) const
+void ChunkCompletionProcessor::ShowStat() const
 {
-    // Trying to get context from /slots endpoint response
-    // If it is not well formed / does not exist, use 'context_size' value
-    rapidjson::Document doc;
-    doc.Parse(slots_info_rsp.c_str());
-
-    if (!doc.HasParseError() && doc.IsArray() && !doc.Empty())
-    {
-        const auto &firstSlot = doc[0];
-
-        if (firstSlot.IsObject() &&
-            firstSlot.HasMember("n_ctx") &&
-            firstSlot["n_ctx"].IsInt())
-        {
-            context_size = firstSlot["n_ctx"].GetInt();
-        }
-    }
-
+    int context_size = slots_info.context_size > 0 ? slots_info.context_size : m_context_size;
     console::write_status(this, context_size);
+}
+
+void ChunkCompletionProcessor::SetSlotsInfo(const std::string &slots)
+{
+    slots_info.Set(slots);
 }
 
 void ChunkCompletionProcessor::CheckMessage(JsonDocument &doc)
@@ -150,8 +170,9 @@ void ChunkCompletionProcessor::CheckReasoning(JsonDocument &doc)
     }
 }
 
-void ChunkCompletionProcessor::CheckTokens(JsonDocument &doc)
+bool ChunkCompletionProcessor::CheckTokens(JsonDocument &doc)
 {
+    bool has_tokens_info_per_chunk = false;
     // ========== Tokens counter ==========================
     // The condition works for llama.cpp
     if (doc.body.HasMember("timings"))
@@ -172,6 +193,7 @@ void ChunkCompletionProcessor::CheckTokens(JsonDocument &doc)
         }
 
         m_total_tokens = ctx_cached + m_prompt_tokens + m_completion_tokens;
+        has_tokens_info_per_chunk = true;
     }
 
     // The condition works for other servers
@@ -195,7 +217,9 @@ void ChunkCompletionProcessor::CheckTokens(JsonDocument &doc)
             double read_cost = usage["cost"].GetDouble();
             m_tokens_cost = read_cost > m_tokens_cost ? read_cost : m_tokens_cost;
         }
+        has_tokens_info_per_chunk = true;
     }
+    return has_tokens_info_per_chunk;
 }
 
 void ChunkCompletionProcessor::CheckTools(JsonDocument &doc)
@@ -273,6 +297,12 @@ void ChunkCompletionProcessor::CheckErrors(JsonDocument &doc)
             m_error = "Server error. Unknown error occurred.";
         }
     }
+}
+
+void ChunkCompletionProcessor::ShowStatPerChunk() const
+{
+    int context_size = slots_info.context_size > 0 ? slots_info.context_size : m_context_size;
+    console::write_status_per_chunk(this, context_size);
 }
 
 void ChunkCompletionProcessor::OutputSystemMessage(const std::string &msg)
@@ -398,6 +428,11 @@ void ChunkCompletionProcessor::GetTokensStat(int &total, int &completion, int &p
 void ChunkCompletionProcessor::SetShowReasoning(bool is_shown)
 {
     m_show_reasoning = is_shown;
+}
+
+void ChunkCompletionProcessor::SetContextSize(int ctx_size)
+{
+    m_context_size = ctx_size;
 }
 
 std::string ChunkCompletionProcessor::GetResponseMessage() const

@@ -61,6 +61,11 @@ void AiClientImpl::SendUserMessage(const std::string &message)
     ChunkCompletionProcessor proc; // POST response chunk receiver
     proc.SetShowReasoning(true); // legacy
     proc.SetCancelFlag(&m_cancelled);
+    proc.SetContextSize(m_context_size);
+
+    std::string slots_rsp = GetSlotsInfo();
+    proc.SetSlotsInfo(slots_rsp);
+
     std::string end_point_chat_completions = GetChatCompletionsEndpoint();
     m_http_client.HttpPostStream(end_point_chat_completions, body, &proc);
 
@@ -72,8 +77,7 @@ void AiClientImpl::SendUserMessage(const std::string &message)
         return;
     }
 
-    std::string slots_rsp = GetSlotsInfo();
-    proc.ShowStat(slots_rsp, m_context_size);
+    proc.ShowStat();
 
     // Check errors before adding the response message to the dialogue
     if (proc.HasErrors())
@@ -221,6 +225,11 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
     ChunkCompletionProcessor proc; // POST response chunks receiver
     proc.SetShowReasoning(true); // legacy
     proc.SetCancelFlag(&m_cancelled);
+    proc.SetContextSize(m_context_size);
+
+    std::string slots_rsp = GetSlotsInfo();
+    proc.SetSlotsInfo(slots_rsp);
+
     std::string end_point_chat_completions = GetChatCompletionsEndpoint();
     m_http_client.HttpPostStream(end_point_chat_completions, body, &proc);
 
@@ -232,8 +241,7 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
         return;
     }
 
-    std::string slots_rsp = GetSlotsInfo();
-    proc.ShowStat(slots_rsp, m_context_size);
+    proc.ShowStat();
 
     if (proc.HasErrors())
     {
@@ -346,6 +354,11 @@ void AiClientImpl::CompressContext()
     // Only the response text is needed here; tool calls are intentionally ignored.
     ChunkCompletionProcessor proc; // POST response chunk receiver
     proc.SetCancelFlag(&m_cancelled);
+    proc.SetContextSize(m_context_size);
+
+    std::string slots_rsp = GetSlotsInfo();
+    proc.SetSlotsInfo(slots_rsp);
+
     std::string end_point_chat_completions = GetChatCompletionsEndpoint();
     m_http_client.HttpPostStream(end_point_chat_completions, summary_body, &proc);
 
@@ -355,8 +368,7 @@ void AiClientImpl::CompressContext()
         return;
     }
 
-    std::string slots_rsp = GetSlotsInfo();
-    proc.ShowStat(slots_rsp, m_context_size);
+    proc.ShowStat();
 
     if (proc.HasErrors())
     {

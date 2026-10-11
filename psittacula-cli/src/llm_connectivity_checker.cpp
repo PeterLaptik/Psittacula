@@ -126,7 +126,7 @@ LlmConnectivityState LlmConnectivityChecker::Check() const
         else if (state.openai_compatible)
             kind = "OpenAI-compatible";
         else
-            kind = "unknown server";
+            kind = "Unknown server";
 
         state.summary = kind + " at " + host;
 
