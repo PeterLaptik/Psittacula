@@ -84,7 +84,7 @@ namespace console {
 
     void move_spinner();
 
-    inline const char* get_origin_colour(TextOrigin origin);
+    const char* get_origin_colour(TextOrigin origin);
 }
 
 #endif // CONSOLE_WRITER_INCLUDED_H
