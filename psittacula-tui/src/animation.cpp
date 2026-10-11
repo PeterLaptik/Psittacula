@@ -5,58 +5,70 @@
 //  The sprite is built from implicit shapes (ellipses + circle chains), so it
 //  rescales smoothly to the current console window - resize it mid-flight
 //  and the parrot grows/shrinks to fit.
+//
+//  Platforms:
+//    - Windows        console API backend (CONSOLE_SCREEN_BUFFER_INFO +
+//                     one WriteConsoleOutputW blit per frame).
+//    - FreeBSD etc.   POSIX tty backend: terminal size via
+//                     ioctl(TIOCGWINSZ), rendering via VT100/ANSI escape
+//                     sequences written straight to stdout. The cell grid
+//                     is kept in memory and diffed against the previously
+//                     shown frame; only changed cells are emitted, so the
+//                     refresh does not flicker. Glyphs are encoded as
+//                     UTF-8 unconditionally (no locale dependence).
 // ---------------------------------------------------------------------------
 
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <windows.h>
-
 #include <algorithm>
+#include <atomic>
+#include <cerrno>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
-#include <atomic>
+
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#else
+#include <sys/ioctl.h>
+#include <thread>
+#include <unistd.h>
+#endif
 
 using Clock = std::chrono::steady_clock;
 
-static std::atomic<bool> is_working = false;
+static std::atomic<bool> is_working(false);
 
-// -------------------------------------------------------------------- RNG --
-struct Rng {                                    // xorshift32 - no <random>
-    explicit Rng(uint32_t seed) : s_(seed ? seed : 1u) {}
-    uint32_t next() {
-        s_ ^= s_ << 13; s_ ^= s_ >> 17; s_ ^= s_ << 5;
-        return s_;
-    }
-    int range(int lo, int hi) {                 // inclusive
-        return lo + static_cast<int>(next() % static_cast<uint32_t>(hi - lo + 1));
-    }
-    private:
-    uint32_t s_;
-};
-
-// -------------------------------------------------------------- Terminal --
-// Flicker-free renderer: each frame we fill a CHAR_INFO grid in memory and
-// hand the whole visible window to the console with one WriteConsoleOutput.
+#ifdef _WIN32
+// ---------------------------------------------------------------------------
+//  Windows backend
+//  Flicker-free renderer: each frame we fill a CHAR_INFO grid in memory and
+//  hand the whole visible window to the console with one WriteConsoleOutput.
+// ---------------------------------------------------------------------------
 class Terminal {
     public:
-    static constexpr WORD yellow = FOREGROUND_RED | FOREGROUND_GREEN |
+    using CellAttr = WORD;
+
+    static constexpr CellAttr yellow = FOREGROUND_RED | FOREGROUND_GREEN |
         FOREGROUND_INTENSITY;
-    static constexpr WORD dkYell = FOREGROUND_RED | FOREGROUND_GREEN;
-    static constexpr WORD red = FOREGROUND_RED | FOREGROUND_INTENSITY;
-    static constexpr WORD white = FOREGROUND_RED | FOREGROUND_GREEN |
+    static constexpr CellAttr dkYell = FOREGROUND_RED | FOREGROUND_GREEN;
+    static constexpr CellAttr red = FOREGROUND_RED | FOREGROUND_INTENSITY;
+    static constexpr CellAttr white = FOREGROUND_RED | FOREGROUND_GREEN |
         FOREGROUND_BLUE | FOREGROUND_INTENSITY;
-    static constexpr WORD grey = FOREGROUND_RED | FOREGROUND_GREEN |
+    static constexpr CellAttr grey = FOREGROUND_RED | FOREGROUND_GREEN |
         FOREGROUND_BLUE;
+    static constexpr CellAttr bright = FOREGROUND_INTENSITY;
 
     // Black sky: zero background bits on every cell.
-    static constexpr WORD skyAttr = 0;
+    static constexpr CellAttr skyAttr = 0;
 
     explicit Terminal(HANDLE out) : out_(out) {
-        CONSOLE_CURSOR_INFO ci{ sizeof(ci), 100 };
+        CONSOLE_CURSOR_INFO ci{};
+        ci.dwSize = 100;
         ci.bVisible = FALSE;
         SetConsoleCursorInfo(out_, &ci);
     }
@@ -84,14 +96,14 @@ class Terminal {
     short width()  const { return w_; }
     short height() const { return h_; }
 
-    void put(int x, int y, wchar_t ch, WORD attr) {
+    void put(int x, int y, wchar_t ch, CellAttr attr) {
         if (x < 0 || y < 0 || x >= w_ || y >= h_) return;
         CHAR_INFO &c = grid_[static_cast<size_t>(y) * w_ + x];
         c.Char.UnicodeChar = ch;
         c.Attributes = attr;
     }
 
-    void text(int x, int y, const std::wstring &s, WORD attr) {
+    void text(int x, int y, const std::wstring &s, CellAttr attr) {
         for (int i = 0; i < static_cast<int>(s.size()); ++i) put(x + i, y, s[i], attr);
     }
 
@@ -119,9 +131,12 @@ class Terminal {
         WriteConsoleOutputW(out_, grid_.get(), size, origin, &region);
     }
 
+    static void pauseMs(int ms) { ::Sleep(ms); }
+
     private:
     void showCursor() {
-        CONSOLE_CURSOR_INFO ci{ sizeof(ci), 100 };
+        CONSOLE_CURSOR_INFO ci{};
+        ci.dwSize = 100;
         ci.bVisible = TRUE;
         SetConsoleCursorInfo(out_, &ci);
     }
@@ -130,6 +145,235 @@ class Terminal {
     std::unique_ptr<CHAR_INFO[]> grid_;
     short                     w_ = 0, h_ = 0;
     SHORT                     winLeft_ = 0, winTop_ = 0;
+};
+
+#else
+// ---------------------------------------------------------------------------
+//  FreeBSD / POSIX backend
+// ---------------------------------------------------------------------------
+
+namespace {
+    // write() loop: a tty write() may return short; EINTR is retried so a
+    // stray signal (SIGWINCH included) cannot truncate a frame.
+    bool writeFully(int fd, const char *data, size_t len) {
+        size_t done = 0;
+        while (done < len) {
+            const ssize_t step = ::write(fd, data + done, len - done);
+            if (step > 0) { done += static_cast<size_t>(step); continue; }
+            if (step < 0 && errno == EINTR) continue;
+            return false;
+        }
+        return true;
+    }
+
+    void appendNumber(std::string &buf, int value) {
+        char tmp[12];
+        int n = 0;
+        if (value == 0) tmp[n++] = '0';
+        while (value > 0) { tmp[n++] = static_cast<char>('0' + value % 10); value /= 10; }
+        while (n > 0) buf += tmp[--n];
+    }
+
+    // Locale-independent wide -> UTF-8 converter. mbstate_t/wctomb follow the
+    // process locale (the main app may have called setlocale with a
+    // non-UTF-8 value), every modern FreeBSD terminal expects UTF-8 bytes -
+    // encoding here is mandatory.
+    void encodeUtf8(uint32_t cp, std::string &out) {
+        if (cp < 0x80u) {                     // 1 byte
+            out += static_cast<char>(cp);
+        } else if (cp < 0x800u) {             // 2 bytes
+            out += static_cast<char>(0xC0u | (cp >> 6));
+            out += static_cast<char>(0x80u | (cp & 0x3Fu));
+        } else if (cp < 0x10000u) {           // 3 bytes - our glyphs stop here
+            out += static_cast<char>(0xE0u | (cp >> 12));
+            out += static_cast<char>(0x80u | ((cp >> 6) & 0x3Fu));
+            out += static_cast<char>(0x80u | (cp & 0x3Fu));
+        } else {                              // 4 bytes (defensive: unused)
+            out += static_cast<char>(0xF0u | (cp >> 18));
+            out += static_cast<char>(0x80u | ((cp >> 12) & 0x3Fu));
+            out += static_cast<char>(0x80u | ((cp >> 6) & 0x3Fu));
+            out += static_cast<char>(0x80u | (cp & 0x3Fu));
+        }
+    }
+    using CellWord = std::uint16_t;   // packed glyph/attribute cell word
+}  // namespace
+
+// Diff renderer for VT/ANSI terminals: the scene is painted into a wcell_
+// grid attribute-per-cell and present() pushes to the real terminal only the
+// cells that changed since the previous frame. CellAttr encodes the classic
+// 16-color text attribute: bits 0-2 hold the SGR foreground color
+// (1 red, 2 green, 4 blue), bit 3 requests bright/intense rendering.
+class Terminal {
+    public:
+    using CellAttr = CellWord;
+
+    // Palette matching the Windows one; emitted as SGR 30-37 (optionally 1).
+    static constexpr CellAttr bright = 8;
+    static constexpr CellAttr yellow = 3 | bright;   // SGR 1;33 bright yellow
+    static constexpr CellAttr dkYell = 3;            // SGR 33 dark yellow
+    static constexpr CellAttr red    = 1 | bright;   // SGR 1;31 bright red
+    static constexpr CellAttr white  = 7;            // SGR 37 white/grey
+    static constexpr CellAttr grey   = 7;            // SGR 37 (rendered dim by
+                                                     //  most palettes)
+
+    // Black sky: attribute 0 on every cell (terminal default background).
+    static constexpr CellAttr skyAttr = 0;
+
+    Terminal() : tty_(::isatty(STDOUT_FILENO) != 0) {
+        if (tty_) emit(kHideCursor);
+    }
+    ~Terminal() { if (tty_) emit(kShowCursor); }
+
+    bool tty() const { return tty_; }
+
+    // Poll terminal size; (re)allocate the back buffer on change.
+    bool poll() {
+        if (!tty_) return false;         // output is not a terminal
+        winsize ws = {};
+        if (::ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) != 0) return false;
+        const short w = static_cast<short>(ws.ws_col);
+        const short h = static_cast<short>(ws.ws_row);
+        if (w <= 0 || h <= 0) return false;
+        if (!grid_ || w != w_ || h != h_) {
+            w_ = w;  h_ = h;
+            const size_t n = static_cast<size_t>(w_) * h_;
+            grid_ = std::make_unique<WCell[]>(n);
+            prev_ = std::make_unique<WCell[]>(n);
+            // A resize re-lays out the screen in ways that cannot be modeled
+            // here: clear it outright and force a full repaint of the new
+            // viewport (prev_ starts zeroed, i.e. differs from every cell).
+            emit("\x1b[m\x1b[2J");
+        }
+        return true;
+    }
+
+    short width()  const { return w_; }
+    short height() const { return h_; }
+
+    void put(int x, int y, wchar_t ch, CellAttr attr) {
+        if (x < 0 || y < 0 || x >= w_ || y >= h_) return;
+        WCell &c = grid_[static_cast<size_t>(y) * w_ + x];
+        c.wc = ch;
+        c.attr = attr;
+    }
+
+    void text(int x, int y, const std::wstring &s, CellAttr attr) {
+        for (int i = 0; i < static_cast<int>(s.size()); ++i) put(x + i, y, s[i], attr);
+    }
+
+    // Fill the whole viewport with the sky dither (also our per-frame clear).
+    void paintSky(unsigned frame) {
+        for (int y = 0; y < h_; ++y)
+            for (int x = 0; x < w_; ++x) {
+                // sparse deterministic dither -> subtle atmosphere
+                const uint32_t hsh =
+                    (static_cast<uint32_t>(x) * 73856093u) ^
+                    (static_cast<uint32_t>(y) * 19349663u) ^
+                    frame;
+                put(x, y, (hsh % 37u) == 0u ? L'\x00b7' : L' ',
+                    skyAttr | grey);          // dim twinkling stars
+            }
+    }
+
+    // Diff-push the grid to the terminal: only cells whose glyph or attribute
+    // changed are emitted, as runs starting with an absolute cursor move and
+    // an attribute set, so the update is invisible (no full-screen repaint).
+    void present() {
+        if (!grid_) return;
+
+        std::string buf;
+        buf.reserve(static_cast<size_t>(w_) * h_ * 3u + 64u);
+
+        bool cursorValid = false;
+        int cx = -1, cy = -1;
+        CellAttr curAttr = static_cast<CellAttr>(0xFFFF);  // no attribute pending
+
+        for (int y = 0; y < h_; ++y) {
+            for (int x = 0; x < w_; ++x) {
+                const size_t idx = static_cast<size_t>(y) * w_ + x;
+                const WCell &c = grid_[idx];
+                WCell &p = prev_[idx];
+
+                if (c.wc == p.wc && c.attr == p.attr) continue;  // unchanged
+
+                // The virtual cursor is not at this cell: reposition first.
+                if (!cursorValid || cx != x || cy != y) {
+                    buf += "\x1b[";
+                    appendNumber(buf, y + 1);
+                    buf += ';';
+                    appendNumber(buf, x + 1);
+                    buf += 'H';
+                    cursorValid = true;
+                }
+                cx = x + 1;
+                cy = y;
+                if (cx >= w_) cx = -1;   // end of row: force reposition next
+
+                if (c.attr != curAttr) {
+                    if (c.attr == 0) {
+                        buf += "\x1b[m";                    // default attribute
+                    } else {
+                        buf += "\x1b[";
+                        buf += (c.attr & bright) ? "1;3" : "0;3";
+                        buf += static_cast<char>('0' + (c.attr & 0x07));
+                        buf += 'm';
+                    }
+                    curAttr = c.attr;
+                }
+
+                encodeUtf8(static_cast<uint32_t>(c.wc), buf);
+
+                p = c;   // mark as already on screen
+            }
+        }
+
+        if (!buf.empty())
+            writeFully(STDOUT_FILENO, buf.data(), buf.size());
+    }
+
+    static void pauseMs(int ms) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+    }
+
+    private:
+    struct WCell {
+        wchar_t wc = 0;
+        CellAttr attr = 0;
+    };
+
+    static constexpr const char *kHideCursor = "\x1b[?25l";
+    static constexpr const char *kShowCursor = "\x1b[?25h";
+
+    void emit(const char *s) {
+        if (s != nullptr)
+            writeFully(STDOUT_FILENO, s, std::char_traits<char>::length(s));
+    }
+
+    bool tty_;
+    std::unique_ptr<WCell[]> grid_, prev_;
+    short w_ = 0, h_ = 0;
+};
+
+#endif  // _WIN32
+
+// ---------------------------------------------------------------------------
+//  Shared scene: uses the platform Terminal through the common API
+//  (poll / width / height / put / text / paintSky / present / pauseMs /
+//  CellAttr constants).
+// ---------------------------------------------------------------------------
+
+// -------------------------------------------------------------------- RNG --
+struct Rng {                                    // xorshift32 - no <random>
+    explicit Rng(uint32_t seed) : s_(seed ? seed : 1u) {}
+    uint32_t next() {
+        s_ ^= s_ << 13; s_ ^= s_ >> 17; s_ ^= s_ << 5;
+        return s_;
+    }
+    int range(int lo, int hi) {                 // inclusive
+        return lo + static_cast<int>(next() % static_cast<uint32_t>(hi - lo + 1));
+    }
+    private:
+    uint32_t s_;
 };
 
 // ------------------------------------------------------------------ Art ---
@@ -194,7 +438,7 @@ static void drawBird(Terminal &t, const Bird &b) {
             const double u = c - bx + 0.5;
             const double v = r - by + 0.5;
 
-            wchar_t ch = 0;  WORD attr = 0;
+            wchar_t ch = 0;  Terminal::CellAttr attr = 0;
 
             if (eye.inside(u, v)) { ch = L'\x2588'; attr = Terminal::white; }
             else if (beak.inside(u, v)) { ch = L'\x2588'; attr = Terminal::red; }
@@ -240,14 +484,22 @@ struct Cloud {
 
 void start_animation()
 {
-    if (is_working.load() == true)
+    if (is_working.exchange(true))
         return;
 
-    is_working.store(true);
+    // Anything buffered in std::cout (e.g. the menu still on screen) must
+    // not mix with the raw escape-byte stream we are about to write.
+    std::cout.flush();
 
+#ifdef _WIN32
     Terminal term(GetStdHandle(STD_OUTPUT_HANDLE));
-    if (!term.poll()) 
+#else
+    Terminal term;
+#endif
+    if (!term.poll()) {
+        is_working.store(false);    // no terminal: leave the flag clean
         return;
+    }
 
     Rng rng(0xC0C02u);
     std::vector<Cloud> clouds(5);
@@ -267,7 +519,7 @@ void start_animation()
             term.text(std::max(0, (W - 36) / 2), H / 2,
                 L"Make the console window bigger!", Terminal::white);
             term.present();
-            Sleep(150);
+            Terminal::pauseMs(150);
             continue;
         }
 
@@ -281,8 +533,8 @@ void start_animation()
 
         // ---- simulation ------------------------------------------------------
         // scale: parrot full drawing is ~12k wide x ~9.5k tall (+feet/shadow)
-        const double k = std::clamp(
-            std::min((W - 2) / 13.0, (H - 3) / 12.5), 0.9, 6.0);
+        const double k = std::max(0.9,
+            std::min(std::min((W - 2) / 13.0, (H - 3) / 12.5), 6.0));
 
         Bird bird;
         bird.k = k;
@@ -309,7 +561,7 @@ void start_animation()
             const int sw = std::max(2, static_cast<int>(
                 11.0 * k + bob * (4.0 / std::max(1.0, k))));
             const int sx = static_cast<int>(bird.x + 6.0 * k) - sw / 2;
-            const WORD attr = bob > 0 ? (Terminal::grey | FOREGROUND_INTENSITY)
+            const Terminal::CellAttr attr = bob > 0 ? (Terminal::grey | Terminal::bright)
                 : Terminal::grey;
             for (int i = 0; i < sw; ++i) term.put(sx + i, liftRow, L'\x00b7', attr);
         }
@@ -318,14 +570,12 @@ void start_animation()
         term.text(1, H - 1, L"Checking connection...", Terminal::grey);
 
         term.present();
-        Sleep(20);                        // ~50 fps
+        Terminal::pauseMs(20);            // ~50 fps
 
         if (!is_working.load())
             break;
     }
 }
-
-
 
 void stop_animation()
 {
