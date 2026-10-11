@@ -155,9 +155,12 @@ void tui::ScreenTextContent::RenderText()
         splitter.SplitText(line.txt, uncoloured_lines);
 
         
+        // Bold state carries across the wrapped pieces of one source line only
+        bool boldActive = false;
         for (const auto &r_line : uncoloured_lines)
         {
-            split_lines.push_back(std::string(colour) + r_line + std::string(colour));
+            auto p_line = MarkDownPostProcess(r_line, boldActive);
+            split_lines.push_back(std::string(colour) + p_line + std::string(colour));
         }
     }
 
@@ -167,15 +170,82 @@ void tui::ScreenTextContent::RenderText()
     const std::string &visible_buffer = !m_show_reasoning && m_buffer.origin == TextOrigin::reasoning ? "[Reasoning]" : m_buffer.txt;
     splitter.SplitText(visible_buffer, uncoloured_buffer_lines);
 
+    bool boldActive = false; // bold state carries across the wrapped pieces of the buffer
     for (const auto &r_line : uncoloured_buffer_lines)
     {
-        split_lines.push_back(std::string(buffer_colour) + r_line + std::string(kDefault));
+        auto p_line = MarkDownPostProcess(r_line, boldActive);
+        split_lines.push_back(std::string(buffer_colour) + p_line + std::string(kDefault));
     }
 
     for (const auto &r_line : split_lines)
     {
         m_text_rendered.push_back(r_line);
     }
+}
+
+std::string tui::ScreenTextContent::MarkDownPostProcess(const std::string &text, bool &boldActive)
+{
+    std::string result;
+    result.reserve(text.size() + 16);
+
+    if (text.size() >= 2 && text[0] == '#' && text[1] == '#')
+    {
+        result += "\033[1m";
+        size_t i = 0;
+        while (i < text.size())
+        {
+            if (i + 1 < text.size() && text[i] == '*' && text[i + 1] == '*')
+            {
+                i += 2;
+                continue;
+            }
+            result += text[i];
+            ++i;
+        }
+        result += "\033[22m";
+        boldActive = true;
+        return result;
+    }
+
+    bool bold = boldActive;
+    if (bold)
+        result += "\033[1m";
+
+    size_t i = 0;
+    while (i < text.size())
+    {
+        // Check for "**"
+        if (i + 1 < text.size() && text[i] == '*' && text[i + 1] == '*') {
+            if (bold) {
+                // matching ** -> close bold
+                result += "\033[22m";
+                bold = false;
+            }
+            else {
+                // unmatched ** -> open bold
+                result += "\033[1m";
+                bold = true;
+            }
+            i += 2; // skip the two asterisks
+        }
+        else {
+            // regular character
+            result += text[i];
+            ++i;
+        }
+    }
+
+    if (bold)
+    {
+        result += "\033[22m";
+        boldActive = true;
+    }
+    else
+    {
+        boldActive = false;
+    }
+
+    return result;
 }
 
 int tui::ScreenTextContent::utf8_char_len(unsigned char lead) const

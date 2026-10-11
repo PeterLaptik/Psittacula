@@ -38,6 +38,8 @@ namespace tui {
             void Split(const std::string &s, std::vector<std::string> &vec);
 
             void RenderText();
+            /// Renders markdown (bold, "##" headings) into ANSI escapes
+            std::string MarkDownPostProcess(const std::string &text, bool &boldActive);
 
             int utf8_char_len(unsigned char lead) const;
             int Utf8Count(const std::string &text) const;
