@@ -1,7 +1,7 @@
 
 # Psittacula
 
-A terminal-based AI coding agent that was written to run with local **llama.cpp**, but it can also work with 
+A lightweight terminal-based AI coding agent that was written to run with local **llama.cpp**, but it can also work with 
 OpenAI-compatible gateways.
 
 Psittacula streams answers in real time, shows model reasoning, and gives the model a multi-tool
@@ -40,14 +40,6 @@ _______________________________________________________
 
 ---
 
-## Installing
-
-### Windows
-
-### FreeBSD
-
----
-
 ## Building
 
 Requirements:
@@ -65,8 +57,8 @@ vcpkg install curl zlib rapidjson
 Configure and build (out-of-source build is recommended):
 
 ```sh
-cmake -S . -B Build -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=<vcpkg>/scripts/buildsystems/vcpkg.cmake
-cmake --build Build --config Release
+cmake -S . -B Build/devel -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=<vcpkg>/scripts/buildsystems/vcpkg.cmake
+cmake --build Build/devel --config Release
 ```
 
 Resulting binary: `Build/Release/bin/psittacula-X.X.X` (name carries the version from `version.txt`).
