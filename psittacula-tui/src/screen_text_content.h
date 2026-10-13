@@ -37,9 +37,11 @@ namespace tui {
             void CutByLinesBuffer();
             void Split(const std::string &s, std::vector<std::string> &vec);
 
-            void RenderText();
+            void RefreshText(); // Rerender dirty flag lines
+            void RenderText();  // Full rendering
+
             /// Renders markdown (bold, "##" headings) into ANSI escapes
-            std::string MarkDownPostProcess(const std::string &text, bool &boldActive);
+            std::string MarkDownPostProcess(const std::string &text, bool &boldActive) const;
 
             int utf8_char_len(unsigned char lead) const;
             int Utf8Count(const std::string &text) const;
@@ -47,6 +49,7 @@ namespace tui {
             struct TextLine {
                 std::string txt;
                 TextOrigin origin = TextOrigin::normal;
+                bool dirty_flag = true;
             };
 
             int m_text_line_max_length = 100;
@@ -56,8 +59,7 @@ namespace tui {
             TextLine m_buffer_no_render;
 
             std::vector<TextLine> m_text;
-            std::vector<std::string> m_buffer_rendered;
-            std::vector<std::string> m_text_rendered;
+            std::vector<std::pair<std::string, bool>> m_text_rendered; // second param -- dirty flag for rerendering
     };
 }
 
