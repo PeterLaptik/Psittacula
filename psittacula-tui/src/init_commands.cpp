@@ -9,6 +9,7 @@
 #include "command_dump_text.h"
 #include "command_change_agent.h"
 #include "command_change_project_dir.h"
+#include "command_rescan.h"
 #include "command_clean_context.h"
 #include "command_restore.h"
 #include "command_compress.h"
@@ -28,6 +29,7 @@ void init_commands(ChatCommandDispatcher *dsp, tui::App *app)
     dsp->RegisterCommand("dump_text", std::make_unique<CommandDumpText>(app));
     dsp->RegisterCommand("rules", std::make_unique<CommandChangeRules>(app));
     dsp->RegisterCommand("project", std::make_unique<CommandChangeProjectDir>(app));
+    dsp->RegisterCommand("rescan", std::make_unique<CommandRescan>(app));
     dsp->RegisterCommand("clear", std::make_unique<CommandCleanContext>(app));
     dsp->RegisterCommand("restore", std::make_unique<CommandRestore>(app));
     dsp->RegisterCommand("compress", std::make_unique<CommandCompress>(app));

@@ -1,8 +1,8 @@
 
 # Psittacula
 
-A lightweight terminal-based AI coding agent that was written to run with local **llama.cpp**, but it can also work with 
-OpenAI-compatible gateways.
+A lightweight terminal-based AI coding agent that was written to run with local **llama.cpp** (it works with some
+OpenAI-compatible gateways as well).
 
 Psittacula streams answers in real time, shows model reasoning, and gives the model a multi-tool
 environment: it can read, search, create and modify files, run shell commands and fetch web pages —
@@ -149,6 +149,7 @@ visible immediately. Switching models keeps the current dialogue.
 | `/restore <name>` | Restore a dialogue from `logs/`. |
 | `/rules [show]` | Load agent rules (system prompt) from `settings/*.txt`, or show the current one. |
 | `/project <path>` | Change the sandbox (project) directory used by file tools. |
+| `/rescan` | Re-scan the project directory: picks up files added/removed from outside. |
 | `/purge [name]` | Delete dialogue dumps from `logs/` (all, or one file). |
 
 ### Keyboard
@@ -189,7 +190,7 @@ All path arguments accept an **absolute path or a path relative to the project (
   `permission_denied` (the model is told the sandbox path and usually self-corrects).
 - `run_command` **always** asks for confirmation; the command, its working directory and its
   output are shown in the console.
-- Destructive file actions are undoable via `/undo` until the session ends.
+- Destructive file actions are undoable via `/undo` until the session ends (does not work for cmd/sh actions).
 
 ---
 
