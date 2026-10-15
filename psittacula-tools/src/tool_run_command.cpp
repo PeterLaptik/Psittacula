@@ -65,6 +65,13 @@ void RunCommandTool::GetParameters(std::vector<ToolParameter> &params_acc)
         "Optional data written to the standard input of the process.",
         false
         });
+
+    params_acc.push_back({
+        "keep_tty",
+        "boolean",
+        "POSIX only: request a real terminal for the child (for interactive / password-prompting commands like sudo or ssh). Denied: the tool never gives a child process access to the user's terminal. Windows ignores this flag (children cannot reach the console there either). Default: false.",
+        false
+        });
 }
 
 std::string RunCommandTool::Execute(std::vector<ToolParameter> &params_values)
@@ -77,6 +84,7 @@ std::string RunCommandTool::Execute(std::vector<ToolParameter> &params_values)
     std::string command = GetParam(params_values, "command");
     std::string cwd = GetParam(params_values, "cwd");
     std::string stdin_data = GetParam(params_values, "stdin_data");
+    const bool child_needs_tty = GetParamBool(params_values, "keep_tty", false);
 
     int timeout_seconds = 120;
     {
@@ -102,6 +110,20 @@ std::string RunCommandTool::Execute(std::vector<ToolParameter> &params_values)
     {
         console::write_line("Missing required parameter: command", console::TextOrigin::error);
         return R"({"error":{"type":"invalid_arguments","message":"Missing required parameter: command"}})";
+    }
+
+    // Fail closed: a child that demands the user's terminal (sudo, ssh, mysql...)
+    // could only freeze Psittacula's raw-mode UI - it would drain its keys and be
+    // unreachable through its /dev/tty. Such requests are refused explicitly so
+    // the model can correct itself instead of hanging the session.
+    if (child_needs_tty)
+    {
+        console::write_line("keep_tty requested: denied (children never get the user's terminal). "
+            "Pipe secret material via stdin_data instead.", console::TextOrigin::error);
+        return R"({"error":{"type":"user_interaction_not_supported",)"
+            R"("message":"keep_tty was requested but is denied: this tool never attaches a child process)"
+            R"( to the user's terminal. Non-interactive use only: pipe passwords/keys via stdin_data )"
+            R"(or run commands that do not prompt.","command":)" + GetEscapedJSONString(command) + R"(}})";
     }
 
     if (cwd.empty())
@@ -150,7 +172,7 @@ std::string RunCommandTool::Execute(std::vector<ToolParameter> &params_values)
     ProcessResult result;
     auto start_time = std::chrono::steady_clock::now();
 
-    if (!ExecuteProcess(command, cwd, stdin_data, max_output_bytes, timeout_seconds, result))
+    if (!ExecuteProcess(command, cwd, stdin_data, child_needs_tty, max_output_bytes, timeout_seconds, result))
     {
         console::write_line("Failed to start process", console::TextOrigin::error);
         return R"({"error":{"type":"runtime_error","message":"Failed to start process"}})";
@@ -185,6 +207,7 @@ std::string RunCommandTool::Execute(std::vector<ToolParameter> &params_values)
         << "\"exit_code\": " << result.exit_code << ", "
         << "\"timed_out\": " << (result.timed_out ? "true" : "false") << ", "
         << "\"truncated\": " << (result.truncated ? "true" : "false") << ", "
+        << "\"sandboxed\": " << (result.sandboxed ? "true" : "false") << ", "
         << "\"duration_ms\": " << duration_ms << ", "
         << "\"stdout\": " << GetEscapedJSONString(result.stdout_data) << ", "
         << "\"stderr\": " << GetEscapedJSONString(result.stderr_data);
@@ -261,10 +284,16 @@ void ReadPipeThread(ReadPipeArgs args)
 bool RunCommandTool::ExecuteProcess(const std::string &command,
     const std::string &cwd,
     const std::string &stdin_data,
+    bool child_needs_tty,
     size_t max_output_bytes,
     int timeout_seconds,
     ProcessResult &result) const
 {
+    // Windows children receive pipes / NUL handles (STARTF_USESTDHANDLES) and
+    // can never attach to the parent console from CreateProcessA, so the
+    // keep_tty request is structurally impossible here: swallow the flag
+    (void)child_needs_tty;
+
     SECURITY_ATTRIBUTES sa{};
     sa.nLength = sizeof(sa);
     sa.bInheritHandle = TRUE;
@@ -443,16 +472,101 @@ finish:
 #include <signal.h>
 #include <sys/wait.h>
 #include <sys/types.h>
+#include <sys/ioctl.h>
+#include <cerrno>
 #include <ctime>
+
+namespace {
+
+/// Minimal sandbox for a child process that must not touch the user's terminal.
+/// posix_openpt / grantpt / unlockpt / ptsname_r: a pty pair whose slave side
+/// will become the child's controlling terminal.
+struct PtyHarness
+{
+    int master = -1;
+
+    ~PtyHarness()
+    {
+        if (master >= 0)
+            close(master);
+    }
+};
+
+// Opens a fresh pty pair. The master is wrapped in the RAII harness; the slave
+// descriptor is handed to the caller for the child side (the child either dups
+// it onto its descriptors or closes it in its _exit paths, so cleanup of the
+// raw slave fd is intentionally left to the child).
+bool OpenPty(PtyHarness &harness, int &slave_fd)
+{
+    harness.master = posix_openpt(O_RDWR | O_NOCTTY);
+
+    if (harness.master < 0)
+        return false;
+
+    if (grantpt(harness.master) != 0 || unlockpt(harness.master) != 0)
+        return false;
+
+    // ptsname() instead of ptsname_r: the latter is missing on some BSDs/macOS.
+    // Its static buffer is fine here - one pty per run and a single worker
+    // thread calls this; the copy happens before anything else runs.
+    const char *name = ptsname(harness.master);
+
+    if (name == nullptr)
+        return false;
+
+    slave_fd = open(name, O_RDWR);
+
+    if (slave_fd < 0)
+        return false;
+
+    return true;
+}
+
+// Must be called from the forked child AFTER the pty slave has been dup'd onto
+// stdin: creates an empty session (drops the inherited controlling terminal)
+// and claims the pty as the new one. Afterwards /dev/tty resolves INSIDE the
+// sandbox, never to the terminal Psittacula owns.
+void BecomeSandboxChild()
+{
+    setsid();
+
+    if (ioctl(STDIN_FILENO, TIOCSCTTY, nullptr) != 0)
+        return; // no controlling terminal at all: the user's tty stays unreachable
+}
+
+// Polite strike at the child session: closing the master makes the kernel
+// deliver SIGHUP to its foreground process group and blocks a prompter that
+// still waits inside the pty. The child has usually exited long before this.
+void HangupSession(PtyHarness &harness)
+{
+    if (harness.master < 0)
+        return;
+
+    close(harness.master);
+    harness.master = -1;
+}
+
+} // namespace
 
 bool RunCommandTool::ExecuteProcess(const std::string &command,
     const std::string &cwd,
     const std::string &stdin_data,
+    bool child_needs_tty,
     size_t max_output_bytes,
     int timeout_seconds,
     ProcessResult &result) const
 {
     const bool use_stdin = !stdin_data.empty();
+
+    // Non-null child_needs_tty means "give the child a real terminal" - the same
+    // feature that froze raw-mode Psittacula sessions. It never reaches this
+    // POSIX branch: Execute() denies such requests explicitly in advance
+    // (user_interaction_not_supported), so the flag is recorded here only to
+    // keep the sandbox from being silently bypassed if denial ever changes.
+    (void)child_needs_tty;
+
+    PtyHarness pty;
+    int pty_slave = -1;
 
     int out_pipe[2] = { -1, -1 };
     int err_pipe[2] = { -1, -1 };
@@ -474,9 +588,13 @@ bool RunCommandTool::ExecuteProcess(const std::string &command,
         close_fd(out_pipe[0]); close_fd(out_pipe[1]);
         close_fd(err_pipe[0]); close_fd(err_pipe[1]);
         close_fd(in_pipe[0]);  close_fd(in_pipe[1]);
+        close_fd(pty_slave);
         signal(SIGPIPE, old_sigpipe);
         return false;
     };
+
+    if (!OpenPty(pty, pty_slave))
+        return fail();
 
     if (pipe(out_pipe) != 0)
         return fail();
@@ -494,20 +612,14 @@ bool RunCommandTool::ExecuteProcess(const std::string &command,
 
     if (pid == 0)
     {
-        if (use_stdin)
-        {
-            dup2(in_pipe[0], STDIN_FILENO);
-        }
-        else
-        {
-            int nul = open("/dev/null", O_RDONLY);
+        // 1) Leave the session that owns Psittacula's terminal
+        setsid();
 
-            if (nul >= 0)
-            {
-                dup2(nul, STDIN_FILENO);
-                close(nul);
-            }
-        }
+        // 2) Wire stdio: stdin = pipe or the sandbox pty, out/err = capture pipes
+        if (use_stdin)
+            dup2(in_pipe[0], STDIN_FILENO);
+        else
+            dup2(pty_slave, STDIN_FILENO);
 
         dup2(out_pipe[1], STDOUT_FILENO);
         dup2(err_pipe[1], STDERR_FILENO);
@@ -515,6 +627,15 @@ bool RunCommandTool::ExecuteProcess(const std::string &command,
         close_fd(out_pipe[0]); close_fd(out_pipe[1]);
         close_fd(err_pipe[0]); close_fd(err_pipe[1]);
         close_fd(in_pipe[0]);  close_fd(in_pipe[1]);
+        close_fd(pty.master); // never let the child (and its descendants) hold the master side
+
+        // 3) Claim the (already dup'd) pty as the controlling terminal, so a
+        // password prompter's open("/dev/tty") lands inside the sandbox, never
+        // on the user's screen. Without stdin_data the pty stays on stdin.
+        if (!use_stdin)
+            BecomeSandboxChild();
+
+        close_fd(pty_slave);
 
         if (chdir(cwd.c_str()) != 0)
             _exit(126);
@@ -523,10 +644,19 @@ bool RunCommandTool::ExecuteProcess(const std::string &command,
         _exit(127);
     }
 
+    // Parent side: drop the child-half descriptors so EOF can reach our readers
     close_fd(out_pipe[1]);
     close_fd(err_pipe[1]);
     if (use_stdin)
         close_fd(in_pipe[0]);
+
+    // The parent does not need the slave: holding it open would keep the master
+    // from ever reporting the sandbox's end
+    close_fd(pty_slave);
+
+    // Everything the child might print to its terminal lands in the captured
+    // stderr: prompts become visible in the tool response without a live tty
+    fcntl(pty.master, F_SETFL, fcntl(pty.master, F_GETFL) | O_NONBLOCK);
 
     fcntl(out_pipe[0], F_SETFL, O_NONBLOCK);
     fcntl(err_pipe[0], F_SETFL, O_NONBLOCK);
@@ -538,12 +668,13 @@ bool RunCommandTool::ExecuteProcess(const std::string &command,
     bool out_open = true;
     bool err_open = true;
     bool in_open = use_stdin;
+    bool pty_open = true;
     size_t in_pos = 0;
     bool timed_out = false;
 
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(timeout_seconds);
 
-    while (out_open || err_open || in_open)
+    while (out_open || err_open || in_open || pty_open)
     {
         long long remaining_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
             deadline - std::chrono::steady_clock::now()).count();
@@ -554,11 +685,12 @@ bool RunCommandTool::ExecuteProcess(const std::string &command,
             break;
         }
 
-        struct pollfd fds[3];
+        struct pollfd fds[4];
         int count = 0;
         int out_index = -1;
         int err_index = -1;
         int in_index = -1;
+        int pty_index = -1;
 
         if (out_open)
         {
@@ -583,6 +715,15 @@ bool RunCommandTool::ExecuteProcess(const std::string &command,
             in_index = count;
             fds[count].fd = in_pipe[1];
             fds[count].events = POLLOUT;
+            fds[count].revents = 0;
+            count++;
+        }
+
+        if (pty_open)
+        {
+            pty_index = count;
+            fds[count].fd = pty.master;
+            fds[count].events = POLLIN;
             fds[count].revents = 0;
             count++;
         }
@@ -690,11 +831,54 @@ bool RunCommandTool::ExecuteProcess(const std::string &command,
                 in_open = false;
             }
         }
+
+        // Whatever the child wrote straight to "the terminal" reaches us here:
+        // captured for the response, never displayed live. The loop simply ends
+        // at the deadline if the child keeps the pts open, and HangupSession()
+        // below then terminates the waiter politely.
+        if (pty_index >= 0 && (fds[pty_index].revents & (POLLIN | POLLHUP | POLLERR)) != 0)
+        {
+            char buffer[4096];
+
+            for (;;)
+            {
+                ssize_t r = read(pty.master, buffer, sizeof(buffer));
+
+                if (r > 0)
+                {
+                    AppendCapped(result.stderr_data, buffer, static_cast<size_t>(r), max_output_bytes, stderr_truncated);
+                    continue;
+                }
+
+                if (r == 0)
+                {
+                    close_fd(pty.master);
+                    pty_open = false;
+                    break;
+                }
+
+                if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+                    break;
+
+                // EIO: the sandbox side is gone (no session / no slave), leave the master unpolled
+                close_fd(pty.master);
+                pty_open = false;
+                break;
+            }
+        }
     }
 
     close_fd(out_pipe[0]);
     close_fd(err_pipe[0]);
     close_fd(in_pipe[1]);
+
+    // Sandbox teardown: the child may hold the pts open even after /bin/sh
+    // exits, so release the whole pty here either way. Closing the master is
+    // also the polite strike: the kernel hangs the session up, killing a
+    // prompter still waiting inside the pty for input that will never come.
+    pty_open = false;
+    HangupSession(pty);
+    close_fd(pty_slave);
 
     int status = 0;
 
@@ -738,6 +922,7 @@ bool RunCommandTool::ExecuteProcess(const std::string &command,
 
     result.timed_out = timed_out;
     result.truncated = stdout_truncated || stderr_truncated;
+    result.sandboxed = true;
 
     signal(SIGPIPE, old_sigpipe);
     return true;

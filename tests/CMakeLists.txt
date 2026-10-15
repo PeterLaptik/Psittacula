@@ -15,6 +15,7 @@ set(TEST_SOURCES
     test_dialogue_body.cpp
     test_dialogue_body_compress.cpp
     test_working_dir_sandbox.cpp
+    test_run_command_sandbox.cpp
     test_text_splitter.cpp
     test_model_env_key.cpp
 )
@@ -35,7 +36,15 @@ set(TUI_ENGINE_SOURCES
     ../psittacula-tui/src/text_splitter.cpp
 )
 
-add_executable(tests-psittacula ${TEST_SOURCES} ${CLI_ENGINE_SOURCES} ${TUI_ENGINE_SOURCES})
+# Tool sources under test: the run_command process plumbing for the POSIX
+# terminal-sandbox regression (tool_base.cpp is pulled in by
+# RunCommandTool::GetEscapedJSONString; neither source needs libcurl)
+set(TOOLS_ENGINE_SOURCES
+    ../psittacula-tools/src/tool_base.cpp
+    ../psittacula-tools/src/tool_run_command.cpp
+)
+
+add_executable(tests-psittacula ${TEST_SOURCES} ${CLI_ENGINE_SOURCES} ${TUI_ENGINE_SOURCES} ${TOOLS_ENGINE_SOURCES})
 
 target_compile_features(tests-psittacula PRIVATE cxx_std_17)
 
@@ -45,6 +54,7 @@ target_include_directories(tests-psittacula PRIVATE
     # include/ copy is removed now, the order is kept as a guard for the future)
     ../psittacula-cli/src
     ../psittacula-cli/include
+    ../psittacula-tools/src         # tool_run_command.h lives next to its sources
     ../psittacula-tools/include
     ../psittacula-tui/src          # TextSplitter header lives here
 )
@@ -79,3 +89,8 @@ endif()
 set_target_properties(tests-psittacula PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_RUNTIME_PATH}
 )
+
+# CTest registration: the FreeBSD port sets TEST_TARGET=test, which runs
+# CTest ("make test" in the build dir). Without add_test() CTest would report
+# "No tests were found!!!" and fail the port's test phase.
+add_test(NAME psittacula-engine COMMAND tests-psittacula)
