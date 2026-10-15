@@ -83,8 +83,8 @@ void tui::PanelText::Draw()
                 ch = '+';
             else if (top || bottom)
                 ch = '-';
-            else if (left || right)
-                ch = '|';
+            //else if (left || right)
+               //ch = '|';
             line.push_back(ch);
         }
 

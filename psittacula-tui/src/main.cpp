@@ -95,6 +95,7 @@ int main(int argc, char **argv)
 
     app.SetClient(client);
     app.SetCommandDispatcher(cmd_dispatcher);
+    app.SetShowReasoning(false);
     app.Run();
 
     return 0;
