@@ -210,12 +210,15 @@ class CommandChangeModel: public ChatCommand
 
             if(client.get() != nullptr)
             { 
+                // Old dialogue is left in the old client,
+                // so we need to save it and restore it in the new client.
                 std::string full_dialogue = client->GetDialogueBody();
 
                 CommandCleanContext cmd_clean{ m_app };
                 cmd_clean.Execute(client, {});
 
                 created_client->RestoreDialogueFrom(full_dialogue);
+                created_client->SetModel(model.GetName());
             }
 
             client.reset(created_client.release());
