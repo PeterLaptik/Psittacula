@@ -64,9 +64,17 @@ add_executable(${PSITTACULA_TUI_NAME}
     ${SRC_DIR}/screen_text_content.h
     ${SRC_DIR}/text_splitter.cpp
     ${SRC_DIR}/text_splitter.h
+    ${SRC_DIR}/app.rc
 )
 
-target_compile_definitions(${PSITTACULA_TUI_NAME} PRIVATE PSITTACULA_APP_VERSION="${A_VERSION}")
+target_compile_definitions(${PSITTACULA_TUI_NAME} PRIVATE
+    PSITTACULA_APP_VERSION="${A_VERSION}"
+    RC_VERSION_MAJOR=${A_VERSION_MAJOR}
+    RC_VERSION_MINOR=${A_VERSION_MINOR}
+    RC_VERSION_PATCH=${A_VERSION_PATCH}
+    RC_FILE_VERSION="${A_VERSION}.0"
+    RC_ORIGINAL_FILENAME="${PSITTACULA_TUI_NAME}.exe"
+)
 
 set_target_properties(${PSITTACULA_TUI_NAME}
     PROPERTIES

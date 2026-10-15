@@ -1,0 +1,58 @@
+#include <windows.h>
+
+// Psittacula Windows resources: application icon + version information
+#ifndef RC_VERSION_MAJOR
+#define RC_VERSION_MAJOR 1
+#endif
+#ifndef RC_VERSION_MINOR
+#define RC_VERSION_MINOR 0
+#endif
+#ifndef RC_VERSION_PATCH
+#define RC_VERSION_PATCH 0
+#endif
+#ifndef RC_FILE_VERSION
+#define RC_FILE_VERSION "1.0.0.0"
+#endif
+
+#ifndef RC_FILE_DESCRIPTION
+#define RC_FILE_DESCRIPTION "Psittacula - AI terminal assistant"
+#endif
+#ifndef RC_PRODUCT_NAME
+#define RC_PRODUCT_NAME "Psittacula"
+#endif
+#ifndef RC_ORIGINAL_FILENAME
+#define RC_ORIGINAL_FILENAME "psittacula-1.0.0.exe"
+#endif
+
+
+1 ICON "../../share/logo_ft.ico"
+
+
+1 VERSIONINFO
+    FILEVERSION     RC_VERSION_MAJOR,RC_VERSION_MINOR,RC_VERSION_PATCH,0
+    PRODUCTVERSION  RC_VERSION_MAJOR,RC_VERSION_MINOR,RC_VERSION_PATCH,0
+    FILEFLAGSMASK   0x3F
+    FILEFLAGS       0x0
+    FILEOS          VOS_NT_WINDOWS32
+    FILETYPE        VFT_APP
+    FILESUBTYPE     0x0
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"    // U.S. English, Unicode
+        BEGIN
+            VALUE "CompanyName",      "Peter Laptik"
+            VALUE "FileDescription",  RC_FILE_DESCRIPTION
+            VALUE "FileVersion",      RC_FILE_VERSION
+            VALUE "InternalName",     "psittacula"
+            VALUE "LegalCopyright",   "Copyright (C) 2026 Peter Laptik. BSD 2-Clause."
+            VALUE "OriginalFilename", RC_ORIGINAL_FILENAME
+            VALUE "ProductName",      RC_PRODUCT_NAME
+            VALUE "ProductVersion",   RC_FILE_VERSION
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 0x04B0
+    END
+END

@@ -4,7 +4,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
     message(FATAL_ERROR
         "In-source builds are not allowed.\n"
         "Configure out-of-source, e.g.:\n"
-        "    cmake -S . -B Build/devel -G \"Visual Studio 17 2022\"\n"
+        "    cmake -S . -B Build/devel \n"
         "    cmake --build Build/devel --config Debug")
 endif()
 
