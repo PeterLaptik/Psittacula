@@ -29,7 +29,7 @@ _______________________________________________________
   create/delete, binary files via base64, web fetch, shell commands.
 - **Sandbox**: all file tools and command working directories are confined to the *project
   directory*; escapes are rejected with a `permission_denied` tool error the model can understand.
-- **Confirmation gate**: shell commands always ask (y/n); non-GET web requests ask as well.
+- **Confirmation gate**: shell commands always ask (y/n, can work out of a sandbox); non-GET web requests ask as well.
 - **Undo / redo** for file and directory tools (`/undo`, `/redo`).
 - **Context management**: autosaved dialogue (`logs/dialogue_*.txt`), dump / restore, context
   clearing and **LLM summarization compression** (`/compress`) with tool-result purging.
