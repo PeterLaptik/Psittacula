@@ -37,16 +37,6 @@ namespace
     // so the current directory of the test process is fine
     const char *kCwd = ".";
 
-    RunCommandTool::ProcessResult RunTheTool(const std::string &command,
-        int timeout_seconds,
-        const std::string &stdin_data = "")
-    {
-        RunCommandTool tool;
-        RunCommandTool::ProcessResult result;
-        tool.ExecuteProcess(command, kCwd, stdin_data, false, 65536, timeout_seconds, result);
-        return result;
-    }
-
     // Controlling terminal of the CALLING process ("pts/N" / "ttysN" / "?" / "")
     std::string OwnTtyName()
     {
@@ -81,6 +71,27 @@ namespace
 int RunCommandSandboxTests()
 {
     int failed = 0;
+
+    // Drives the tool through the friend seam. The call MUST stay lexically
+    // inside RunCommandSandboxTests(): friendship is lexical, not transitive,
+    // so a helper in the anonymous namespace has no access ([class.access]/6).
+    // RunTheTool is a LOCAL class-type callable defined in this function body:
+    // members of a class local to F are compiled as if defined within F and
+    // inherit the enclosing function's access rights.
+    struct RunTheToolFn
+    {
+        RunCommandTool::ProcessResult operator()(const std::string &command,
+            int timeout_seconds,
+            const std::string &stdin_data = "") const
+        {
+            RunCommandTool tool;
+            RunCommandTool::ProcessResult result;
+            tool.ExecuteProcess(command, kCwd, stdin_data, false, 65536, timeout_seconds, result);
+            return result;
+        }
+    };
+
+    const RunTheToolFn RunTheTool = {};
 
     {
         bool all_ok = true;
