@@ -29,13 +29,13 @@ std::string FileCopyTool::Execute(std::vector<ToolParameter> &params_values)
     Formatter fmt;
     WorkingDir &wdir = WorkingDir::GetInstance();
 
-    console::write_line("File copy tool.", console::TextOrigin::filesystem);
+    console::write_line("File copy tool.", console::TextOrigin::tools);
 
     std::string rel_from = GetParam(params_values, "from");
-    UnescapeSlashesInPath(rel_from);
+    UnEscapeSlashesInPath(rel_from);
 
     std::string rel_to = GetParam(params_values, "to");
-    UnescapeSlashesInPath(rel_to);
+    UnEscapeSlashesInPath(rel_to);
 
     if (rel_from.empty() || rel_to.empty())
     {
@@ -43,16 +43,19 @@ std::string FileCopyTool::Execute(std::vector<ToolParameter> &params_values)
         return R"({"error":{"type":"invalid_arguments","message":"Missing required parameters: from, to"}})";
     }
 
-    src_path = std::filesystem::path(wdir.GetProjectDir() + rel_from).string();
-    dst_path = std::filesystem::path(wdir.GetProjectDir() + rel_to).string();
+    src_path = ResolveProjectPath(rel_from);
+    dst_path = ResolveProjectPath(rel_to);
 
-    if (!wdir.IsInWorkDir(src_path) || !wdir.IsInWorkDir(dst_path))
+    if (!wdir.IsInWorkDir(src_path))
     {
-        console::write_line("Permission denied: path outside working directory", console::TextOrigin::error);
-        return fmt.Format(
-            "{\"error\":{\"type\":\"permission_denied\",\"message\":\"One or both paths are outside working directory\",\"from\":\"%?\",\"to\":\"%?\"}}",
-            rel_from, rel_to
-        );
+        console::write_line(fmt.Format("Permission_denied: path is outside working directory:\n path: %?\n working directory: %?", src_path, wdir.GetProjectDir()), console::TextOrigin::error);
+        return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory (%?)\",\"path\":\"%?\"}}", wdir.GetProjectDir(), src_path);
+    }
+
+    if (!wdir.IsInWorkDir(dst_path))
+    {
+        console::write_line(fmt.Format("Permission_denied: path is outside working directory:\n path: %?\n working directory: %?", dst_path, wdir.GetProjectDir()), console::TextOrigin::error);
+        return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory (%?)\",\"path\":\"%?\"}}", wdir.GetProjectDir(), dst_path);
     }
 
     if (!std::filesystem::exists(src_path))
@@ -77,7 +80,7 @@ std::string FileCopyTool::Execute(std::vector<ToolParameter> &params_values)
         );
     }
 
-    console::write_line(fmt.Format("Copying file: %? -> %?", src_path, dst_path), console::TextOrigin::filesystem);
+    console::write_line(fmt.Format("Copying file: %? -> %?", src_path, dst_path), console::TextOrigin::tools);
 
     std::error_code ec;
     std::filesystem::copy_file(src_path, dst_path, std::filesystem::copy_options::overwrite_existing, ec);
@@ -118,7 +121,7 @@ void FileCopyTool::Undo()
     if (!executed)
         return;
 
-    console::write_line("Undo file copy: removing " + dst_path, console::TextOrigin::filesystem);
+    console::write_line("Undo file copy: removing " + dst_path, console::TextOrigin::tools);
 
     if (dst_existed_before)
     {
@@ -138,7 +141,7 @@ void FileCopyTool::Redo()
     if (!executed)
         return;
 
-    console::write_line("Redo file copy: " + src_path + " -> " + dst_path, console::TextOrigin::filesystem);
+    console::write_line("Redo file copy: " + src_path + " -> " + dst_path, console::TextOrigin::tools);
 
     std::error_code ec;
     std::filesystem::copy_file(src_path, dst_path, std::filesystem::copy_options::overwrite_existing, ec);

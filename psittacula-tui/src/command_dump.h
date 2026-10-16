@@ -14,15 +14,23 @@
 class CommandDump : public ChatCommand
 {
     public:
+        using ChatCommand::ChatCommand;
+
         void Execute(std::unique_ptr<AiClient> &client, const std::vector<std::string> &args) override
         {
-            std::string project_dir = WorkingDir::GetInstance().GetProjectDir();
+            if (!client.get())
+            {
+                console::write_line("Error: AI client is not initialized / no connection", console::TextOrigin::error);
+                return;
+            }
+
+            std::string dir_to_save = WorkingDir::GetInstance().GetLogsDir();
             std::string body = client->GetDialogueBody();
 
             std::string file_path;
             if (!args.empty()) {
                 // Use provided filename
-                file_path = project_dir + "/" + args[0] + ".txt";
+                file_path = dir_to_save + "/" + args[0] + ".txt";
             } else {
                 // Generate timestamp
                 auto now = std::chrono::system_clock::now();
@@ -39,7 +47,7 @@ class CommandDump : public ChatCommand
                 std::strftime(timestamp, sizeof(timestamp), "%Y-%m-%d_%H-%M-%S", &tm);
 
                 // Build filename
-                file_path = project_dir + "/dialogue_" + timestamp + ".txt";
+                file_path = dir_to_save + "/dialogue_" + timestamp + ".txt";
             }
 
             // Write file
@@ -54,7 +62,7 @@ class CommandDump : public ChatCommand
             out << body;
             out.close();
 
-            console::write_line("Dialogue body saved to: " + file_path, TextOrigin::filesystem);
+            console::write_line("Dialogue body saved to: " + file_path, TextOrigin::tools);
         }
 
         std::string Description() override

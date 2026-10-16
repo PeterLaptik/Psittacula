@@ -1,0 +1,66 @@
+#ifndef SCREEN_TEXT_CONTENT_INCLUDED_H
+#define SCREEN_TEXT_CONTENT_INCLUDED_H
+
+#include "console_writer.h"
+#include <string>
+#include<vector>
+
+using console::TextOrigin;
+
+namespace tui {
+    /// Screen visible text container and renderer
+    class ScreenTextContent
+    {
+        public:
+            /// Adds raw text
+            void AddText(const std::string &txt, TextOrigin origin);
+
+            void SetMaxLineLength(int length);
+
+            int GetMaxLineLength() const;
+
+            /// Returns text window content for a defined height;
+            /// shift > 0 moves the window towards older text (0 = latest)
+            void GetTextWindowForHeight(int height, int shift, std::vector<std::string> &acc) const;
+
+            /// Number of currently rendered lines
+            int GetRenderedLinesCount() const;
+
+            void Clear();
+
+            void SetShowReasoning(bool reasoning);
+
+            bool GetShowReasoning() const;
+
+        private:
+            void SplitBuffer();
+            void CutByLinesBuffer();
+            void Split(const std::string &s, std::vector<std::string> &vec);
+
+            void RefreshText(); // Rerender dirty flag lines
+            void RenderText();  // Full rendering
+
+            /// Renders markdown (bold, "##" headings) into ANSI escapes
+            std::string MarkDownPostProcess(const std::string &text, bool &boldActive) const;
+
+            int utf8_char_len(unsigned char lead) const;
+            int Utf8Count(const std::string &text) const;
+
+            struct TextLine {
+                std::string txt;
+                TextOrigin origin = TextOrigin::normal;
+                bool dirty_flag = true;
+            };
+
+            int m_text_line_max_length = 100;
+            bool m_show_reasoning = true;
+
+            TextLine m_buffer;
+            TextLine m_buffer_no_render;
+
+            std::vector<TextLine> m_text;
+            std::vector<std::pair<std::string, bool>> m_text_rendered; // second param -- dirty flag for rerendering
+    };
+}
+
+#endif // SCREEN_TEXT_CONTENT_INCLUDED_H

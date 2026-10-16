@@ -1,8 +1,8 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.25)
 project(PSITTACULA_CLI)
 
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
+if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
@@ -12,17 +12,20 @@ set(INCLUDE_DIR ./include)
 set(SRC_DIR ./src)
 
 add_library(${PSITTACULA_CLI_NAME} STATIC
-	${INCLUDE_DIR}/ai_client.cpp
 	${INCLUDE_DIR}/ai_client.h
+	${INCLUDE_DIR}/chunk_processor.h
 	${INCLUDE_DIR}/clients_factory.h
 	${INCLUDE_DIR}/console_writer.h
+	${INCLUDE_DIR}/curl_global_guard.h
 	${INCLUDE_DIR}/format_util.h
+	${INCLUDE_DIR}/llm_connectivity_checker.h
+	${INCLUDE_DIR}/model.h
+	${INCLUDE_DIR}/utf8_util.h
 	${INCLUDE_DIR}/working_dir.h
 	${SRC_DIR}/ai_client_impl.cpp
 	${SRC_DIR}/ai_client_impl.h
 	${SRC_DIR}/chunk_completion_processor.cpp
 	${SRC_DIR}/chunk_completion_processor.h
-	${SRC_DIR}/chunk_processor.h
 	${SRC_DIR}/clients_factory.cpp
 	${SRC_DIR}/console_history.cpp
 	${SRC_DIR}/console_history.h
@@ -31,9 +34,13 @@ add_library(${PSITTACULA_CLI_NAME} STATIC
 	${SRC_DIR}/context_info.cpp
 	${SRC_DIR}/dialogue_body.cpp
 	${SRC_DIR}/dialogue_body.h
+	${SRC_DIR}/json_dialogue.cpp
+	${SRC_DIR}/json_dialogue.h
 	${SRC_DIR}/history_manager.h
+	${SRC_DIR}/llm_connectivity_checker.cpp
 	${SRC_DIR}/http_client.cpp
 	${SRC_DIR}/http_client.h
+	${SRC_DIR}/model.cpp
 	${SRC_DIR}/response_readers.cpp
 	${SRC_DIR}/response_readers.h
 	${SRC_DIR}/default_rule_provider.h

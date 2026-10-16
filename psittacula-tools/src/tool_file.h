@@ -7,7 +7,7 @@ class ToolFile: public ToolBase
 {
     protected:
 
-        void CleanFilePathFromTrailingDots(std::string path)
+        void CleanFilePathFromTrailingDots(std::string path) const
         {
             while (!path.empty() && path.back() == '.')
                 path.pop_back();

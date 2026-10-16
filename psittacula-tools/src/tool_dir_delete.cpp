@@ -14,13 +14,6 @@ void DirDeleteTool::GetParameters(std::vector<ToolParameter> &params_acc)
         "Full path of the directory to delete.",
         true
         });
-
-    params_acc.push_back({
-        "recursive",
-        "boolean",
-        "If true, delete directory recursively.",
-        false
-        });
 }
 
 std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
@@ -28,12 +21,10 @@ std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
     Formatter fmt;
     WorkingDir &wdir = WorkingDir::GetInstance();
 
-    console::write_line("Directory delete tool.", console::TextOrigin::filesystem);
+    console::write_line("Directory delete tool.", console::TextOrigin::tools);
 
     std::string path = GetParam(params_values, "path");
-    UnescapeSlashesInPath(path);
-
-    recursive = GetParamBool(params_values, "recursive", false);
+    UnEscapeSlashesInPath(path);
 
     if (path.empty())
     {
@@ -43,11 +34,8 @@ std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
 
     if (!wdir.IsInWorkDir(path))
     {
-        console::write_line(fmt.Format("Permission denied: %?", path), console::TextOrigin::error);
-        return fmt.Format(
-            "{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory\",\"path\":\"%?\"}}",
-            path
-        );
+        console::write_line(fmt.Format("Permission_denied: path is outside working directory:\n path: %?\n working directory: %?", path, wdir.GetProjectDir()), console::TextOrigin::error);
+        return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory (%?)\",\"path\":\"%?\"}}", wdir.GetProjectDir(), path);
     }
 
     if (!std::filesystem::exists(path))
@@ -77,30 +65,12 @@ std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
         );
     }
 
-    existed_before = true;
     last_path = path;
 
-    console::write_line(fmt.Format("Deleting directory: %?", path), console::TextOrigin::filesystem);
+    console::write_line(fmt.Format("Deleting directory: %?", path), console::TextOrigin::tools);
 
     std::error_code ec;
-
-    if (recursive)
-    {
-        std::filesystem::remove_all(path, ec);
-    }
-    else
-    {
-        if (!std::filesystem::is_empty(path))
-        {
-            console::write_line("Directory is not empty; recursive=false", console::TextOrigin::error);
-            return fmt.Format(
-                "{\"error\":{\"type\":\"runtime_error\",\"message\":\"Directory is not empty\",\"path\":\"%?\"}}",
-                path
-            );
-        }
-
-        std::filesystem::remove(path, ec);
-    }
+    std::filesystem::remove(path, ec);
 
     if (ec)
     {
@@ -113,19 +83,19 @@ std::string DirDeleteTool::Execute(std::vector<ToolParameter> &params_values)
 
     executed = true;
 
+    // No 'recursive' field: the tool is non-recursive by design (an empty
+    // directory is required), and a stale %? placeholder with no argument
+    // used to render as "recursive":? - invalid JSON in a success response
     return fmt.Format(
         "{"
         "\"status\":\"success\","
         "\"directory\":{"
         "\"path\":\"%?\","
-        "\"deleted\":true,"
-        "\"recursive\":%?"
+        "\"deleted\":true"
         "},"
-        "\"message\":\"Directory deleted%?\""
+        "\"message\":\"Directory deleted\""
         "}",
-        path,
-        recursive ? "true" : "false",
-        recursive ? " recursively" : ""
+        path
     );
 }
 
@@ -134,10 +104,7 @@ void DirDeleteTool::Undo()
     if (!executed)
         return;
 
-    console::write_line("Undo directory delete: " + last_path, console::TextOrigin::filesystem);
-
-    // We cannot restore deleted directory contents unless we snapshot them.
-    // For safety, we only recreate the directory itself.
+    console::write_line("Undo directory delete: " + last_path, console::TextOrigin::tools);
     std::filesystem::create_directories(last_path);
 }
 
@@ -146,12 +113,8 @@ void DirDeleteTool::Redo()
     if (!executed)
         return;
 
-    console::write_line("Redo directory delete: " + last_path, console::TextOrigin::filesystem);
+    console::write_line("Redo directory delete: " + last_path, console::TextOrigin::tools);
 
     std::error_code ec;
-
-    if (recursive)
-        std::filesystem::remove_all(last_path, ec);
-    else
-        std::filesystem::remove(last_path, ec);
+    std::filesystem::remove(last_path, ec);
 }

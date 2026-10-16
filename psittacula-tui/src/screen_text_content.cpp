@@ -1,0 +1,347 @@
+#include "screen_text_content.h"
+#include "text_splitter.h"
+#include <algorithm>
+
+void tui::ScreenTextContent::AddText(const std::string &txt, TextOrigin origin)
+{
+    if (origin != m_buffer.origin)
+    {
+        // Flush buffer
+        TextLine txt;
+        txt.txt = m_buffer.txt;
+        txt.origin = m_buffer.origin;
+        txt.dirty_flag = true;
+        m_text.push_back(txt);
+
+        m_buffer.txt.clear();
+        m_buffer.origin = origin;
+        m_buffer.dirty_flag = true;
+    }
+
+    m_buffer.txt += txt;
+    RefreshText();
+}
+
+void tui::ScreenTextContent::SetMaxLineLength(int length)
+{
+    m_text_line_max_length = length;
+    RenderText();
+}
+
+int tui::ScreenTextContent::GetMaxLineLength() const
+{
+    return m_text_line_max_length;
+}
+
+int tui::ScreenTextContent::GetRenderedLinesCount() const
+{
+    return static_cast<int>(m_text_rendered.size());
+}
+
+void tui::ScreenTextContent::GetTextWindowForHeight(int height, int shift, std::vector<std::string> &acc) const
+{
+    if (height <= 0)
+        return;
+
+    int max_shift = static_cast<int>(m_text_rendered.size()) - height + 1;
+    if (max_shift < 0)
+        max_shift = 0;
+    if (shift > max_shift)
+        shift = max_shift;
+    if (shift < 0)
+        shift = 0;
+
+    size_t first = acc.size();
+    int counter = 1;
+
+    for (int i = static_cast<int>(m_text_rendered.size()) - 1 - shift; counter <= height && i >= 0; --i)
+    {
+        acc.push_back(m_text_rendered[i].first);
+        counter++;
+    }
+
+    // Reverse only the window appended above; any content the caller
+    // already had in acc stays in place.
+    std::reverse(acc.begin() + static_cast<std::ptrdiff_t>(first), acc.end());
+}
+
+void tui::ScreenTextContent::Clear()
+{
+    m_buffer.txt.clear();
+    m_buffer_no_render.txt.clear();
+    m_text.clear();
+    m_text_rendered.clear();
+}
+
+void tui::ScreenTextContent::SetShowReasoning(bool reasoning)
+{
+    m_show_reasoning = reasoning;
+    RenderText();
+}
+
+bool tui::ScreenTextContent::GetShowReasoning() const
+{
+    return m_show_reasoning;
+}
+
+void tui::ScreenTextContent::SplitBuffer()
+{
+    TextSplitter splitter{ m_text_line_max_length };
+
+    std::vector<std::string> split_lines;
+    splitter.SplitText(m_buffer_no_render.txt, split_lines);
+
+    for (int i = 0, arr_size = split_lines.size() - 2; i < arr_size; i++)
+    {
+        m_text_rendered.emplace_back(split_lines[i], true);
+    }
+
+    m_buffer.txt = split_lines[split_lines.size() - 1];
+}
+
+void tui::ScreenTextContent::CutByLinesBuffer()
+{
+    std::vector<std::string> cut_result;
+    Split(m_buffer_no_render.txt, cut_result);
+
+    if (cut_result.size() < 2)
+        return;
+
+    for (size_t i = 0, vec_sz = cut_result.size(); i < vec_sz - 1; i++)
+    {
+        m_text.push_back(TextLine{ cut_result[i], m_buffer_no_render.origin });
+        m_text_rendered.emplace_back(cut_result[i], true);
+    }
+
+    m_buffer_no_render.txt = cut_result[cut_result.size() - 1];
+    m_buffer.txt = m_buffer_no_render.txt;
+}
+
+
+void tui::ScreenTextContent::Split(const std::string &s, std::vector<std::string> &vec)
+{
+    size_t start = 0;
+    while (true)
+    {
+        size_t pos = s.find('\n', start);
+        if (pos == std::string::npos)
+        {
+            vec.push_back(s.substr(start));
+            break;
+        }
+        vec.push_back(s.substr(start, pos - start));
+        start = pos + 1;
+    }
+}
+
+void tui::ScreenTextContent::RefreshText()
+{
+    TextSplitter splitter{ m_text_line_max_length };
+
+    // Only dirty flag re-render, see below
+    // Two-argument erase: remove_if only compacts the kept elements and
+    // returns the logical end; erase needs the full [new_end, end) range.
+    m_text_rendered.erase(std::remove_if(m_text_rendered.begin(), m_text_rendered.end(),
+        [](const std::pair<std::string, bool> &line) { return line.second; }),
+        m_text_rendered.end());
+
+    const char *kDefault = console::get_origin_colour(TextOrigin::normal);
+
+    // Saved text
+    std::vector<std::pair<std::string, bool>> split_lines;
+    for (auto &line : m_text)
+    {
+        // Only dirty flag re-render
+        if (!line.dirty_flag)
+            continue;
+
+        line.dirty_flag = false;
+        const char *colour = console::get_origin_colour(line.origin);
+
+        if (line.origin == TextOrigin::reasoning && !m_show_reasoning)
+        {
+            split_lines.emplace_back(std::string(colour) + "[Reasoning]" + std::string(kDefault), line.dirty_flag);
+            continue;
+        }
+
+        std::vector<std::string> uncoloured_lines;
+        splitter.SplitText(line.txt, uncoloured_lines);
+
+
+        // Bold state carries across the wrapped pieces of one source line only
+        bool boldActive = false;
+        for (const auto &r_line : uncoloured_lines)
+        {
+            auto p_line = MarkDownPostProcess(r_line, boldActive);
+            split_lines.emplace_back(std::string(colour) + p_line + std::string(colour), line.dirty_flag);
+        }
+    }
+
+    // Buffer text
+    std::vector<std::string> uncoloured_buffer_lines;
+    const char *buffer_colour = console::get_origin_colour(m_buffer.origin);
+
+    const std::string &visible_buffer = !m_show_reasoning && m_buffer.origin == TextOrigin::reasoning ? "[Reasoning]" : m_buffer.txt;
+    splitter.SplitText(visible_buffer, uncoloured_buffer_lines);
+
+    bool boldActive = false; // bold state carries across the wrapped pieces of the buffer
+    for (const auto &r_line : uncoloured_buffer_lines)
+    {
+        auto p_line = MarkDownPostProcess(r_line, boldActive);
+        split_lines.emplace_back(std::string(buffer_colour) + p_line + std::string(kDefault), true);
+    }
+
+    for (const auto &r_line : split_lines)
+    {
+        m_text_rendered.push_back(r_line);
+    }
+}
+
+void tui::ScreenTextContent::RenderText()
+{
+    TextSplitter splitter{ m_text_line_max_length };
+
+    m_text_rendered.clear();
+
+    const char *kDefault = console::get_origin_colour(TextOrigin::normal);
+
+    // Saved text
+    std::vector<std::pair<std::string, bool>> split_lines;
+    for (const auto &line : m_text)
+    {
+        const char *colour = console::get_origin_colour(line.origin);
+
+        if (line.origin == TextOrigin::reasoning && !m_show_reasoning)
+        {
+            split_lines.emplace_back(std::string(colour) + "[Reasoning]" + std::string(kDefault), line.dirty_flag);
+            continue;
+        }
+
+        std::vector<std::string> uncoloured_lines;
+        splitter.SplitText(line.txt, uncoloured_lines);
+
+        
+        // Bold state carries across the wrapped pieces of one source line only
+        bool boldActive = false;
+        for (const auto &r_line : uncoloured_lines)
+        {
+            auto p_line = MarkDownPostProcess(r_line, boldActive);
+            split_lines.emplace_back(std::string(colour) + p_line + std::string(colour), line.dirty_flag);
+        }
+    }
+
+    // Buffer text
+    std::vector<std::string> uncoloured_buffer_lines;
+    const char *buffer_colour = console::get_origin_colour(m_buffer.origin);
+
+    const std::string &visible_buffer = !m_show_reasoning && m_buffer.origin == TextOrigin::reasoning ? "[Reasoning]" : m_buffer.txt;
+    splitter.SplitText(visible_buffer, uncoloured_buffer_lines);
+
+    bool boldActive = false; // bold state carries across the wrapped pieces of the buffer
+    for (const auto &r_line : uncoloured_buffer_lines)
+    {
+        auto p_line = MarkDownPostProcess(r_line, boldActive);
+        split_lines.emplace_back(std::string(buffer_colour) + p_line + std::string(kDefault), true);
+    }
+
+    for (const auto &r_line : split_lines)
+    {
+        m_text_rendered.push_back(r_line);
+    }
+}
+
+std::string tui::ScreenTextContent::MarkDownPostProcess(const std::string &text, bool &boldActive) const
+{
+    std::string result;
+    result.reserve(text.size() + 16);
+
+    if (text.size() >= 2 && text[0] == '#' && text[1] == '#')
+    {
+        result += "\033[1m";
+        size_t i = 0;
+        while (i < text.size())
+        {
+            if (i + 1 < text.size() && text[i] == '*' && text[i + 1] == '*')
+            {
+                i += 2;
+                continue;
+            }
+            result += text[i];
+            ++i;
+        }
+        result += "\033[22m";
+        boldActive = true;
+        return result;
+    }
+
+    bool bold = boldActive;
+    if (bold)
+        result += "\033[1m";
+
+    size_t i = 0;
+    while (i < text.size())
+    {
+        // Check for "**"
+        if (i + 1 < text.size() && text[i] == '*' && text[i + 1] == '*') {
+            if (bold) {
+                // matching ** -> close bold
+                result += "\033[22m";
+                bold = false;
+            }
+            else {
+                // unmatched ** -> open bold
+                result += "\033[1m";
+                bold = true;
+            }
+            i += 2; // skip the two asterisks
+        }
+        else {
+            // regular character
+            result += text[i];
+            ++i;
+        }
+    }
+
+    if (bold)
+    {
+        result += "\033[22m";
+        boldActive = true;
+    }
+    else
+    {
+        boldActive = false;
+    }
+
+    return result;
+}
+
+int tui::ScreenTextContent::utf8_char_len(unsigned char lead) const
+{
+    if (lead < 0x80)
+        return 1;
+    if ((lead >> 5) == 0x6)
+        return 2;
+    if ((lead >> 4) == 0xE)
+        return 3;
+    if ((lead >> 3) == 0x1E)
+        return 4;
+    return 1;
+}
+
+int tui::ScreenTextContent::Utf8Count(const std::string &text) const
+{
+    int count = 0;
+    size_t i = 0;
+    while (i < text.size())
+    {
+        size_t step = static_cast<size_t>(utf8_char_len(static_cast<unsigned char>(text[i])));
+        if (i + step > text.size())
+        {
+            ++count;
+            break;
+        }
+        i += step;
+        ++count;
+    }
+    return count;
+}

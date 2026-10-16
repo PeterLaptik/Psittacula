@@ -8,16 +8,50 @@
 class CommandCleanContext : public ChatCommand
 {
     public:
+        using ChatCommand::ChatCommand;
+
         void Execute(std::unique_ptr<AiClient> &client,
             const std::vector<std::string> &args) override
         {
+            if (!client.get())
+            {
+                console::write_line("Error: AI client is not initialized / no connection", console::TextOrigin::error);
+                return;
+            }
+
             client->ClearContext();
-            console::write_line("Context cleared.", TextOrigin::filesystem);
+            console::write_line("Context cleared.", TextOrigin::tools);
+            console::write_line("-----", TextOrigin::normal);
+            console::write(GetLogo());
         }
 
         std::string Description() override
         {
             return "Clears the current conversation context.";
+        }
+
+    private:
+        #ifndef PSITTACULA_APP_VERSION
+        #define PSITTACULA_APP_VERSION "unknown"
+        #endif
+
+        std::string GetLogo()
+        {
+            std::string logo =
+                R"(_______________________________________________________
+      / __\ ___\//_ _/_ _// | /__\//  ///   / |      
+     / /_// /  // //  // //||//  //  ///   //||     
+    / ___/__ \// //  // //_||/  //  ///   //_||    
+   / /  ____\// //  // /___ |\_//__///__ /___ |   
+ __\/__/____//_//__//_//___||_/\___/____\/___||__
+    )";
+
+            logo += "Version: ";
+            logo += PSITTACULA_APP_VERSION;
+            logo += "\n    Written by Peter Laptik";
+            logo += "\n\033[95m    Input /help for information about commands\033[0m";
+            logo += "\n\033[95m    Use / for interactive command choice and @ for file choice\033[0m \n \n";
+            return logo;
         }
 };
 

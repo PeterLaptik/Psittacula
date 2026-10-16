@@ -30,7 +30,7 @@ void ContextInfo::UpdateTokens(const ChunkCompletionProcessor &chunk_processor)
     m_tokens_cost = cost;
 }
 
-void ContextInfo::WriteStat() const
+void ContextInfo::ShowStat() const
 {
 
 }

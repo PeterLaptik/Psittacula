@@ -7,6 +7,8 @@
 #include <istream>
 #include <iostream>
 #include <memory>
+#include <type_traits>
+#include <string_view>
 
 ///\brief Class for filling strings with formatted arguments.
 /// The format specifier is '%?'.
@@ -22,21 +24,19 @@ class Formatter
 {
     public:
         Formatter()
-           : m_ptr_locale(new std::locale()),
-             m_flags(std::ios_base::skipws | std::ios_base::dec),
+           : m_flags(std::ios_base::skipws | std::ios_base::dec),
              m_precision(6)
         { }
 
         Formatter(const std::locale& loc,
                   std::ios_base::fmtflags flags = std::ios_base::skipws | std::ios_base::dec,
                   std::streamsize precision = 6)
-           : m_ptr_locale(new std::locale(loc)),
+           : m_ptr_locale(loc),
              m_flags(flags),
              m_precision(precision)
         { }
 
-        ~Formatter()
-        { }
+        ~Formatter() = default;
 
         ///\brief Generates string from char sequence and fills it with parameters.
         ///\param seq - pointer to sequence (for example, char*)
@@ -149,8 +149,8 @@ class Formatter
         ///\see the method is analogue of std::ios_base::imbue
         std::locale Imbue(const std::locale& loc)
         {
-            const std::locale old_locale = *m_ptr_locale;
-            *m_ptr_locale = loc;
+            const std::locale old_locale = m_ptr_locale;
+            m_ptr_locale = loc;
             return old_locale;
         }
 
@@ -159,7 +159,7 @@ class Formatter
         ///\see the method is analogue of std::ios_base::getloc
         std::locale Getloc() const
         {
-            return *m_ptr_locale;
+            return m_ptr_locale;
         }
 
         /// Returns the current precision of formatter
@@ -213,7 +213,7 @@ class Formatter
         const char *SUBSTITUTE_MASK = "%?";
 
         // Current locale for formatting
-        std::unique_ptr<std::locale> m_ptr_locale;
+        std::locale m_ptr_locale;
         // Current set of flags for formatting
         std::ios_base::fmtflags m_flags;
         // Current precision for formatting of numeric values
@@ -224,7 +224,7 @@ class Formatter
         void AssignStreamSettings(Stream &stream)
         {
             stream.precision(m_precision);
-            stream.imbue(*m_ptr_locale);
+            stream.imbue(m_ptr_locale);
             stream.flags(m_flags);
         }
 
@@ -264,15 +264,6 @@ class Formatter
             stream << t;
         }
 
-        template<typename T>
-        struct is_string : std::false_type {};
-
-        template<>
-        struct is_string<std::string> : std::true_type {};
-
-        template<>
-        struct is_string<std::string_view> : std::true_type {};
-
         // Outputs type which can be iterated, to a string stream
         // stream - stream to get a string value
         // t - type value
@@ -281,7 +272,11 @@ class Formatter
                 typename Type = typename T::value_type,
                 typename Begin = decltype(std::declval<T>().begin()),
                 typename End = decltype(std::declval<T>().end()),
-                std::enable_if_t<!is_string<T>::value>>
+                std::enable_if_t<
+                    !std::is_same_v<T, std::string>
+                    && !std::is_same_v<T, std::string_view>
+                >
+        >
         void OutputValue(Stream &stream, const T &t)
         {
             stream << "[";

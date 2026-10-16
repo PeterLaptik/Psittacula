@@ -1,5 +1,10 @@
 #include "tool_base.h"
+#include "console_writer.h"
+#include "utf8_util.h"
+#include "working_dir.h"
+#include <iostream>
 #include <algorithm>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <iomanip>
@@ -8,7 +13,20 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/prettywriter.h>
 
-std::string ToolBase::GetParam(const std::vector<ToolParameter> &params_acc, const std::string &param_name, std::string default_value)
+std::string ToolBase::ResolveProjectPath(const std::string &input)
+{
+    namespace fs = std::filesystem;
+
+    const fs::path requested = input;
+
+    if (requested.is_absolute())
+        return requested.string();
+
+    return (fs::path(WorkingDir::GetInstance().GetProjectDir()) / requested).string();
+}
+
+
+std::string ToolBase::GetParam(const std::vector<ToolParameter> &params_acc, const std::string &param_name, std::string default_value) const
 {
     auto it = std::find_if(params_acc.begin(), params_acc.end(),
         [&param_name](const ToolParameter &tp) {
@@ -42,13 +60,17 @@ bool ToolBase::GetParamBool(const std::vector<ToolParameter> &params_acc, const 
 
 std::string ToolBase::GetEscapedJSONString(const std::string &str) const
 {
+    // Invalid UTF-8 bytes must never reach the request body: the server side
+    // rejects the whole request with a JSON parse error
+    const std::string safe = utf8::Sanitize(str);
+
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    writer.String(str.c_str());
-    return std::string(buffer.GetString());
+    writer.String(safe.c_str(), static_cast<rapidjson::SizeType>(safe.size()));
+    return std::string(buffer.GetString(), buffer.GetSize());
 }
 
-void ToolBase::UnescapeSlashesInPath(std::string &value) const
+void ToolBase::UnEscapeSlashesInPath(std::string &value) const
 {
     std::string from = "\\\\";
     std::string to = "\\";

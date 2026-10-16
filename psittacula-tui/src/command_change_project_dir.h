@@ -12,15 +12,17 @@
 class CommandChangeProjectDir : public ChatCommand
 {
     public:
+        using ChatCommand::ChatCommand;
+
         void Execute(std::unique_ptr<AiClient> &client, const std::vector<std::string> &args) override
         {
             ActivateAlternateScreen();
 
             namespace fs = std::filesystem;
 
-            std::string current = WorkingDir::GetInstance().GetWorkDir();
-            console::write_line("Current project directory:", TextOrigin::filesystem);
-            console::write_line("  " + current + "\n");
+            std::string current_dir = WorkingDir::GetInstance().GetWorkDir();
+            console::write_line("Current project directory:", TextOrigin::tools);
+            console::write_line("  " + current_dir + "\n");
 
             std::string new_path;
 
@@ -39,14 +41,17 @@ class CommandChangeProjectDir : public ChatCommand
             }
             else
             {
+                console::LineInputScope line_input;
                 std::cout << "Enter new project directory path: ";
                 std::getline(std::cin, new_path);
             }
 
             if (new_path.empty())
             {
-                console::write_line("No path entered. Aborting.\n", TextOrigin::error);
                 RestoreMainScreen();
+                console::write_line(" \n No path entered.", TextOrigin::error);
+                console::write("Working path to a project: ", TextOrigin::tools);
+                console::write_line(current_dir + " \n ", TextOrigin::tools);
                 return;
             }
 
@@ -60,8 +65,11 @@ class CommandChangeProjectDir : public ChatCommand
 
                 std::cout << "Create it? (y/n): ";
                 char c;
-                std::cin >> c;
-                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                {
+                    console::LineInputScope line_input;
+                    std::cin >> c;
+                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                }
 
                 if (c == 'y' || c == 'Y')
                 {
@@ -73,7 +81,7 @@ class CommandChangeProjectDir : public ChatCommand
                         RestoreMainScreen();
                         return;
                     }
-                    console::write_line("Directory created.\n", TextOrigin::filesystem);
+                    console::write_line("Directory created.\n", TextOrigin::tools);
                 }
                 else
                 {
@@ -86,7 +94,7 @@ class CommandChangeProjectDir : public ChatCommand
             WorkingDir::GetInstance().SetProjectDir(p.string());
 
             RestoreMainScreen();
-            console::write_line("Project directory changed to:", TextOrigin::filesystem);
+            console::write_line("Project directory changed to:", TextOrigin::tools);
             console::write_line("  " + p.string() + "\n");
         }
 

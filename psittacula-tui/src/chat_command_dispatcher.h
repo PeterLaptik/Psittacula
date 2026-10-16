@@ -10,8 +10,66 @@
 #include <algorithm>
 #include <iterator>
 #include <memory>
+#include <cstddef>
+
+#ifdef _WIN32
+#include <conio.h>
+#else
+#include <sys/select.h>
+#include <termios.h>
+#include <unistd.h>
+#endif
 
 class AiClient;
+
+// Raw terminal input: puts terminal in raw mode, reads one byte, restores mode.
+// Must be declared before any class that uses it.
+static int GetKey()
+{
+#ifdef _WIN32
+    return _getch();
+#else
+    struct termios old_tios, new_tios;
+    tcgetattr(STDIN_FILENO, &old_tios);
+    new_tios = old_tios;
+    new_tios.c_lflag &= ~(ICANON | ECHO);
+    // Disable CR->NL translation and flow control, matching the raw mode
+    // used elsewhere (Screen::EnableRawMode), so a bare Enter (CR, 13) and
+    // escape sequences arrive unmodified.
+    new_tios.c_iflag &= ~(ICRNL | INLCR | IXON);
+    new_tios.c_cc[VMIN] = 1;
+    new_tios.c_cc[VTIME] = 0;
+    tcsetattr(STDIN_FILENO, TCSANOW, &new_tios);
+
+    // Read via the unbuffered read() syscall rather than fgetc()/stdio.
+    // Buffered stdio can read ahead of tcsetattr() taking effect and
+    // mis-split/reorder bytes of an escape sequence, which on some Unix
+    // (FreeBSD) ttys made Enter appear to move the selection instead of
+    // confirming it.
+    unsigned char c = 0;
+    int result = read(STDIN_FILENO, &c, 1);
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &old_tios);
+    return result == 1 ? static_cast<int>(c) : -1;
+#endif
+}
+
+#ifndef _WIN32
+// Waits up to timeout_ms for the next byte on stdin (raw-mode menus).
+// Used to tell a bare Escape (quit) from the first byte of an escape sequence such as ESC [ A (navigation).
+inline bool MenuInputCommandReady(int timeout_ms)
+{
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(STDIN_FILENO, &fds);
+
+    struct timeval tv;
+    tv.tv_sec = timeout_ms / 1000;
+    tv.tv_usec = (timeout_ms % 1000) * 1000;
+
+    return select(STDIN_FILENO + 1, &fds, nullptr, nullptr, &tv) > 0;
+}
+#endif
 
 /// Keeps and dispatches chat commands
 class ChatCommandDispatcher
@@ -51,13 +109,129 @@ class ChatCommandDispatcher
             }
             else
             {
-                console::write_line("\rUnknown command: " + command_name, console::TextOrigin::error);
+                console::write_line("Unknown command: " + command_name, console::TextOrigin::error);
             }
         }
 
-        // Shows list of aviable commands
+        void GetCommandList(std::vector<std::string>& acc) const
+        {
+            for (auto &[key, value] : m_commands)
+                acc.push_back('/' + key);
+        }
+
+        // Shows list of available commands with descriptions in an interactive menu
+        std::string SelectCommand()
+        {
+            ActivateAlternateScreen();
+
+            std::vector<std::pair<std::string, std::string>> cmd_list;
+            for (auto &cmd : m_commands)
+            {
+                cmd_list.emplace_back(cmd.first, cmd.second->Description());
+            }
+
+            std::sort(cmd_list.begin(), cmd_list.end(), [](auto item_1, auto item_2) {
+                return item_1.first < item_2.first;
+                });
+
+            int index = 0;
+            DrawCommandMenu(cmd_list, index);
+
+            while (true)
+            {
+#ifdef _WIN32
+                int c = _getch();
+                if (c == 224)
+                {
+                    int arrow = _getch();
+                    if (arrow == 72 && index > 0) index--;
+                    else if (arrow == 80 && index < cmd_list.size() - 1) index++;
+                    DrawCommandMenu(cmd_list, index);
+                }
+                else if (c == 27)
+                {
+                    // Escape to quit without selecting
+                    RestoreMainScreen();
+                    return "";
+                }
+                else if (c == 13)
+                {
+                    // Enter to select command
+                    break;
+                }
+#else
+                int c = GetKey();
+
+                if (c == -1)
+                {
+                    // stdin failure / EOF: staying here is useless
+                    RestoreMainScreen();
+                    return "";
+                }
+
+                if (c == '\x1b')
+                {
+                    // Bare ESC (no byte follows within 50 ms) quits the menu;
+                    // ESC [ ... is a navigation sequence
+                    if (!MenuInputCommandReady(50))
+                    {
+                        RestoreMainScreen();
+                        return "";
+                    }
+
+                    int c1 = GetKey();
+                    if (c1 == '[')
+                    {
+                        int c2 = GetKey();
+                        if (c2 == 'A' && index > 0) index--;
+                        else if (c2 == 'B' && index < cmd_list.size() - 1) index++;
+                        DrawCommandMenu(cmd_list, index);
+                    }
+                    // any other sequence: swallowed, menu stays
+                }
+                else if (c == '\n' || c == '\r')
+                {
+                    // Enter to select command
+                    break;
+                }
+#endif
+            }
+
+            // Selected command
+            std::string selected_cmd = cmd_list[index].first;
+            std::string selected_desc = cmd_list[index].second;
+
+            RestoreMainScreen();
+            return selected_cmd;
+        }
+
+        void DrawCommandMenu(const std::vector<std::pair<std::string, std::string>> &commands, int index)
+        {
+            std::cout << "\x1b[2J\x1b[H";
+            console::write_line("--------------------------------------------------------------", console::TextOrigin::tools);
+            console::write_line("\033[1mSelect a command to execute\033[0m");
+            console::write_line("Use Up/Down to navigate, Enter to select, Escape to quit.\n");
+
+            for (int i = 0; i < commands.size(); ++i)
+            {
+                if (i == index)
+                    std::cout << "\x1b[7m";
+
+                std::cout << "\033[1m" << commands[i].first << "\033[0m" << " - " << commands[i].second;
+                if (i == index)
+                    std::cout << "\x1b[0m";
+                else
+                    std::cout << "\033[0m";
+                std::cout << "\n";
+            }
+        }
+
+        // Shows list of aviable commands (non-interactive)
         void ShowHelp()
         {
+            auto *console_rcv = console::get_current_receiver();
+            console::set_up_console();
+
             std::cout << "\x1b[?1049h\x1b[2J\x1b[H";
             std::vector<std::pair<std::string, std::string>> cmd_list;
             for (auto &cmd : m_commands)
@@ -69,23 +243,35 @@ class ChatCommandDispatcher
                 return item_1.first < item_2.first;
                 });
 
-            console::write_line("---------------------------------------------", console::TextOrigin::filesystem);
-            console::write_line("\033[1mAvialable commands:\033[0m");
+            console::write_line("---------------------------------------------", console::TextOrigin::tools);
+            console::write_line("\033[1mAvailable commands:\033[0m");
             for (auto &cmd_desc : cmd_list)
             {
                 console::write_line("\033[1m" + cmd_desc.first + " -\033[0m " + cmd_desc.second);
             }
 
-            console::write_line("\033[1mq -\033[0m Clear active query.");
-            console::write_line("\033[1mexit -\033[0m Exit form the program.");
-
             console::write_line("\n\nPress Enter to continue...");
-            std::cin.get();
+            {
+                console::LineInputScope line_input;
+                std::cin.get();
+            }
 
             std::cout << "\x1b[?1049l";
+            console::set_up_console(console_rcv);
         }
 
     private:
+        // Sets alternate screen buffer for command interactive mode, if necessary
+        void  ActivateAlternateScreen() const
+        {
+            std::cout << "\x1b[?1049h\x1b[2J\x1b[H";
+        }
+        // Sets back to main dialogue screen
+        void RestoreMainScreen() const
+        {
+            std::cout << "\x1b[?1049l";
+        }
+
         std::map<std::string, std::unique_ptr<ChatCommand>> m_commands;
 };
 

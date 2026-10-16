@@ -22,10 +22,10 @@ std::string FileRemoveTool::Execute(std::vector<ToolParameter> &params_values)
     Formatter fmt;
     WorkingDir &wdir = WorkingDir::GetInstance();
 
-    console::write_line("File remove tool.", console::TextOrigin::filesystem);
+    console::write_line("File remove tool.", console::TextOrigin::tools);
 
     std::string path = GetParam(params_values, "path");
-    UnescapeSlashesInPath(path);
+    UnEscapeSlashesInPath(path);
 
     if (path.empty())
     {
@@ -33,13 +33,13 @@ std::string FileRemoveTool::Execute(std::vector<ToolParameter> &params_values)
         return R"({"error":{"type":"invalid_arguments","message":"Missing required parameter: path"}})";
     }
 
-    if (!wdir.IsInWorkDir(path)) 
+    if (!wdir.IsInWorkDir(path))
     {
-        console::write_line(fmt.Format("Permission_denied: path is outside working directory: %?", path), console::TextOrigin::error);
-        return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory\",\"path\":\"%?\"}}", path);
+        console::write_line(fmt.Format("Permission_denied: path is outside working directory:\n path: %?\n working directory: %?", path, wdir.GetProjectDir()), console::TextOrigin::error);
+        return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory (%?)\",\"path\":\"%?\"}}", wdir.GetProjectDir(), path);
     }
 
-    console::write_line("Removing file: " + path, console::TextOrigin::filesystem);
+    console::write_line("Removing file: " + path, console::TextOrigin::tools);
 
     if (!std::filesystem::exists(path)) 
     {
@@ -81,7 +81,7 @@ void FileRemoveTool::Undo()
     if (!executed)
         return;
 
-    console::write_line("Restoring file: " + last_path, console::TextOrigin::filesystem);
+    console::write_line("Restoring file: " + last_path, console::TextOrigin::tools);
 
     std::ofstream out(last_path);
     if (out) 
@@ -100,7 +100,7 @@ void FileRemoveTool::Redo()
     if (!executed)
         return;
 
-    console::write_line("Removing file again: " + last_path, console::TextOrigin::filesystem);
+    console::write_line("Removing file again: " + last_path, console::TextOrigin::tools);
 
     if (std::filesystem::exists(last_path)) 
     {

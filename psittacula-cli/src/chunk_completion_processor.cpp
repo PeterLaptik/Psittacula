@@ -1,8 +1,6 @@
 #include "chunk_completion_processor.h"
 #include "console_writer.h"
 #include "format_util.h"
-#include <sstream>
-#include <iomanip>
 #include <random>
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
@@ -11,34 +9,38 @@
 
 using console::TextOrigin;
 
+
+// Context size data to compute
+static struct SlotsInfo
+{
+    int context_size = 0;
+
+    void Set(const std::string slots_info)
+    {
+        rapidjson::Document doc;
+        doc.Parse(slots_info.c_str());
+        // Trying to get context from /slots endpoint response
+        // If it is not well formed / does not exist, use 'context_size' value
+        if (!doc.HasParseError() && doc.IsArray() && !doc.Empty())
+        {
+            const auto &firstSlot = doc[0];
+
+            if (firstSlot.IsObject() &&
+                firstSlot.HasMember("n_ctx") &&
+                firstSlot["n_ctx"].IsInt())
+            {
+                context_size = firstSlot["n_ctx"].GetInt();
+            }
+        }
+    }
+} slots_info;
+
+
 struct ChunkCompletionProcessor::JsonDocument
 {
     rapidjson::Document &body;
 };
 
-
-// Resoning progress
-// Shows rotating line in a console
-static size_t progress_cursor = 0;
-static const char progress[4] = { '/', '|', '\\', '-' };
-
-void ChunkCompletionProcessor::Reset()
-{
-    m_reasoning_in_process = true;
-    m_show_reasoning = true;
-
-    m_message.clear();
-    m_reasoning.clear();
-
-    m_total_tokens = 0;
-    m_completion_tokens = 0;
-    m_prompt_tokens = 0;
-    m_tokens_cost = 0;
-
-    m_current_tool.name.clear();
-    m_current_tool.arguments.clear();
-    m_tools.clear();
-}
 
 void ChunkCompletionProcessor::ProcessChunk(const std::string &chunk)
 {
@@ -52,8 +54,8 @@ void ChunkCompletionProcessor::ProcessChunk(const std::string &chunk)
     json.erase(0, json.find_first_not_of(" \t\n\r\f\v"));
     json.erase(json.find_last_not_of(" \t\n\r\f\v") + 1);
 
-    // Is response finished?
-    if (json == " [DONE]" || json == "[DONE]")
+    // Is response finished? (json is already trimmed)
+    if (json == "[DONE]")
     {
         return;
     }
@@ -65,13 +67,20 @@ void ChunkCompletionProcessor::ProcessChunk(const std::string &chunk)
         JsonDocument data{doc};
 
         // Try to process data
-        if (doc.HasMember("choices") && doc["choices"].Size() > 0)
+        if (doc.HasMember("choices") && doc["choices"].Size() > 0 && doc["choices"][0].HasMember("delta"))
         {
             CheckReasoning(data);
             CheckMessage(data);
             CheckTools(data);
-            CheckTokens(data);
         }
+
+        // Usage/cost data can arrive in a trailing chunk with an empty
+        // "choices" array (e.g. Kilo Gateway, OpenRouter, OpenAI with
+        // stream_options.include_usage), so check it unconditionally.
+        bool has_tokens_info = CheckTokens(data);
+
+        if(has_tokens_info)
+            ShowStatPerChunk();
     }
     else if(!doc.Parse(chunk.c_str()).HasParseError())
     {
@@ -83,49 +92,27 @@ void ChunkCompletionProcessor::ProcessChunk(const std::string &chunk)
     {
         // Skip: ignore unsupported chunks
     }
+
+    console::move_spinner();
 }
 
-void ChunkCompletionProcessor::WriteStat(std::string slots_info_rsp, int context_size) const
+void ChunkCompletionProcessor::ShowStat() const
 {
-    // Trying to get context from /slots endpoint response
-    // If it is not well formed / does not exist, use 'context_size' value
-    rapidjson::Document doc;
-    doc.Parse(slots_info_rsp.c_str());
+    int context_size = slots_info.context_size > 0 ? slots_info.context_size : m_context_size;
+    console::write_status(this, context_size);
+}
 
-    if (!doc.HasParseError() && doc.IsArray() && !doc.Empty())
-    {
-        const auto &firstSlot = doc[0];
-
-        if (firstSlot.IsObject() &&
-            firstSlot.HasMember("n_ctx") &&
-            firstSlot["n_ctx"].IsInt())
-        {
-            context_size = firstSlot["n_ctx"].GetInt();
-        }
-    }
-
-    double ratio_ctx = context_size > 0 ? static_cast<double>(m_total_tokens) / static_cast<double>(context_size) : 0;
-    double percentage_ctx = std::round(ratio_ctx * 10000) / 100;
-
-    std::ostringstream oss;
-    oss << std::fixed << std::setprecision(2) << percentage_ctx;
-    std::string percentage_ctx_str = oss.str();
-
-    std::string context_usage_str = context_size > 0 ?
-        percentage_ctx_str + "% of context (" + std::to_string(context_size) + ")" : "";
-
-    console::write_line("\nTokens: " + std::to_string(m_total_tokens)
-        + " (prompt: " + std::to_string(m_prompt_tokens) +
-        + " / completion: " + std::to_string(m_completion_tokens)
-        + ") \t"
-        + context_usage_str
-        + (m_tokens_cost > 0 ? "cost: " + std::to_string(m_tokens_cost) : "")
-        + "\n", console::TextOrigin::reasoning);
-    console::write_splitter();
+void ChunkCompletionProcessor::SetSlotsInfo(const std::string &slots)
+{
+    slots_info.Set(slots);
 }
 
 void ChunkCompletionProcessor::CheckMessage(JsonDocument &doc)
 {
+    // Final chunks (e.g. finish_reason only) and some providers may omit 'delta'
+    if (!doc.body["choices"][0].IsObject() || !doc.body["choices"][0].HasMember("delta"))
+        return;
+
     // ========== Content output ==========================
     const auto &delta = doc.body["choices"][0]["delta"];
 
@@ -155,31 +142,37 @@ void ChunkCompletionProcessor::CheckReasoning(JsonDocument &doc)
     if (!m_reasoning_in_process)
         return;
 
+    // Final chunks (e.g. finish_reason only) and some providers may omit 'delta'
+    if (!doc.body["choices"][0].IsObject() || !doc.body["choices"][0].HasMember("delta"))
+        return;
+
     const auto &delta = doc.body["choices"][0]["delta"];
 
     // ========== Output reasoning data ====================
     // Reasoning text or progress
-    // Ignored after the first non-empty contet (see the code above)
-    // Checking fields: reasoning_content or reasoning
-    // The first condition works for llama.cpp
-    if (delta.HasMember("reasoning_content") && delta["reasoning_content"].IsString()) {
-        std::string reasoning_txt = delta["reasoning_content"].GetString();
-        OutputReasoning(reasoning_txt);
-        m_reasoning += reasoning_txt;
-        m_reasoning_in_process = true;
-    }
-    // The condition works for other servers
-    else if (delta.HasMember("reasoning") && delta["reasoning"].IsString())
+    // Ignored after the first non-empty content (see the code above)
+    // Checking fields, in order: reasoning_content, reasoning, thinking
+    //  - "reasoning_content" works for llama.cpp / DeepSeek-style servers
+    //  - "reasoning" works for OpenRouter and similar normalized servers
+    //  - "thinking" works for some other OpenAI-compatible providers/proxies
+    static const char *reasoning_fields[] = { "reasoning_content", "reasoning", "thinking" };
+
+    for (const char *field : reasoning_fields)
     {
-        std::string reasoning_txt = delta["reasoning"].GetString();
-        OutputReasoning(reasoning_txt);
-        m_reasoning += reasoning_txt;
-        m_reasoning_in_process = true;
+        if (delta.HasMember(field) && delta[field].IsString())
+        {
+            std::string reasoning_txt = delta[field].GetString();
+            OutputReasoning(reasoning_txt);
+            m_reasoning += reasoning_txt;
+            m_reasoning_in_process = true;
+            break;
+        }
     }
 }
 
-void ChunkCompletionProcessor::CheckTokens(JsonDocument &doc)
+bool ChunkCompletionProcessor::CheckTokens(JsonDocument &doc)
 {
+    bool has_tokens_info_per_chunk = false;
     // ========== Tokens counter ==========================
     // The condition works for llama.cpp
     if (doc.body.HasMember("timings"))
@@ -200,6 +193,7 @@ void ChunkCompletionProcessor::CheckTokens(JsonDocument &doc)
         }
 
         m_total_tokens = ctx_cached + m_prompt_tokens + m_completion_tokens;
+        has_tokens_info_per_chunk = true;
     }
 
     // The condition works for other servers
@@ -218,15 +212,22 @@ void ChunkCompletionProcessor::CheckTokens(JsonDocument &doc)
         {
             m_prompt_tokens = usage["prompt_tokens"].GetInt();
         }
-        if (usage.HasMember("cost") && usage["cost"].IsDouble())
+        if (usage.HasMember("cost") && usage["cost"].IsNumber())
         {
-            m_tokens_cost = usage["cost"].IsDouble();
+            double read_cost = usage["cost"].GetDouble();
+            m_tokens_cost = read_cost > m_tokens_cost ? read_cost : m_tokens_cost;
         }
+        has_tokens_info_per_chunk = true;
     }
+    return has_tokens_info_per_chunk;
 }
 
 void ChunkCompletionProcessor::CheckTools(JsonDocument &doc)
 {
+    // Final chunks (e.g. finish_reason only) and some providers may omit 'delta'
+    if (!doc.body["choices"][0].IsObject() || !doc.body["choices"][0].HasMember("delta"))
+        return;
+
     const auto &delta = doc.body["choices"][0]["delta"];
 
     // ========== Tools calling ===========================
@@ -234,7 +235,8 @@ void ChunkCompletionProcessor::CheckTools(JsonDocument &doc)
     {
         for (auto &t : delta["tool_calls"].GetArray())
         {
-            // ---- Function object ----
+            // 
+            // - Function object ----
             if (t.HasMember("function") && t["function"].IsObject())
             {
                 const auto &fn = t["function"];
@@ -243,7 +245,6 @@ void ChunkCompletionProcessor::CheckTools(JsonDocument &doc)
                 if (fn.HasMember("id") && fn["id"].IsString())
                 {
                     id = fn["id"].GetString();
-                    std::cout << "ID ========== " << id << std::endl;
                 }
 
                 std::string name;
@@ -276,13 +277,20 @@ void ChunkCompletionProcessor::CheckTools(JsonDocument &doc)
 
 void ChunkCompletionProcessor::CheckErrors(JsonDocument &doc)
 {
+    // Some servers return 'error' as a plain string, others as an object
+    if (doc.body.HasMember("error") && doc.body["error"].IsString())
+    {
+        std::string msg = doc.body["error"].GetString();
+        m_error = msg.empty() ? "Server error. Unknown error occurred." : "Server error. " + msg;
+        return;
+    }
+
     if (doc.body.HasMember("error") && doc.body["error"].IsObject())
     {
         const auto &err = doc.body["error"];
         if (err.HasMember("message") && err["message"].IsString())
         {
-            m_error = "Server error. ";
-            m_error = err["message"].GetString();
+            m_error = "Server error. " + std::string(err["message"].GetString());
         }
         else
         {
@@ -291,9 +299,15 @@ void ChunkCompletionProcessor::CheckErrors(JsonDocument &doc)
     }
 }
 
+void ChunkCompletionProcessor::ShowStatPerChunk() const
+{
+    int context_size = slots_info.context_size > 0 ? slots_info.context_size : m_context_size;
+    console::write_status_per_chunk(this, context_size);
+}
+
 void ChunkCompletionProcessor::OutputSystemMessage(const std::string &msg)
 {
-    console::write(msg, TextOrigin::filesystem);
+    console::write(msg, TextOrigin::tools);
 }
 
 void ChunkCompletionProcessor::OutputReasoning(const std::string &msg) const
@@ -302,15 +316,6 @@ void ChunkCompletionProcessor::OutputReasoning(const std::string &msg) const
     {
         console::write(msg, TextOrigin::reasoning);
         console::flush();
-    }
-    else
-    {
-        progress_cursor = (progress_cursor >= 3 ? 0 : progress_cursor + 1);
-        std::string r_msg = "\rReasoning ";
-        r_msg += progress[progress_cursor];
-        console::write(r_msg, TextOrigin::reasoning);
-        if (m_total_tokens > 0)
-            console::write("\ttokens: " + std::to_string(m_total_tokens), TextOrigin::reasoning);
     }
 }
 
@@ -355,51 +360,52 @@ void ChunkCompletionProcessor::GetResponseTools(std::vector<ToolCall> &calls_acc
             continue;
         }
 
-        // Assembling th full content like JSON stringified object:
-        // {\"arg1\": 1, \"arg2\": \"2str\", etc.}
-        std::string full_content;
-
-        for (auto it = doc.MemberBegin(); it != doc.MemberEnd(); ++it) 
+        // Iterate members: fill parsed arguments for the tool call.
+        // caller.content is the raw arguments JSON (see below).
+        for (auto it = doc.MemberBegin(); it != doc.MemberEnd(); ++it)
         {
             std::string key = it->name.GetString();
-            full_content += fmt.Format("\"%?\":", key);
-
             const rapidjson::Value &value = it->value;
 
             std::string arg_val;
             if (value.IsString()) {
                 arg_val = value.GetString();
-                full_content += fmt.Format("\"%?\"", arg_val);
             }
             else if (value.IsInt()) {
                 arg_val = std::to_string(value.GetInt());
-                full_content += fmt.Format("%?", arg_val);
+            }
+            else if (value.IsInt64()) {
+                arg_val = std::to_string(value.GetInt64());
+            }
+            else if (value.IsUint()) {
+                arg_val = std::to_string(value.GetUint());
+            }
+            else if (value.IsUint64()) {
+                arg_val = std::to_string(value.GetUint64());
+            }
+            else if (value.IsDouble() || value.IsFloat()) {
+                arg_val = std::to_string(value.GetDouble());
             }
             else if (value.IsBool()) {
-                arg_val = std::to_string(value.GetBool());
-                full_content += fmt.Format("%?", arg_val);
+                arg_val = value.GetBool() ? "true" : "false";
             }
-            else
+            else {
+                // Nested arrays/objects: serialize back to a JSON string
+                rapidjson::StringBuffer buf;
+                rapidjson::Writer<rapidjson::StringBuffer> buf_writer(buf);
+                if (value.Accept(buf_writer))
+                    arg_val = buf.GetString();
+            }
+
+            if (arg_val.empty() && !value.IsNull())
             {
-                std::string msg = fmt.Format("GetTools: Unknown type of argument: %?", key);
+                std::string msg = fmt.Format("GetTools: Unsupported type of argument: %?", key);
                 console::write_line(msg, TextOrigin::error);
             }
 
+            // JSON null is passed as an empty value
             caller.arguments.emplace_back(key, arg_val);
-            full_content += ",";
         }
-
-        if (!full_content.empty())
-        {
-            full_content.pop_back(); // remove last comma
-            full_content += "}";
-        }
-        else
-        {
-            full_content = "{}"; // no args for call
-        }
-
-        full_content = "{" + full_content; // {\"arg1\": 1, \"arg2\": \"2str\", etc.}
 
         // Raw arguments as a content
         rapidjson::StringBuffer buffer;
@@ -419,9 +425,14 @@ void ChunkCompletionProcessor::GetTokensStat(int &total, int &completion, int &p
     cost = m_tokens_cost;
 }
 
-void ChunkCompletionProcessor::SetReasoning(bool is_shown)
+void ChunkCompletionProcessor::SetShowReasoning(bool is_shown)
 {
     m_show_reasoning = is_shown;
+}
+
+void ChunkCompletionProcessor::SetContextSize(int ctx_size)
+{
+    m_context_size = ctx_size;
 }
 
 std::string ChunkCompletionProcessor::GetResponseMessage() const
@@ -432,6 +443,16 @@ std::string ChunkCompletionProcessor::GetResponseMessage() const
 std::string ChunkCompletionProcessor::GetResponseReasoning() const
 {
     return m_reasoning;
+}
+
+void ChunkCompletionProcessor::SetCancelFlag(std::atomic<bool> *flag)
+{
+    m_cancel_flag = flag;
+}
+
+bool ChunkCompletionProcessor::IsCancelled() const
+{
+    return m_cancel_flag && m_cancel_flag->load();
 }
 
 bool ChunkCompletionProcessor::HasErrors() const

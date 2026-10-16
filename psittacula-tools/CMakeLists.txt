@@ -1,8 +1,8 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.25)
 project(PSITTACULA_TOOLS)
 
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
+if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
@@ -24,6 +24,8 @@ add_library(${PSITTACULA_TOOLS_NAME} STATIC
 	${SRC_DIR}/tool_file_create.h
 	${SRC_DIR}/tool_file_create_binary.cpp
 	${SRC_DIR}/tool_file_create_binary.h
+	${SRC_DIR}/tool_file_content_modify.cpp
+	${SRC_DIR}/tool_file_content_modify.h
 	${SRC_DIR}/tool_dir_create.h
 	${SRC_DIR}/tool_dir_create.cpp
 	${SRC_DIR}/tool_file_remove.h
@@ -40,6 +42,10 @@ add_library(${PSITTACULA_TOOLS_NAME} STATIC
 	${SRC_DIR}/tool_file_list.h
 	${SRC_DIR}/tool_file_copy.cpp
 	${SRC_DIR}/tool_file_copy.h
+	${SRC_DIR}/tool_web_fetch.cpp
+	${SRC_DIR}/tool_web_fetch.h
+	${SRC_DIR}/tool_run_command.cpp
+	${SRC_DIR}/tool_run_command.h
 )
 
 set_target_properties(${PSITTACULA_TOOLS_NAME} PROPERTIES
@@ -51,5 +57,13 @@ set_target_properties(${PSITTACULA_TOOLS_NAME} PROPERTIES
 target_include_directories(${PSITTACULA_TOOLS_NAME} PRIVATE ${INCLUDE_DIR})
 target_include_directories(${PSITTACULA_TOOLS_NAME} PRIVATE ${CLI_INCLUDE})
 target_include_directories(${PSITTACULA_TOOLS_NAME} PRIVATE ${rapidjson_SOURCE_DIR}/include)
+target_include_directories(${PSITTACULA_TOOLS_NAME} PRIVATE ${CURL_INCLUDE_DIRS})
 
 target_link_libraries(${PSITTACULA_TOOLS_NAME} PRIVATE rapidjson)
+target_link_libraries(${PSITTACULA_TOOLS_NAME} PRIVATE CURL::libcurl)
+target_link_libraries(${PSITTACULA_TOOLS_NAME} PRIVATE Threads::Threads)
+
+# Dependency for tor tool_web_fetch
+if(WIN32)
+    target_link_libraries(${PSITTACULA_TOOLS_NAME} PRIVATE ws2_32)
+endif()

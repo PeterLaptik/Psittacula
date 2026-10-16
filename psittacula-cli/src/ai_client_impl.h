@@ -6,19 +6,20 @@
 #include "format_util.h"
 #include "history_manager.h"
 #include "dialogue_body.h"
+#include "json_dialogue.h"
+#include "model.h"
+#include <atomic>
 #include <map>
 #include <memory>
 
 class ToolBase;
 
-/// Standars client implementation
+/// Regular client implementation
 ///\see AiClient for details
 class AiClientImpl: public AiClient
 {
     public:
-        explicit AiClientImpl(const std::string &host_and_port, int context_size);
-
-        AiClientImpl(const std::string &host, int port, int context_size);
+        explicit AiClientImpl(const Model &model);
 
         ~AiClientImpl() override;
 
@@ -26,11 +27,13 @@ class AiClientImpl: public AiClient
 
         void SendUserMessage(const std::string &message = "") override;
 
-        void SetReasoning(bool is_shown = true) override;
+        void CancelRequest() override;
 
         void SetApiKey(const std::string &key) override;
 
         void SetModel(const std::string &model) override;
+
+        void SetLog(bool enabled) override;
 
         void RegisterTool(std::unique_ptr<ToolBase> tool) override;
 
@@ -42,9 +45,13 @@ class AiClientImpl: public AiClient
 
         std::string GetDialogueBody() const override;
 
+        std::string GetDialogueText() const override;
+
         std::string GetAgentRules() const override;
 
         void ClearContext() override;
+
+        void CompressContext() override;
 
         void RestoreDialogueFrom(const std::string &data) override;
 
@@ -59,23 +66,41 @@ class AiClientImpl: public AiClient
         void SendToolsResponses(const std::vector<ToolResponse> &tools_responses, const std::string &response = "");
 
         // Gets actual context size via /slots endpoint
-        std::string GetSlotstInfo();
+        std::string GetSlotsInfo();
+
+        // Returns the chat completions endpoint:
+        // m_chat_endpoint if set, otherwise chosen by context size (llama.cpp / non-llama)
+        std::string GetChatCompletionsEndpoint() const;
+
+        // Autosave through the gate: writes the dialogue body to the log
+        // file only when AiClient::m_log is enabled (one check instead of
+        // one per call site)
+        void WriteLog();
 
         // POST JSON data object
         // Keeps all messages, tool calls, tool calls responses
         DialogueBody m_body_obj;
 
+        // Autosaves the current dialogue JSON body after each iteration
+        // of the exchange with the AI (see SendUserMessage / SendToolsResponses)
+        JsonDialogue m_json_dialogue;
+
         Formatter fmt; // Simple string formatter
 
-        std::string m_api_key;      // Optional: API bearing key
-        int m_context_size = -1;    // Can be set directly, if not set (for llama.cpp) then /slots endpoint is used to get the actual size
-        bool m_show_reasoning = true;
-        int m_tool_loop_counter = 0;  // Counts tool calls loop iterations to avoid infinite loops
+        std::string m_api_key;          // Optional: Bearer API key
+        int m_context_size = -1;        // Can be set directly, if not set (for llama.cpp) then /slots endpoint is used to get the actual size
+        int m_tool_loop_counter = 0;    // Counts tool calls loop iterations to avoid infinite loops
+        std::string m_chat_endpoint;
 
         HttpClient m_http_client; // CURL client for network requests
 
         HistoryManager m_history_mgr; // Tool calls undo / redo manager
+        // Interrupt flag: set by CancelRequest from the UI thread
+        std::atomic<bool> m_cancelled{false};
         std::map<std::string, std::unique_ptr<ToolBase>> m_tools_dispatcher; // tool name -> tool prototype object
+
+        // Dialogue autosave flag
+        bool m_log = false;
 };
 
 #endif // AI_CLIENT_IMPL_INCLUDED_H

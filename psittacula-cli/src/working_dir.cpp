@@ -10,6 +10,21 @@ namespace fs = std::filesystem;
 
 const char * const kDefaultDir = "Psittacula";
 const char * const kModelsSubDir = "models";
+const char * const kSettingsSubDir = "settings";
+const char * const kProjectsSubDir = "projects";
+const char * const kLogsSubDir = "logs";
+
+namespace {
+    void CreateDirsNoThrow(const fs::path &dir, Formatter &fmt)
+    {
+        std::error_code ec;
+        fs::create_directories(dir, ec);
+        if (ec)
+            console::write_line(
+                fmt.Format("Failed to create directory '%?': %?", dir.string(), ec.message()),
+                TextOrigin::error);
+    }
+}
 
 WorkingDir& WorkingDir::GetInstance()
 {
@@ -18,6 +33,7 @@ WorkingDir& WorkingDir::GetInstance()
     {
         instance.CreateWorkingDirs();
         instance.FindModels();
+        instance.SetProjectDir(instance.GetProjectDir());
     }
 
     return instance;
@@ -26,18 +42,33 @@ WorkingDir& WorkingDir::GetInstance()
 void WorkingDir::SetWorkDir(const std::string &path)
 {
     WorkingDir &instance = WorkingDir::GetInstance();
+
+    {
+        std::error_code ec;
+        fs::create_directories(path, ec);
+        if (ec)
+        {
+            console::write_line(
+                instance.m_fmt.Format("Failed to set workdir '%?': %?", path, ec.message()),
+                TextOrigin::error);
+            return; // the rest would fail identically: do not spam
+        }
+    }
+
     instance.m_workdir = path;
 
-    // Create subdirectories if they don't exist
+    // Create subdirectories if they don't exist (failures are logged, not thrown)
     fs::path base = instance.m_workdir;
-    fs::path models = base / "models";
-    fs::path settings = base / "settings";
-    fs::path projects = base / "projects";
-    fs::create_directories(models);
-    fs::create_directories(settings);
-    fs::create_directories(projects);
+    fs::path models = base / kModelsSubDir;
+    fs::path settings = base / kSettingsSubDir;
+    fs::path projects = base / kProjectsSubDir;
+    fs::path logs = base / kLogsSubDir;
+    CreateDirsNoThrow(models, instance.m_fmt);
+    CreateDirsNoThrow(settings, instance.m_fmt);
+    CreateDirsNoThrow(projects, instance.m_fmt);
+    CreateDirsNoThrow(logs, instance.m_fmt);
 
-    m_project_dir = projects.string();
+    instance.m_project_dir = projects.string();
 
     instance.UpdateModels();
 }
@@ -45,6 +76,32 @@ void WorkingDir::SetWorkDir(const std::string &path)
 void WorkingDir::SetProjectDir(const std::string &path)
 {
     m_project_dir = path;
+
+    m_projects_files.clear();
+
+    try
+    {
+        fs::directory_entry dir(path);
+        if (!dir.exists() || !dir.is_directory())
+        {
+            console::write_line("Project dir is not found or is not a directory!", TextOrigin::error);
+            return;
+        }
+
+        for (const auto &entry : fs::recursive_directory_iterator(dir))
+        {
+            if (entry.is_regular_file())
+            {
+                const fs::path full_path = entry.path();
+                m_projects_files.emplace_back(full_path.filename().string(), full_path.generic_string());
+            }
+        }
+    }
+    catch (const std::exception &e)
+    {
+        console::write_line("Error on searching project files:", TextOrigin::error);
+        console::write_line(e.what(), TextOrigin::error);
+    }
 }
 
 void WorkingDir::UpdateModels()
@@ -71,6 +128,16 @@ std::string WorkingDir::GetModelsDir() const
 std::string WorkingDir::GetSettingsDir() const
 {
     return m_workdir + '/' + "settings/";
+}
+
+std::string WorkingDir::GetLogsDir() const
+{
+    return m_workdir + '/' + "logs/";
+}
+
+const std::vector<ProjectFile>& WorkingDir::GetProjectFilesList() const
+{
+    return m_projects_files;
 }
 
 std::string WorkingDir::GetWorkDir() const
@@ -134,12 +201,12 @@ void WorkingDir::CreateWorkingDirs()
     }
 #else
     const char *home = std::getenv("HOME");
-    home_dir = fs::path(home ? home / kDefaultDir : "");
+    home_dir = fs::path(home ? fs::path(home) / kDefaultDir : "");
 #endif
 
     if (!fs::exists(home_dir))
     {
-        console::write_line(m_fmt.Format("Creating working dir: %?", home_dir.string()), TextOrigin::filesystem);
+        console::write_line(m_fmt.Format("Creating working dir: %?", home_dir.string()), TextOrigin::tools);
         std::error_code ec;
         fs::create_directories(home_dir, ec);
         if (ec) 
@@ -152,12 +219,14 @@ void WorkingDir::CreateWorkingDirs()
     m_workdir = home_dir.string();
 
     fs::path base = m_workdir;
-    fs::path models = base / "models";
-    fs::path settings = base / "settings";
-    fs::path projects = base / "projects";
-    fs::create_directories(models);
-    fs::create_directories(settings);
-    fs::create_directories(projects);
+    fs::path models = base / kModelsSubDir;
+    fs::path settings = base / kSettingsSubDir;
+    fs::path projects = base / kProjectsSubDir;
+    fs::path logs = base / kLogsSubDir;
+    CreateDirsNoThrow(models, m_fmt);
+    CreateDirsNoThrow(settings, m_fmt);
+    CreateDirsNoThrow(projects, m_fmt);
+    CreateDirsNoThrow(logs, m_fmt);
 
     m_project_dir = projects.string();
 }
@@ -189,15 +258,17 @@ bool WorkingDir::IsInWorkDir(const std::string &path) const
             return true;
 
         // Walk upward from target until root or sandbox is found
-        int level_counter = 0;
         fs::path cur = target;
-        while (!cur.empty() && level_counter < 32)
+        while (!cur.empty())
         {
             if (cur == sandbox)
                 return true;
 
-            cur = cur.parent_path();
-            level_counter++;
+            fs::path parent = cur.parent_path();
+            if (parent == cur) // reached: no further progress possible
+                break;
+
+            cur = parent;
         }
 
         return false;
@@ -207,4 +278,3 @@ bool WorkingDir::IsInWorkDir(const std::string &path) const
         return false;
     }
 }
-

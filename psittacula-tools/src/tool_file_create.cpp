@@ -28,10 +28,11 @@ std::string FileCreateTool::Execute(std::vector<ToolParameter> &params_values)
     Formatter fmt;
     WorkingDir &wdir = WorkingDir::GetInstance();
 
-    console::write_line("File create tool.", console::TextOrigin::filesystem);
+    console::write_line("File create tool.", console::TextOrigin::tools);
 
     std::string path = GetParam(params_values, "path");
-    UnescapeSlashesInPath(path);
+    UnEscapeSlashesInPath(path);
+    console::write_line("Path: " + path, console::TextOrigin::tools);
 
     std::string content = GetParam(params_values, "content");
     // Unescape?
@@ -42,20 +43,20 @@ std::string FileCreateTool::Execute(std::vector<ToolParameter> &params_values)
         return R"({"error":{"type":"invalid_arguments","message":"Missing required parameter: path"}})";
     }
 
-    if (!wdir.IsInWorkDir(path)) 
+    if (!wdir.IsInWorkDir(path))
     {
-        console::write_line(fmt.Format("Permission_denied: path is outside working directory: %?", path), console::TextOrigin::error);
-        return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory\",\"path\":\"%?\"}}", path);
+        console::write_line(fmt.Format("Permission_denied: path is outside working directory:\n path: %?\n working directory: %?", path, wdir.GetProjectDir()), console::TextOrigin::error);
+        return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory (%?)\",\"path\":\"%?\"}}", wdir.GetProjectDir(), path);
     }
 
-    console::write_line("Creating file: " + path, console::TextOrigin::filesystem);
+    console::write_line("Creating file: " + path, console::TextOrigin::tools);
 
     last_path = path;
     last_content = content;
     executed = false;
     existing_file_dump.clear();
 
-    // Create parent dird if do not exist
+    // Create parent dirs if they do not exist
     std::filesystem::create_directories(std::filesystem::path(path).parent_path());
 
     bool file_exists = std::filesystem::exists(path);
@@ -125,7 +126,7 @@ void FileCreateTool::Undo()
     if (!executed)
         return;
 
-    console::write_line("Removing file: " + last_path, console::TextOrigin::filesystem);
+    console::write_line("Removing file: " + last_path, console::TextOrigin::tools);
 
     if (!existing_file_dump.empty()) 
     {
@@ -148,7 +149,7 @@ void FileCreateTool::Redo()
     if (!executed)
         return;
 
-    console::write_line("Creating file again: " + last_path, console::TextOrigin::filesystem);
+    console::write_line("Creating file again: " + last_path, console::TextOrigin::tools);
 
     std::ofstream out(last_path);
     out << last_content;

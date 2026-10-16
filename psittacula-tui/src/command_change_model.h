@@ -2,32 +2,45 @@
 #define COMMAND_CHANGE_MODEL_INCLUDED_H
 
 #include "chat_command.h"
+#include "command_clean_context.h"
 #include "console_writer.h"
 #include "format_util.h"
 #include "working_dir.h"
 #include "model.h"
+#include "animation.h"
+#include "llm_connectivity_checker.h"
 #include <iostream>
 #include <fstream>
 #include <filesystem>
+#include <thread>
 
 #ifdef _WIN32
 #include <conio.h>
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
 #else
+#include <sys/ioctl.h>
+#include <sys/select.h>
 #include <termios.h>
 #include <unistd.h>
+#endif
 
-int getch()
+#ifndef _WIN32
+// Waits up to timeout_ms for the next byte on stdin (raw-mode menus).
+// Used to tell a bare Escape (quit) from the first byte of an escape sequence such as ESC [ A (navigation).
+inline bool MenuInputModelReady(int timeout_ms)
 {
-    termios oldt, newt;
-    tcgetattr(STDIN_FILENO, &oldt);
-    newt = oldt;
-    newt.c_lflag &= ~(ICANON | ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(STDIN_FILENO, &fds);
 
-    int ch = getchar();
+    struct timeval tv;
+    tv.tv_sec = timeout_ms / 1000;
+    tv.tv_usec = (timeout_ms % 1000) * 1000;
 
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    return ch;
+    return select(STDIN_FILENO + 1, &fds, nullptr, nullptr, &tv) > 0;
 }
 #endif
 
@@ -35,6 +48,8 @@ int getch()
 class CommandChangeModel: public ChatCommand
 {
     public:
+        using ChatCommand::ChatCommand;
+
         void Execute(std::unique_ptr<AiClient> &client, const std::vector<std::string> &args) override
         {
             if (args.empty())
@@ -58,13 +73,41 @@ class CommandChangeModel: public ChatCommand
 
         std::string Description() override
         {
-            return "Change model in interractive mode. Does not clear current context. \n\r\t[ARGS]: [create] is to create model connection in an interactive mode and connect to a new model.";
+            return "Change model in interactive mode. Does not clear current context. \n\r\t[ARG]: [create] is to create model connection in an interactive mode and connect to a new model.";
         }
 
     private:
         Formatter formatter;
 
-        // Select model from the list of found models in the working directory in interractive mode. 
+#ifndef _WIN32
+        int getch()
+        {
+            termios oldt, newt;
+            tcgetattr(STDIN_FILENO, &oldt);
+            newt = oldt;
+            newt.c_lflag &= ~(ICANON | ECHO);
+            // Disable CR->NL translation and flow control so a bare Enter
+            // (CR, 13) and escape sequences are delivered byte-for-byte,
+            // matching the raw mode used elsewhere (Screen::EnableRawMode).
+            newt.c_iflag &= ~(ICRNL | INLCR | IXON);
+            newt.c_cc[VMIN] = 1;
+            newt.c_cc[VTIME] = 0;
+            tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
+            // Use the unbuffered read() syscall instead of getchar()/stdio.
+            // Buffered stdio can read ahead and reorder/mis-split bytes of
+            // an escape sequence relative to what tcsetattr() just changed,
+            // which on some Unix (FreeBSD) ttys made Enter appear to move
+            // the selection instead of confirming it.
+            unsigned char ch = 0;
+            int result = read(STDIN_FILENO, &ch, 1);
+
+            tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+            return result == 1 ? static_cast<int>(ch) : -1;
+        }
+#endif
+
+        // Select model from the list of found models in the working directory in interactive mode. 
         void ChooseModel(std::unique_ptr<AiClient> &client)
         {
             ActivateAlternateScreen();
@@ -81,6 +124,10 @@ class CommandChangeModel: public ChatCommand
 
             DrawMenu(models, index);
 
+            // ESC pressed bare: no selection was made. The nonzero index
+            // below tells 'nothing was chosen', and the menu just quits.
+            bool escaped = false;
+
             // Read raw key input
             while (true)
             {
@@ -93,22 +140,44 @@ class CommandChangeModel: public ChatCommand
                     else if (arrow == 80 && index < models.size() - 1) index++; // Down
                     DrawMenu(models, index);
                 }
+                else if (c == 27) // Escape quits without selecting
+                {
+                    escaped = true;
+                    break;
+                }
                 else if (c == 13) // Enter
                 {
                     break;
                 }
 #else
                 int c = getch();
+
+                if (c == -1)
+                {
+                    // stdin failure / EOF: staying here is useless
+                    escaped = true;
+                    break;
+                }
+
                 if (c == '\x1b') // ESC
                 {
+                    // Bare ESC (no byte follows within 50 ms) quits the menu;
+                    // ESC [ ... is a navigation sequence
+                    if (!MenuInputModelReady(50))
+                    {
+                        escaped = true;
+                        break;
+                    }
+
                     int c1 = getch();
                     if (c1 == '[')
                     {
                         int c2 = getch();
                         if (c2 == 'A' && index > 0) index--;                        // Up
                         else if (c2 == 'B' && index < models.size() - 1) index++;   // Down
-                        DrawMenu();
+                        DrawMenu(models, index);
                     }
+                    // any other sequence: swallowed, menu stays
                 }
                 else if (c == '\n' || c == '\r')
                 {
@@ -117,16 +186,71 @@ class CommandChangeModel: public ChatCommand
 #endif
             }
 
+            if (escaped)
+            {
+                RestoreMainScreen();
+                m_app->RefreshStatus("   Model selection cancelled.");
+                return; // nothing loaded, current model unchanged
+            }
+
             // Load selected model
             Model model = Model::FromFile(models[index]);
-            AiClient *created_client = model.GetClient();
 
-            if(client.get() != nullptr)
-                created_client->RestoreDialogueFrom(client->GetDialogueBody());
+            std::thread t(start_animation);
 
-            client.reset(created_client);
+            LlmConnectivityChecker checker(model.GetHost(), model.GetApiKey());
+            LlmConnectivityState state = checker.Check();
+
+            stop_animation();
+            t.join();
 
             RestoreMainScreen();
+
+            std::unique_ptr<AiClient> created_client = model.GetClient();
+
+            if(client.get() != nullptr)
+            { 
+                // Old dialogue is left in the old client,
+                // so we need to save it and restore it in the new client.
+                std::string full_dialogue = client->GetDialogueBody();
+
+                CommandCleanContext cmd_clean{ m_app };
+                cmd_clean.Execute(client, {});
+
+                created_client->RestoreDialogueFrom(full_dialogue);
+                created_client->SetModel(model.GetName());
+            }
+
+            client.reset(created_client.release());
+
+            bool has_api_key = !model.GetApiKey().empty();
+            console::write_line(std::string("Found API key: ") + (has_api_key ? "yes" : "no"), TextOrigin::tools);
+            console::write_line(state.summary + "\n ", state.reachable ? TextOrigin::tools : TextOrigin::error);
+
+            if (!state.reachable)
+            {
+                for (auto &probe : state.probes)
+                {
+                    std::string info = probe.details.empty() ? probe.error : probe.details;
+                    console::write_line(formatter.Format("  %?: %? (%?ms)", probe.name, info, probe.latency_ms), TextOrigin::error);
+                }
+
+                m_app->RefreshStatus("\033[31m   Cannot connect to the selected model.\033[31m");
+                return;
+            }
+            else
+            {
+                // Write a short model info to the status line
+                std::string context_size_info = model.GetContextSize() > 0
+                    ? std::to_string(model.GetContextSize())
+                    : "   n/a";
+
+                std::string model_info = formatter.Format(
+                    "   Model: %? | Host: %? | Context: %?",
+                    model.GetName(), model.GetHost(), context_size_info);
+
+                m_app->RefreshStatus(model_info);
+            }
         }
 
         void CreateModel(std::unique_ptr<AiClient> &client)
@@ -138,28 +262,36 @@ class CommandChangeModel: public ChatCommand
             if (no_models)
                 console::write_line("No models found. Create at least one connection!\n\n", TextOrigin::error);
 
-            console::write_line("============ Create new model connection ==================", TextOrigin::filesystem);
+            console::write_line("============ Create new model connection ==================", TextOrigin::tools);
 
             std::string file_name;
             std::string model_name;
             std::string host;
-            std::string api_key;
+            std::string api_key_env_name;
             std::string context_size_str;
+            std::string chat_endpoint;
 
-            std::cout << "Enter file name for the connection: ";
-            std::getline(std::cin, file_name);
+            {
+                console::LineInputScope line_input;
 
-            std::cout << "Enter model name (e.g., gpt-4o): ";
-            std::getline(std::cin, model_name);
+                std::cout << "Enter file name for the connection: ";
+                std::getline(std::cin, file_name);
 
-            std::cout << "Enter host URL (e.g., http://localhost:8080): ";
-            std::getline(std::cin, host);
+                std::cout << "\nEnter model name (e.g., gpt-4o): ";
+                std::getline(std::cin, model_name);
 
-            std::cout << "Enter context size (optional, leave empty if not set): ";
-            std::getline(std::cin, context_size_str);
+                std::cout << "\nEnter host URL (e.g. http://localhost:8080): ";
+                std::getline(std::cin, host);
 
-            std::cout << "Enter API key (leave empty if not required): ";
-            std::getline(std::cin, api_key);
+                std::cout << "\nEnter chat completion endpoint (leave empty for default '/v1/chat/completions'): ";
+                std::getline(std::cin, chat_endpoint);
+
+                std::cout << "\nEnter context size (leave empty for llama.cpp): ";
+                std::getline(std::cin, context_size_str);
+
+                std::cout << "\nEnter name of the environment variable holding the API key (leave empty for keyless local servers): ";
+                std::getline(std::cin, api_key_env_name);
+            }
 
             std::string models_dir = WorkingDir::GetInstance().GetModelsDir();
 
@@ -179,8 +311,14 @@ class CommandChangeModel: public ChatCommand
             file << "name=" << model_name << "\n\n";
 
             file << "# Host\n";
-            file << "# The value will be concatenate with '/chat/completions' for requests\n";
+            file << "# The value will be concatenated with the chat completion endpoint for requests\n";
             file << "host=" << host << "\n\n";
+
+            file << "# Chat completion endpoint (optional)\n";
+            if (!chat_endpoint.empty())
+                file << "chat_endpoint=" << chat_endpoint << "\n\n";
+            else
+                file << "# chat_endpoint=/v1/chat/completions\n\n";
 
             file << "# Context size: maximum context length for the model (optional)\n";
             if (!context_size_str.empty())
@@ -188,11 +326,11 @@ class CommandChangeModel: public ChatCommand
             else
                 file << "# context_size=\n";
 
-            file << "# Bearing key: add if necessary\n";
-            if (!api_key.empty())
-                file << "api_key=" << api_key << "\n";
+            file << "# Bearer key comes from the environment only; it is never stored in this file.\n";
+            if (!api_key_env_name.empty())
+                file << "api_key_env=" << api_key_env_name << "\n";
             else
-                file << "# api_key=\n";
+                file << "# api_key_env=MY_API_KEY\n";
 
             file.close();
 
@@ -200,26 +338,92 @@ class CommandChangeModel: public ChatCommand
 
             RestoreMainScreen();
 
-            console::write_line("Configuration file '" + file_path + "' created successfully.\n", TextOrigin::filesystem);
+            console::write_line("Configuration file '" + file_path + "' created successfully.\n", TextOrigin::tools);
+        }
+
+        int TerminalWidth() const
+        {
+#ifdef _WIN32
+            HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
+            CONSOLE_SCREEN_BUFFER_INFO info;
+            if (console != INVALID_HANDLE_VALUE && console != nullptr &&
+                GetConsoleScreenBufferInfo(console, &info))
+            {
+                return info.srWindow.Right - info.srWindow.Left + 1;
+            }
+#else
+            winsize ws = {};
+            if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0 && ws.ws_col > 0)
+                return ws.ws_col;
+#endif
+            return 80;
+        }
+
+        int TextWidth(const std::string &text) const
+        {
+            int width = 0;
+            for (size_t i = 0; i < text.size();)
+            {
+                if (text[i] == '\033')
+                {
+                    size_t end = text.find('m', i + 1);
+                    if (end == std::string::npos)
+                        break;
+                    i = end + 1;
+                    continue;
+                }
+
+                size_t step = 1;
+                unsigned char lead = static_cast<unsigned char>(text[i]);
+                if ((lead & 0xE0) == 0xC0)
+                    step = 2;
+                else if ((lead & 0xF0) == 0xE0)
+                    step = 3;
+                else if ((lead & 0xF8) == 0xF0)
+                    step = 4;
+                if (i + step > text.size())
+                    break;
+
+                i += step;
+                ++width;
+            }
+            return width;
+        }
+
+        void WriteCentered(const std::string &text, TextOrigin origin = TextOrigin::normal)
+        {
+            int pad = (TerminalWidth() - TextWidth(text)) / 2;
+            if (pad < 0)
+                pad = 0;
+            std::cout << std::string(static_cast<size_t>(pad), ' ');
+            console::write_line(text, origin);
         }
 
         // Main menu to choose a model
         void DrawMenu(const std::vector<std::string> &models, int index)
         {
             std::cout << "\x1b[2J\x1b[H"; // clear + home
-            console::write_line("====================================================", TextOrigin::filesystem);
-            console::write_line("============ Choose model to work ==================", TextOrigin::filesystem);
-            console::write_line("====================================================", TextOrigin::filesystem);
-            console::write_line(formatter.Format("Found models: %?", models.size()), TextOrigin::filesystem);
-            console::write_line("Use Up/Down to choose, Enter to select.\n");
+            WriteCentered("====================================================", TextOrigin::tools);
+            WriteCentered("============ Choose model to work ==================", TextOrigin::tools);
+            WriteCentered("====================================================", TextOrigin::tools);
+            WriteCentered(formatter.Format("Found models: %?", models.size()), TextOrigin::tools);
+            WriteCentered("Use Up/Down to choose, Enter to select, Escape to quit.\n");
 
             for (int i = 0; i < models.size(); ++i)
             {
+                std::string item = std::to_string(i + 1) + " - " + models[i];
+
+                int pad = (TerminalWidth() - TextWidth(item)) / 2;
+                if (pad < 0)
+                    pad = 0;
+
+                std::cout << std::string(static_cast<size_t>(pad), ' ');
                 if (i == index)
                     std::cout << "\x1b[7m"; // highlight
 
-                std::cout << (i + 1) << " - " << models[i] << "\x1b[0m\n";
+                std::cout << item << "\x1b[0m\n";
             }
+            std::cout.flush();
         }
 };
 

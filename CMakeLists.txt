@@ -1,14 +1,21 @@
 cmake_minimum_required(VERSION 3.25)
 
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+    message(FATAL_ERROR
+        "In-source builds are not allowed.\n"
+        "Configure out-of-source, e.g.:\n"
+        "    cmake -S . -B Build/devel \n"
+        "    cmake --build Build/devel --config Debug")
+endif()
+
 project(Psittacula)
 
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
+if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
 # Project output paths: %root_project_dir%/Build/*
-set(OUTPUT_DIR_NAME Build/${CMAKE_BUILD_TYPE})
-set(OUTPUT_DIR_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${OUTPUT_DIR_NAME}) 
+set(OUTPUT_DIR_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Build/${CMAKE_BUILD_TYPE}) 
 set(OUTPUT_RUNTIME_PATH ${OUTPUT_DIR_PATH}/bin)
 set(OUTPUT_LIB_PATH ${OUTPUT_DIR_PATH}/lib)
 set(OUTPUT_ARCH_PATH ${OUTPUT_DIR_PATH}/lib)
@@ -34,6 +41,7 @@ message(STATUS "Searching dependencies in ${CMAKE_PREFIX_PATH}")
 find_package(ZLIB REQUIRED)
 find_package(CURL REQUIRED)
 find_package(RapidJSON REQUIRED)
+find_package(Threads REQUIRED)
 
 # Project contents
 # Sub-projects names
@@ -50,4 +58,11 @@ set(PSITTACULA_TOOLS_NAME psittacula-tools-${A_VERSION})
 add_subdirectory(${PSITTACULA_TUI})
 add_subdirectory(${PSITTACULA_CLI})
 add_subdirectory(${PSITTACULA_TOOLS})
+
+# Engine unit tests (optional: add with -DPSITTACULA_BUILD_TESTS=ON)
+option(PSITTACULA_BUILD_TESTS "Build the engine unit tests" OFF)
+if(PSITTACULA_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
 

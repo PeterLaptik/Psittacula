@@ -19,7 +19,7 @@ class ContextInfo
         void UpdateTokens(const ChunkCompletionProcessor &chunk_processor);
 
         /// Outputs statistic (tokens used, context)
-        void WriteStat() const;
+        void ShowStat() const;
 
     private:
         int m_ctx_size = -1;

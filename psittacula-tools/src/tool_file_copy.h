@@ -9,9 +9,9 @@ class FileCopyTool : public ToolFile
 {
     public:
     FileCopyTool() = default;
-    virtual ~FileCopyTool() = default;
+    ~FileCopyTool() override = default;
 
-    ToolBase *Clone() override { return new FileCopyTool(); }
+    ToolBase* Clone() override { return new FileCopyTool(); }
 
     std::string Execute(std::vector<ToolParameter> &params_values) override;
 
@@ -19,7 +19,7 @@ class FileCopyTool : public ToolFile
     void Redo() override;
 
     std::string GetToolName() const override { return "copy_file"; }
-    std::string GetToolDescription() const override { return "Copies a file from one location to another."; }
+    std::string GetToolDescription() const override { return "Copies a file from one location to another. Paths: absolute, or relative to the project directory."; }
 
     void GetParameters(std::vector<ToolParameter> &params_acc) override;
 

@@ -1,0 +1,85 @@
+#ifndef APP_INCLUDED_H
+#define APP_INCLUDED_H
+
+#include "screen.h"
+#include "keyboard.h"
+#include "ai_client.h"
+#include "exit_dialogue.h"
+#include "confirm_dialogue.h"
+#include "console_writer.h"
+#include <mutex>
+#include <string>
+#include <thread>
+
+class ConfirmDialogue;
+class ChatCommandDispatcher;
+
+namespace tui {
+    /// Application: contains main loop, manages keyboard input and screen output
+    class App: public console::TextReceiver
+    {
+        public:
+            App();
+            ~App();
+
+            App(const App&) = delete;
+            App& operator=(const App&) = delete;
+
+            void Run();
+
+            void MoveSpinner() override;
+
+            void SetClient(std::unique_ptr<AiClient> &client);
+
+            void SetCommandDispatcher(std::unique_ptr<ChatCommandDispatcher> &cmd_dispatcher);
+
+            void SetShowReasoning(bool reasoning);
+
+            bool GetShowReasoning() const;
+
+            // Text receiver interface for system output
+            void WriteLine(const std::string &message, TextOrigin origin = TextOrigin::normal) override;
+            void Write(const std::string &message, TextOrigin origin = TextOrigin::normal) override;
+            bool AskConfirm(const std::string &message) override;
+            void RefreshStatus(const std::string &status) override;
+            void Clear() override;
+            void Flush() override;
+
+        private:
+            void MainLoop();
+            void ProcessCommand(const std::string &command);
+            void ProcessQuery(const std::string &query);
+
+            /// Worker body: runs the blocking query, reports result to UI state
+            void ProcessQueryWorker(std::string query);
+
+            /// Joins a finished worker without blocking the UI (non-blocking)
+            void ReapFinishedQuery();
+
+            /// Shows "working" status; call from UI thread each loop iteration
+            void ShowQueryStatus();
+
+            Screen m_screen;
+            Keyboard m_keyboard;
+
+            ExitDialogue m_exit_dialog;
+            ConfirmDialogue m_confirm_dialogue;
+
+            std::unique_ptr<AiClient> m_client;
+            std::unique_ptr<ChatCommandDispatcher> m_cmd_dispatcher;
+
+            // Streaming query state: only the worker thread touches m_client
+            std::thread m_query_thread;
+            std::atomic<bool> m_query_running{false};
+            std::mutex m_query_mutex;
+            std::string m_query_result; // "ok", "cancelled", or "error: ..."
+
+            bool m_query_status_shown = false;
+
+            // Guard to exclude spin the loop at 100% of a core
+            // See the code in the main loop
+            int m_eof_streak = 0;
+    };
+}
+
+#endif

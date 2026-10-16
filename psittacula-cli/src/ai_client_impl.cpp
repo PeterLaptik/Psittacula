@@ -11,71 +11,126 @@
 // Maximum number of tool calls per response, to prevent infinite loops in case of errors
 const int kToolsCallMax = 20; 
 
+// Number of most recent messages to keep in full after compression.
+// The older context is replaced by an LLM-generated summary.
+constexpr int kMessagesToKeep = 2;
+
 const std::string kEndPointHealth = "/health";
-const std::string kEndPointCompletions = "/chat/completions";
+const std::string kEndPointCompletionsLlama = "/v1/chat/completions";
+const std::string kEndPointCompletionsNonLlama = "/chat/completions";
 const std::string kEndPointSlots = "/slots";
 
+const long kSlotsTimeoutMs = 2000;
 
-AiClientImpl::AiClientImpl(const std::string &host_and_port, int context_size)
-    : m_http_client(host_and_port), m_context_size(context_size)
-{ 
-    InitTools();
-
-    DefaultRuleProvider provider;
-    m_body_obj.AddSystemMessage(provider.GetDefaultSystemPrompt());
-}
-
-AiClientImpl::AiClientImpl(const std::string &host, int port, int context_size)
-    : m_http_client(host, port), m_context_size(context_size)
+AiClientImpl::AiClientImpl(const Model &model)
+    : m_http_client(model.GetHost(), 
+        model.GetApiKey()), 
+        m_context_size(model.GetContextSize()),
+        m_chat_endpoint(model.GetChatEndpoint())
 {
     InitTools();
 
     DefaultRuleProvider provider;
     m_body_obj.AddSystemMessage(provider.GetDefaultSystemPrompt());
+
+    m_body_obj.SetModel(model.GetName());
 }
 
 AiClientImpl::~AiClientImpl()
 { }
 
+// Autosave through the flag: the dialogue body is written to the log file
+// only when AiClient::SetLog(true) was called; the default is disabled
+void AiClientImpl::WriteLog()
+{
+    if (m_log)
+        m_json_dialogue.Write(m_body_obj.ToJsonString());
+}
+
 void AiClientImpl::SendUserMessage(const std::string &message)
 {
+    m_cancelled.store(false);
     m_tool_loop_counter = 0;
 
     // Add message to a dialogue body and send to a server
     m_body_obj.AddUserMessage(message);
+    WriteLog();
 
     std::string body = m_body_obj.ToJsonString();
 
     ChunkCompletionProcessor proc; // POST response chunk receiver
-    proc.SetReasoning(m_show_reasoning);
-    m_http_client.HttpPostStream(kEndPointCompletions, body, &proc);
+    proc.SetShowReasoning(true); // legacy
+    proc.SetCancelFlag(&m_cancelled);
+    proc.SetContextSize(m_context_size);
 
-    std::string slots_rsp = GetSlotstInfo();
-    proc.WriteStat(slots_rsp, m_context_size);
+    std::string slots_rsp = GetSlotsInfo();
+    proc.SetSlotsInfo(slots_rsp);
 
-    // Add response message to a dialogue body
-    std::string response_msg = proc.GetResponseMessage();
-    m_body_obj.AddResponse(response_msg);
+    std::string end_point_chat_completions = GetChatCompletionsEndpoint();
+    m_http_client.HttpPostStream(end_point_chat_completions, body, &proc);
 
-    // Check errors
+    if (m_cancelled.load())
+    {
+        m_body_obj.RemoveLastExchange();
+        WriteLog();
+        console::write_line("\nInterrupted by user.", console::TextOrigin::reasoning);
+        return;
+    }
+
+    proc.ShowStat();
+
+    // Check errors before adding the response message to the dialogue
     if (proc.HasErrors())
     {
         console::write_line("\nError: " + proc.GetError(), console::TextOrigin::error);
         return;
     }
 
+    // Add response message to a dialogue body
+    std::string response_msg = proc.GetResponseMessage();
+    m_body_obj.AddResponse(response_msg);
+    WriteLog();
+
     // Check and process tool calls if exist
     std::vector<ToolCall> tool_calls;
     proc.GetResponseTools(tool_calls);
 
+    if (m_cancelled.load())
+    {
+        m_body_obj.RemoveLastExchange();
+        WriteLog();
+        console::write_line("\nInterrupted by user.", console::TextOrigin::reasoning);
+        return;
+    }
+
     std::vector<ToolResponse> responses;
     for (auto &tool_call : tool_calls)
     {
+        if (m_cancelled.load())
+        {
+            m_body_obj.RemoveLastExchange();
+            WriteLog();
+            console::write_line("\nInterrupted by user.", console::TextOrigin::reasoning);
+            return;
+        }
         ToolResponse rsp = EvokeTool(tool_call);
         responses.push_back(rsp);
     }
 
+    if (m_cancelled.load())
+    {
+        m_body_obj.RemoveLastExchange();
+        WriteLog();
+        console::write_line("\nInterrupted by user.", console::TextOrigin::reasoning);
+        return;
+    }
+
     SendToolsResponses(responses);
+}
+
+void AiClientImpl::CancelRequest()
+{
+    m_cancelled.store(true);
 }
 
 void AiClientImpl::RegisterTool(std::unique_ptr<ToolBase> tool)
@@ -83,7 +138,7 @@ void AiClientImpl::RegisterTool(std::unique_ptr<ToolBase> tool)
     auto it = m_tools_dispatcher.find(tool->GetToolName());
     if (it != m_tools_dispatcher.end())
     {
-        console::write_line("\nRegister tool error: tool exists" + tool->GetToolName(), console::TextOrigin::error);
+        console::write_line("\nRegister tool error: tool exists: " + tool->GetToolName(), console::TextOrigin::error);
         return;
     }
 
@@ -123,8 +178,10 @@ ToolResponse AiClientImpl::EvokeTool(ToolCall &call)
     auto it = m_tools_dispatcher.find(call.name);
     if (it == m_tools_dispatcher.end())
     {
-        console::write_line("\nNo tool found:" + call.name, console::TextOrigin::error);
-        std::string msg = fmt.Format("{\"error\": \"%?\"}", rsp.name);
+        console::write_line("\nNo tool found: " + call.name, console::TextOrigin::error);
+        // Report the error back to the LLM so it can correct itself
+        // instead of receiving an empty tool result
+        rsp.output_content = fmt.Format("{\"error\": \"Unknown tool: %?\"}", rsp.name);
         return rsp;
     }
 
@@ -148,10 +205,10 @@ ToolResponse AiClientImpl::EvokeTool(ToolCall &call)
 
 void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_responses, const std::string &response)
 {
-    if (tools_responses.empty())
+    if (tools_responses.empty() || m_cancelled.load())
         return;
 
-    // Infinit loop check
+    // Infinite loop check
     m_tool_loop_counter++;
     if (m_tool_loop_counter > kToolsCallMax)
     {
@@ -161,15 +218,30 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
 
     // Send tool responses and get result message from LLM
     m_body_obj.AddToolResponses(tools_responses);
+    WriteLog();
 
     std::string body = m_body_obj.ToJsonString();
 
     ChunkCompletionProcessor proc; // POST response chunks receiver
-    proc.SetReasoning(m_show_reasoning);
-    m_http_client.HttpPostStream(kEndPointCompletions, body, &proc);
+    proc.SetShowReasoning(true); // legacy
+    proc.SetCancelFlag(&m_cancelled);
+    proc.SetContextSize(m_context_size);
 
-    std::string slots_rsp = GetSlotstInfo();
-    proc.WriteStat(slots_rsp, m_context_size);
+    std::string slots_rsp = GetSlotsInfo();
+    proc.SetSlotsInfo(slots_rsp);
+
+    std::string end_point_chat_completions = GetChatCompletionsEndpoint();
+    m_http_client.HttpPostStream(end_point_chat_completions, body, &proc);
+
+    if (m_cancelled.load())
+    {
+        m_body_obj.RemoveLastExchange();
+        WriteLog();
+        console::write_line("\nInterrupted by user.", console::TextOrigin::reasoning);
+        return;
+    }
+
+    proc.ShowStat();
 
     if (proc.HasErrors())
     {
@@ -180,6 +252,7 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
     // Response message after tools execution
     std::string response_msg = proc.GetResponseMessage();
     bool is_not_empty_message = m_body_obj.AddResponse(response_msg);
+    WriteLog();
 
     if(is_not_empty_message)
         m_tool_loop_counter = 0; // Reset tool loop counter for a non-empty message
@@ -193,17 +266,19 @@ void AiClientImpl::SendToolsResponses(const std::vector<ToolResponse> &tools_res
     std::vector<ToolResponse> secondary_responses;
     for (auto &tool_call : tool_calls)
     {
+        if (m_cancelled.load())
+        {
+            m_body_obj.RemoveLastExchange();
+            WriteLog();
+            console::write_line("\nInterrupted by user.", console::TextOrigin::reasoning);
+            return;
+        }
         ToolResponse rsp = EvokeTool(tool_call);
         secondary_responses.push_back(rsp);
     }
 
     // Recursive call to send secondary tool responses
     SendToolsResponses(secondary_responses);
-}
-
-void AiClientImpl::SetReasoning(bool is_shown)
-{
-    m_show_reasoning = is_shown;
 }
 
 void AiClientImpl::SetApiKey(const std::string &key)
@@ -216,24 +291,102 @@ void AiClientImpl::SetModel(const std::string &model)
     m_body_obj.SetModel(model);
 }
 
+void AiClientImpl::SetLog(bool enabled)
+{
+    m_log = enabled;
+}
+
 void AiClientImpl::SetAgentRules(const std::string &rules)
 {
     m_body_obj.AddSystemMessage(rules);
 }
 
-std::string AiClientImpl::GetSlotstInfo()
+std::string AiClientImpl::GetSlotsInfo()
 {
-    return m_http_client.HttpGet(kEndPointSlots);
+    const HttpResult rsp = m_http_client.HttpGetFull(kEndPointSlots, kSlotsTimeoutMs);
+
+    if (!rsp.error.empty() && rsp.status == 0)
+    {
+        console::write_line(
+            fmt.Format("/slots unreachable: %?", rsp.error),
+            console::TextOrigin::reasoning);
+    }
+
+    return rsp.body;
+}
+
+std::string AiClientImpl::GetChatCompletionsEndpoint() const
+{
+    if (!m_chat_endpoint.empty())
+        return m_chat_endpoint;
+
+    return m_context_size == -1 ? kEndPointCompletionsLlama : kEndPointCompletionsNonLlama;
 }
 
 void AiClientImpl::ClearContext()
 {
+    console::clear();
     m_body_obj.ClearContext();
+    m_json_dialogue.Reset();
+    WriteLog();
+}
+
+// A simple way compressing: summarizing + last two messages (kMessagesToKeep)
+// It can be done smarter
+void AiClientImpl::CompressContext()
+{
+    // The flag may still be set by an earlier CancelRequest (ESC interrupt) -
+    // clear it explicitly, otherwise this action aborts instantly
+    m_cancelled.store(false);
+
+    // Build a summarization request: the dialogue without the last messages,
+    // plus an instruction for the LLM to summarize the remaining context.
+    std::string summary_body = m_body_obj.GetBodyForSummarizing(kMessagesToKeep);
+    if (summary_body.empty())
+    {
+        console::write_line("\nError: not enough context to compress", console::TextOrigin::error);
+        return;
+    }
+
+    console::write_line(" \n Compressing context. Please wait... \n DO NOT INTERRUPT! \n ", console::TextOrigin::error);
+
+    // Send the summarization request using the same streaming flow as a normal reply.
+    // Only the response text is needed here; tool calls are intentionally ignored.
+    ChunkCompletionProcessor proc; // POST response chunk receiver
+    proc.SetCancelFlag(&m_cancelled);
+    proc.SetContextSize(m_context_size);
+
+    std::string slots_rsp = GetSlotsInfo();
+    proc.SetSlotsInfo(slots_rsp);
+
+    std::string end_point_chat_completions = GetChatCompletionsEndpoint();
+    m_http_client.HttpPostStream(end_point_chat_completions, summary_body, &proc);
+
+    if (m_cancelled.load())
+    {
+        console::write_line("\nInterrupted by user.", console::TextOrigin::reasoning);
+        return;
+    }
+
+    proc.ShowStat();
+
+    if (proc.HasErrors())
+    {
+        console::write_line("\nError: " + proc.GetError(), console::TextOrigin::error);
+        return;
+    }
+
+    // Rewrite the dialogue in place: keep the system message, the generated
+    // summary, and the last kMessagesToKeep messages.
+    std::string summarized_msg = proc.GetResponseMessage();
+    m_body_obj.Compress(summarized_msg, kMessagesToKeep);
+    WriteLog();
 }
 
 void AiClientImpl::RestoreDialogueFrom(const std::string &data)
 {
     m_body_obj.FromJsonString(data);
+    WriteLog();
 }
 
 void AiClientImpl::ToolUndo()
@@ -249,6 +402,11 @@ void AiClientImpl::ToolRedo()
 std::string AiClientImpl::GetDialogueBody() const
 {
     return m_body_obj.ToJsonString();
+}
+
+std::string AiClientImpl::GetDialogueText() const
+{
+    return m_body_obj.ToPureText();
 }
 
 std::string AiClientImpl::GetAgentRules() const

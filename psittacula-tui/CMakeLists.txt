@@ -1,8 +1,8 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.25)
 project(${PSITTACULA_TUI})
 
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
+if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
@@ -17,27 +17,64 @@ set(TOOLS_INCLUDE ../${PSITTACULA_TOOLS}/include)
 
 add_executable(${PSITTACULA_TUI_NAME}
     ${SRC_DIR}/main.cpp
+    ${SRC_DIR}/animation.h
+    ${SRC_DIR}/animation.cpp
+    ${SRC_DIR}/app.cpp
+    ${SRC_DIR}/app.h
     ${SRC_DIR}/chat_command.h
     ${SRC_DIR}/chat_command_dispatcher.h
     ${SRC_DIR}/command_change_agent.h
     ${SRC_DIR}/command_change_model.h
-    ${SRC_DIR}//command_change_project_dir.h
-    ${SRC_DIR}//command_clean_context.h
+    ${SRC_DIR}/command_change_project_dir.h
+    ${SRC_DIR}/command_clean_context.h
+    ${SRC_DIR}/command_compress.h
     ${SRC_DIR}/command_dump.h
+    ${SRC_DIR}/command_dump_text.h
+    ${SRC_DIR}/command_purge.h
     ${SRC_DIR}/command_reasoning.h
     ${SRC_DIR}/command_redo.h
     ${SRC_DIR}/command_restore.h
     ${SRC_DIR}/command_tools.h
     ${SRC_DIR}/command_undo.h
+    ${SRC_DIR}/exit_dialogue.cpp
+    ${SRC_DIR}/exit_dialogue.h
+    ${SRC_DIR}/confirm_dialogue.cpp
+    ${SRC_DIR}/confirm_dialogue.h
     ${SRC_DIR}/init_commands.cpp
     ${SRC_DIR}/init_commands.h
-    ${SRC_DIR}/model.cpp
-    ${SRC_DIR}/model.h
+    ${SRC_DIR}/input_text_content.cpp
+    ${SRC_DIR}/input_text_content.h
+    ${SRC_DIR}/keyboard.cpp
+    ${SRC_DIR}/keyboard.h
+    ${SRC_DIR}/logo.h
+    ${SRC_DIR}/panel.cpp
+    ${SRC_DIR}/panel.h
+    ${SRC_DIR}/panel_input.cpp
+    ${SRC_DIR}/panel_input.h
+    ${SRC_DIR}/panel_status.cpp
+    ${SRC_DIR}/panel_status.h
+    ${SRC_DIR}/panel_text.cpp
+    ${SRC_DIR}/panel_text.h
     ${SRC_DIR}/param_reader.cpp
     ${SRC_DIR}/param_reader.h
+    ${SRC_DIR}/response.h
+    ${SRC_DIR}/screen.cpp
+    ${SRC_DIR}/screen.h
+    ${SRC_DIR}/screen_text_content.cpp
+    ${SRC_DIR}/screen_text_content.h
+    ${SRC_DIR}/text_splitter.cpp
+    ${SRC_DIR}/text_splitter.h
+    ${SRC_DIR}/app.rc
 )
 
-target_compile_definitions(${PSITTACULA_TUI_NAME} PRIVATE PSITTACULA_APP_VERSION="${A_VERSION}")
+target_compile_definitions(${PSITTACULA_TUI_NAME} PRIVATE
+    PSITTACULA_APP_VERSION="${A_VERSION}"
+    RC_VERSION_MAJOR=${A_VERSION_MAJOR}
+    RC_VERSION_MINOR=${A_VERSION_MINOR}
+    RC_VERSION_PATCH=${A_VERSION_PATCH}
+    RC_FILE_VERSION="${A_VERSION}.0"
+    RC_ORIGINAL_FILENAME="${PSITTACULA_TUI_NAME}.exe"
+)
 
 set_target_properties(${PSITTACULA_TUI_NAME}
     PROPERTIES
@@ -54,3 +91,8 @@ target_include_directories(${PSITTACULA_TUI_NAME} PRIVATE ${TOOLS_INCLUDE})
 
 target_link_libraries(${PSITTACULA_TUI_NAME} PRIVATE ${PSITTACULA_CLI_NAME})
 target_link_libraries(${PSITTACULA_TUI_NAME} PRIVATE ${PSITTACULA_TOOLS_NAME})
+target_link_libraries(${PSITTACULA_TUI_NAME} PRIVATE Threads::Threads)
+
+# Install rules
+include(GNUInstallDirs)
+install(TARGETS ${PSITTACULA_TUI_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

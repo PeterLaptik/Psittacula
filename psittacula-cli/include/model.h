@@ -12,7 +12,7 @@ class Model final
     public:
         Model() = default;
 
-        Model(const std::string &name, const std::string &host, const std::string api_key, int context_size = -1);
+        Model(const std::string &name, const std::string &host, const std::string api_key, const std::string &chat_endpoint, int context_size = -1);
 
         ~Model() = default;
 
@@ -26,7 +26,9 @@ class Model final
 
         int GetContextSize() const;
 
-        AiClient* GetClient() const;
+        std::string GetChatEndpoint() const;
+
+        std::unique_ptr<AiClient> GetClient() const;
 
     private:
         static inline std::string Trim(const std::string &s);
@@ -35,6 +37,7 @@ class Model final
         std::string m_host;
         std::string m_api_key;
         int m_context_size = -1; // -1 means the value is not set
+        std::string m_chat_endpoint = "/v1/chat/completions";
 };
 
 #endif // MODEL_INCLUDED_H

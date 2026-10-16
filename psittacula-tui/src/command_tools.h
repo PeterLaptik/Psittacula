@@ -10,13 +10,22 @@
 class CommandTools : public ChatCommand
 {
     public:
+        using ChatCommand::ChatCommand;
+
         void Execute(std::unique_ptr<AiClient> &client, const std::vector<std::string> &args) override
         {
             ActivateAlternateScreen();
 
             std::vector<std::pair<std::string, std::string>> tools;
+            if (client.get() == nullptr)
+            {
+                RestoreMainScreen();
+                console::write_line("Error: AI client is not initialized / no connection", TextOrigin::error);
+                return;
+            }
+
             client.get()->GetToolsInfo(tools);
-            console::write_line("---------------------------------------------", TextOrigin::filesystem);
+            console::write_line("---------------------------------------------", TextOrigin::tools);
             console::write_line("\033[1mAvailable tools:\033[0m");
             for (const auto &tool : tools)
             {
@@ -24,7 +33,10 @@ class CommandTools : public ChatCommand
             }
 
             console::write_line("\n\nPress Enter to continue...");
-            std::cin.get();
+            {
+                console::LineInputScope line_input;
+                std::cin.get();
+            }
 
             RestoreMainScreen();
         }

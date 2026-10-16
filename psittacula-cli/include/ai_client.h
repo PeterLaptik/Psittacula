@@ -6,7 +6,7 @@
 #include <memory>
 
 /// Default interface for the LLM client
-///\see AiClientImpl
+///\\see AiClientImpl
 class AiClient
 {
     public:
@@ -20,10 +20,12 @@ class AiClient
         /// Sends message from user
         virtual void SendUserMessage(const std::string &message) = 0;
 
-        /// Sets whether a reasoning text is shown
-        virtual void SetReasoning(bool is_shown = true) = 0;
+        /// Interrupts an in-progress SendUserMessage streaming / tool loop
+        virtual void CancelRequest() = 0;
 
-        /// Sets API bearing key, if necessary
+        /// Enables / disables the dialogue autosave
+        virtual void SetLog(bool enabled) = 0;
+        /// Sets Bearer API key, if necessary
         virtual void SetApiKey(const std::string &key) = 0;
 
         /// Sets model name for all POST data bodies
@@ -45,13 +47,20 @@ class AiClient
         virtual std::string GetAgentRules() const = 0;
 
         /// Returns full data body from the last POST request
-        /// May be useful for debug and manua testing
+        /// May be useful for debug and manual testing
         virtual std::string GetDialogueBody() const = 0;
 
+        /// Returns pure dialogue text from the active session
+        virtual std::string GetDialogueText() const = 0;
+
         /// Clears all context: removes all messages excepting of the first system-role message
+        /// Leaves undo / redo tools history untouched
         virtual void ClearContext() = 0;
 
-        /// Restores session data (dialogue, etc) from a JsonString
+        /// Compresses the context, reducing its size while preserving key information
+        virtual void CompressContext() = 0;
+
+        /// Restores session data (dialogue, etc) from a JSON string
         virtual void RestoreDialogueFrom(const std::string &data) = 0;
 };
 

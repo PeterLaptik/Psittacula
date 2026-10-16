@@ -10,12 +10,14 @@
 class CommandReasoning : public ChatCommand
 {
     public:
+        using ChatCommand::ChatCommand;
+
         void Execute(std::unique_ptr<AiClient> &client,
             const std::vector<std::string> &args) override
         {
             if (args.size() != 1)
             {
-                console::write_line("Usage: reasoning <true|false>", TextOrigin::reasoning);
+                console::write_line("Usage: reasoning <true|false>", TextOrigin::tools);
                 return;
             }
 
@@ -29,13 +31,13 @@ class CommandReasoning : public ChatCommand
 
             if (value == "true" || value == "1" || value == "on")
             {
-                client->SetReasoning(true);
-                console::write_line("Reasoning mode enabled.", TextOrigin::reasoning);
+                m_app->SetShowReasoning(true);
+                console::write_line("Reasoning mode is enabled.", TextOrigin::tools);
             }
             else if (value == "false" || value == "0" || value == "off")
             {
-                client->SetReasoning(false);
-                console::write_line("Reasoning mode disabled.", TextOrigin::reasoning);
+                m_app->SetShowReasoning(false);
+                console::write_line("Reasoning mode is disabled.", TextOrigin::tools);
             }
             else
             {
@@ -45,7 +47,7 @@ class CommandReasoning : public ChatCommand
 
         std::string Description() override
         {
-            return "Enable deeper reasoning output.\n\t[ARGS] - true / false";
+            return "Enable reasoning text output.\n\t[ARG] - true / false";
         }
 };
 

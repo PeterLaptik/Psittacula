@@ -5,11 +5,24 @@
 #include <string>
 #include <vector>
 
+struct ProjectFile
+{
+    ProjectFile(const std::string &file_name, const std::string &file_path)
+        : path(file_path), name(file_name)
+    { }
+
+    std::string path;
+    std::string name;
+};
+
 /// A singleton keeping working dir paths
 class WorkingDir
 {
     public:
-        static WorkingDir& GetInstance();
+        static WorkingDir &GetInstance();
+
+        WorkingDir(const WorkingDir &) = delete;
+        WorkingDir &operator=(const WorkingDir &) = delete;
 
         void SetWorkDir(const std::string &path);
 
@@ -27,6 +40,10 @@ class WorkingDir
 
         std::string GetSettingsDir() const;
 
+        std::string GetLogsDir() const;
+
+        const std::vector<ProjectFile>& GetProjectFilesList() const;
+
         bool IsInWorkDir(const std::string &path) const;
 
     private:
@@ -40,6 +57,8 @@ class WorkingDir
         std::string m_workdir;      // Settings for model connections, etc
         std::string m_project_dir;  // Project: files and directories can be modified via file tools
         std::vector<std::string> models_list;
+
+        std::vector<ProjectFile> m_projects_files;
 };
 
 #endif // WORKING_DIR_INCLUDED_H

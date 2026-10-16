@@ -20,10 +20,11 @@ std::string DirCreateTool::Execute(std::vector<ToolParameter> &params_values)
     Formatter fmt;
     WorkingDir &wdir = WorkingDir::GetInstance();
 
-    console::write_line("Directory create tool.", console::TextOrigin::filesystem);
+    console::write_line("Directory create tool.", console::TextOrigin::tools);
 
     std::string path = GetParam(params_values, "path");
-    UnescapeSlashesInPath(path);
+    UnEscapeSlashesInPath(path);
+    console::write_line("Path: " + path, console::TextOrigin::tools);
 
     if (path.empty())
     {
@@ -31,15 +32,15 @@ std::string DirCreateTool::Execute(std::vector<ToolParameter> &params_values)
         return R"({"error":{"type":"invalid_arguments","message":"Missing required parameter: path"}})";
     }
 
-    if (!wdir.IsInWorkDir(path)) 
+    if (!wdir.IsInWorkDir(path))
     {
-        console::write_line(fmt.Format("Permission_denied: path is outside working directory: %?", path), console::TextOrigin::error);
-        return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory\",\"path\":\"%?\"}}", path);
+        console::write_line(fmt.Format("Permission_denied: path is outside working directory:\n path: %?\n working directory: %?", path, wdir.GetProjectDir()), console::TextOrigin::error);
+        return fmt.Format("{\"error\":{\"type\":\"permission_denied\",\"message\":\"Path is outside working directory (%?)\",\"path\":\"%?\"}}", wdir.GetProjectDir(), path);
     }
 
     bool existed_before = std::filesystem::exists(path);
 
-    console::write_line(fmt.Format("Creating directory: %?", path), console::TextOrigin::filesystem);
+    console::write_line(fmt.Format("Creating directory: %?", path), console::TextOrigin::tools);
 
     if (!std::filesystem::create_directories(path) && !existed_before) 
     {
@@ -74,7 +75,7 @@ void DirCreateTool::Undo()
     if (dir_existed_before)
         return;
 
-    std::cout << "Removing directory: " << last_path << std::endl;
+    console::write_line("Removing directory: " + last_path, console::TextOrigin::tools);
 
     // Check if directory is empty
     bool is_empty = std::filesystem::is_empty(last_path);
@@ -106,7 +107,7 @@ void DirCreateTool::Redo()
         return;
     }
 
-    std::cout << "Recreating sirectory: " << last_path << std::endl;
+    console::write_line("Recreating directory: " + last_path, console::TextOrigin::tools);
 
     std::filesystem::create_directories(last_path);
 }

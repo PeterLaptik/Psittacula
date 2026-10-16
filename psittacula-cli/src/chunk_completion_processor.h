@@ -3,6 +3,7 @@
 
 #include "chunk_processor.h"
 #include "tool_base.h"
+#include <atomic>
 #include <string>
 #include <vector>
 
@@ -16,14 +17,17 @@ class ChunkCompletionProcessor: public ChunkProcessor
 
         virtual ~ChunkCompletionProcessor() = default;
 
-        /// Clears all data from the last response
-        void Reset();
-
-        /// Process a chenk data: extract message, reasoning, tools, errors, etc
+        /// Process a chunk of SSE data: extract message, reasoning, tools, errors, etc
         void ProcessChunk(const std::string &chunk) override;
 
+        /// ChunkProcessor: true when CancelRequest was called from the UI thread
+        bool IsCancelled() const override;
+
         /// Shows/ hides reasoning text
-        void SetReasoning(bool is_shown);
+        void SetShowReasoning(bool is_shown);
+
+        /// Sets context size value. It is used to compute stat
+        void SetContextSize(int ctx_size);
 
         /// Returns full response message
         std::string GetResponseMessage() const;
@@ -31,8 +35,14 @@ class ChunkCompletionProcessor: public ChunkProcessor
         /// Returns full response reasoning text
         std::string GetResponseReasoning() const;
 
-        /// Outputs statistic to a console (tokens used, context)
-        void WriteStat(std::string slots_info_rsp, int context_size = -1) const;
+        /// Outputs statistics to a console (tokens used, context)
+        void ShowStat() const;
+
+        /// Sets slots info response to extract context size
+        void SetSlotsInfo(const std::string &slots);
+
+        /// Sets external interrupt flag checked by CURL progress for ESC cancel
+        void SetCancelFlag(std::atomic<bool> *flag);
 
         /// Returns whether a server returned error message for a request
         bool HasErrors() const;
@@ -44,7 +54,7 @@ class ChunkCompletionProcessor: public ChunkProcessor
         void GetResponseTools(std::vector<ToolCall> &calls_acc);
 
         /// Returns token statistic after response
-        void GetTokensStat(int &total, int &completion, int &prompt, double &cost) const;
+        void GetTokensStat(int &total, int &completion, int &prompt, double &cost) const override;
 
     private:
         void OutputSystemMessage(const std::string &msg);
@@ -54,9 +64,12 @@ class ChunkCompletionProcessor: public ChunkProcessor
 
         void CheckMessage(JsonDocument &doc);
         void CheckReasoning(JsonDocument &doc);
-        void CheckTokens(JsonDocument &doc);
+        bool CheckTokens(JsonDocument &doc);
         void CheckTools(JsonDocument &doc);
         void CheckErrors(JsonDocument &doc);
+
+        /// Outputs statistics to a console (tokens used, context) per each chunk
+        void ShowStatPerChunk() const;
 
         bool m_reasoning_in_process = true;
         bool m_show_reasoning = false;
@@ -67,7 +80,9 @@ class ChunkCompletionProcessor: public ChunkProcessor
         int m_total_tokens = 0;
         int m_completion_tokens = 0;
         int m_prompt_tokens = 0;
-        int m_tokens_cost = 0;
+        double m_tokens_cost = 0;
+
+        int m_context_size = 0;
 
         // Tools
         struct FunctionToEvoke
@@ -81,6 +96,9 @@ class ChunkCompletionProcessor: public ChunkProcessor
         std::vector<FunctionToEvoke> m_tools;   // all tool lists
 
         std::string m_error; // error message
+
+        // Points to the client's atomic interrupt flag (never owned, may be null)
+        std::atomic<bool> *m_cancel_flag = nullptr;
 };
 
 #endif // CHUNK_COMPLETION_PROCESOR_INCLUDED_H
