@@ -39,6 +39,13 @@ _______________________________________________________
   resize handling, `/`-command and `@`-file autocomplete).
 
 ---
+## Installing
+
+### Windows
+Use archived binaries from [releases](https://github.com/PeterLaptik/Psittacula/releases)
+
+### FreeBSD
+Use port archive from [releases](https://github.com/PeterLaptik/Psittacula/releases)
 
 ## Building
 
